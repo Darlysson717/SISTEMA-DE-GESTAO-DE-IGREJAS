@@ -1,0 +1,16 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Flutter Android (Supabase)",
+      "request": "launch",
+      "type": "dart",
+      "deviceId": "android",
+      "toolArgs": [
+        "--dart-define=SUPABASE_URL=https://gtxamoukdklnudhxgjhc.supabase.co",
+        "--dart-define=SUPABASE_ANON_KEY=sb_publishable_9QiR4QbOFYojwurQ_RSi5w_dhLBsQyW",
+        "--dart-define=SUPABASE_REDIRECT_URL=com.igreja.centro_social_app://login-callback/"
+      ]
+    }
+  ]
+}
