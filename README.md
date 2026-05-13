@@ -4,7 +4,7 @@ Sistema base escalável para Centro Social da Igreja com serviços gratuitos com
 
 ## ✅ Sistema Simplificado
 
-**Todos os usuários são tratados como membros da comunidade.** Não há distinção entre administradores, voluntários e usuários comuns. A identificação de "profissionais" é feita automaticamente quando um usuário publica serviços.
+**Todos os usuários são tratados como membros da comunidade.** Há distinção entre administradores, voluntários e usuários comuns. A identificação de "profissionais" é feita automaticamente quando um usuário publica serviços.
 
 ### Funcionalidades Automáticas
 - **Criação automática de disponibilidade**: Quando um serviço é aprovado, as `professional_availabilities` são criadas automaticamente baseadas nos horários do serviço
