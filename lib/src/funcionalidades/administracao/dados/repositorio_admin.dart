@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:excel/excel.dart';
 
 const String superAdminEmail = 'darlison.pires.corporativo@gmail.com';
 
@@ -656,5 +657,185 @@ class AdminRepository {
       return '"${field.replaceAll('"', '""')}"';
     }
     return field;
+  }
+
+  Future<List<int>> exportEventsSummaryXlsx() async {
+    final now = DateTime.now();
+    final start = (now.month == 1)
+        ? DateTime(now.year - 1, 12, 1)
+        : DateTime(now.year, now.month - 1, 1);
+    final end = now;
+
+    // Load events created in the window
+    final eventRows = await _client
+      .from('eventos')
+      .select('id, nome, status, categoria, evento_pago, permitir_voluntarios, requer_inscricao, limite_vagas, data_inicio, data_fim, created_at')
+        .gte('created_at', start.toIso8601String())
+        .lte('created_at', end.toIso8601String())
+        .order('created_at', ascending: true);
+
+    final events = (eventRows as List<dynamic>)
+        .map((r) => r as Map<String, dynamic>)
+        .toList();
+
+    final eventIds = events.map((e) => e['id'] as String).where((id) => id.isNotEmpty).toList();
+
+    // Load registration stats
+    final registrationStatsByEvent = <String, Map<String, int>>{};
+    if (eventIds.isNotEmpty) {
+      final regs = await _client
+          .from('event_registrations')
+          .select('event_id, interesse')
+          .inFilter('event_id', eventIds);
+
+      for (final r in (regs as List<dynamic>)) {
+        final map = r as Map<String, dynamic>;
+        final eid = (map['event_id'] as String?)?.trim() ?? '';
+        if (eid.isEmpty) continue;
+        final interest = (map['interesse'] as String?)?.trim().toLowerCase() ?? '';
+        final stats = registrationStatsByEvent.putIfAbsent(eid, () => {'total': 0, 'participants': 0, 'volunteers': 0});
+        stats['total'] = (stats['total'] ?? 0) + 1;
+        if (interest == 'voluntario' || interest == 'volunteer') {
+          stats['volunteers'] = (stats['volunteers'] ?? 0) + 1;
+        } else {
+          stats['participants'] = (stats['participants'] ?? 0) + 1;
+        }
+      }
+    }
+
+    // Aggregate metrics
+    final statusCounts = <String, int>{};
+    final categoryCounts = <String, int>{};
+    var eventsWithRegistrations = 0;
+    var eventsWithVolunteers = 0;
+    var paidEvents = 0;
+    var totalRegistrations = 0;
+    var totalParticipants = 0;
+    var totalVolunteers = 0;
+
+    for (final e in events) {
+      final status = (e['status'] as String?) ?? 'Sem status';
+      statusCounts[status] = (statusCounts[status] ?? 0) + 1;
+
+      final category = ((e['categoria'] as String?) ?? '').trim();
+      final catKey = category.isEmpty ? 'Sem categoria' : category;
+      categoryCounts[catKey] = (categoryCounts[catKey] ?? 0) + 1;
+
+      final isPaid = (e['evento_pago'] as bool?) ?? false;
+      if (isPaid) paidEvents += 1;
+
+      final allowsVolunteers = (e['permitir_voluntarios'] as bool?) ?? false;
+      if (allowsVolunteers) eventsWithVolunteers += 1;
+
+      final stats = registrationStatsByEvent[e['id'] as String];
+      if (stats != null && (stats['total'] ?? 0) > 0) {
+        eventsWithRegistrations += 1;
+        totalRegistrations += (stats['total'] ?? 0);
+        totalParticipants += (stats['participants'] ?? 0);
+        totalVolunteers += (stats['volunteers'] ?? 0);
+      }
+    }
+
+    final excel = Excel.createExcel();
+    final defaultName = excel.getDefaultSheet();
+    if (defaultName != null && defaultName != 'Resumo') {
+      excel.rename(defaultName, 'Resumo');
+    }
+
+    final sheet = excel['Resumo'];
+
+    sheet.appendRow([TextCellValue('Relatório de Eventos')]);
+    sheet.appendRow(const [null]);
+    sheet.appendRow([TextCellValue('Indicador'), TextCellValue('Valor')]);
+
+    final metricRows = <List<CellValue?>>[
+      [TextCellValue('Total de eventos'), IntCellValue(events.length)],
+      [TextCellValue('Eventos com inscrição'), IntCellValue(eventsWithRegistrations)],
+      [TextCellValue('Eventos pagos'), IntCellValue(paidEvents)],
+      [TextCellValue('Eventos com voluntarios'), IntCellValue(eventsWithVolunteers)],
+      [TextCellValue('Total de inscricoes'), IntCellValue(totalRegistrations)],
+      [TextCellValue('Total de participantes'), IntCellValue(totalParticipants)],
+      [TextCellValue('Total de voluntarios'), IntCellValue(totalVolunteers)],
+    ];
+
+    for (final row in metricRows) {
+      sheet.appendRow(row);
+    }
+
+    sheet.appendRow(const [null]);
+    sheet.appendRow([TextCellValue('Eventos por status'), null]);
+    sheet.appendRow([TextCellValue('Status'), TextCellValue('Quantidade')]);
+    for (final entry in statusCounts.entries) {
+      sheet.appendRow([TextCellValue(entry.key), IntCellValue(entry.value)]);
+    }
+
+    sheet.appendRow(const [null]);
+    sheet.appendRow([TextCellValue('Eventos por categoria'), null]);
+    sheet.appendRow([TextCellValue('Categoria'), TextCellValue('Quantidade')]);
+    final categories = categoryCounts.keys.toList()..sort();
+    for (final c in categories) {
+      sheet.appendRow([TextCellValue(c), IntCellValue(categoryCounts[c] ?? 0)]);
+    }
+
+    // --- Aba detalhada 'Eventos' ---
+    final eventsSheet = excel['Eventos'];
+    eventsSheet.appendRow([
+      TextCellValue('ID'),
+      TextCellValue('Nome'),
+      TextCellValue('Categoria'),
+      TextCellValue('Pago'),
+      TextCellValue('Permite Voluntários'),
+      TextCellValue('Requer Inscrição'),
+      TextCellValue('Limite Vagas'),
+      TextCellValue('Data Início'),
+      TextCellValue('Data Fim'),
+      TextCellValue('Criado Em'),
+      TextCellValue('Status'),
+      TextCellValue('Inscrições Totais'),
+      TextCellValue('Participantes'),
+      TextCellValue('Voluntários'),
+    ]);
+
+    for (final e in events) {
+      final id = (e['id'] as String?) ?? '';
+      final name = (e['nome'] as String?) ?? '';
+      final category = (e['categoria'] as String?) ?? '';
+      final paid = ((e['evento_pago'] as bool?) ?? false) ? 'Sim' : 'Não';
+      final allowsVol = ((e['permitir_voluntarios'] as bool?) ?? false) ? 'Sim' : 'Não';
+      final requiresReg = ((e['requer_inscricao'] as bool?) ?? false) ? 'Sim' : 'Não';
+      final limit = (e['limite_vagas'] is int) ? IntCellValue(e['limite_vagas'] as int) : null;
+      final dataInicio = (e['data_inicio'] as String?) ?? '';
+      final dataFim = (e['data_fim'] as String?) ?? '';
+      final createdAt = (e['created_at'] as String?) ?? '';
+      final status = (e['status'] as String?) ?? '';
+
+      final stats = registrationStatsByEvent[id] ?? {'total': 0, 'participants': 0, 'volunteers': 0};
+      final total = (stats['total'] ?? 0);
+      final participants = (stats['participants'] ?? 0);
+      final volunteers = (stats['volunteers'] ?? 0);
+
+      final row = <CellValue?>[
+        TextCellValue(id),
+        TextCellValue(name),
+        TextCellValue(category),
+        TextCellValue(paid),
+        TextCellValue(allowsVol),
+        TextCellValue(requiresReg),
+        limit,
+        TextCellValue(dataInicio),
+        TextCellValue(dataFim),
+        TextCellValue(createdAt),
+        TextCellValue(status),
+        IntCellValue(total),
+        IntCellValue(participants),
+        IntCellValue(volunteers),
+      ];
+
+      eventsSheet.appendRow(row);
+    }
+
+    final bytes = excel.encode();
+    if (bytes == null) throw Exception('Não foi possível gerar XLSX.');
+    return bytes;
   }
 }

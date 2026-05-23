@@ -1,5 +1,6 @@
 import 'package:centro_social_app/src/funcionalidades/administracao/apresentacao/provedores/provedores_admin.dart';
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
@@ -16,6 +17,7 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage> {
   bool _isSavingAdmin = false;
   bool _isCleaningStorage = false;
   bool _isExportingServices = false;
+  bool _isExportingEventsSummary = false;
   String? _reviewingRequestId;
   String? _revokingUserId;
 
@@ -578,10 +580,24 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage> {
                               ),
                               const SizedBox(height: 8),
                               OutlinedButton.icon(
-                                onPressed: null,
-                                icon: const Icon(Icons.download_outlined),
+                                onPressed: _isExportingEventsSummary
+                                    ? null
+                                    : _handleExportEventsSummary,
+                                icon: _isExportingEventsSummary
+                                    ? const SizedBox(
+                                        height: 16,
+                                        width: 16,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                            Color(0xFF0F172A),
+                                          ),
+                                        ),
+                                      )
+                                    : const Icon(Icons.download_outlined),
                                 label: const Text(
-                                  'Exportar Eventos (em breve)',
+                                  'Exportar Eventos (Resumo)',
                                 ),
                               ),
                             ],
@@ -889,6 +905,8 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage> {
 
       final shareResult = await _shareCsvReport(csvContent);
 
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -928,6 +946,56 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage> {
       text: 'Relatório de agendamentos',
       fileNameOverrides: [fileName],
     );
+  }
+
+  Future<ShareResult> _shareXlsxReport(Uint8List bytes) async {
+    final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-');
+    final fileName = 'relatorio_eventos_resumo_$timestamp.xlsx';
+
+    return Share.shareXFiles(
+      [
+        XFile.fromData(
+          bytes,
+          mimeType:
+              'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ),
+      ],
+      text: 'Relatório de eventos (Resumo)',
+      fileNameOverrides: [fileName],
+    );
+  }
+
+  Future<void> _handleExportEventsSummary() async {
+    setState(() => _isExportingEventsSummary = true);
+    try {
+      final bytes = await ref
+          .read(adminRepositoryProvider)
+          .exportEventsSummaryXlsx();
+
+      if (!mounted) return;
+
+      final shareResult = await _shareXlsxReport(Uint8List.fromList(bytes));
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            shareResult.status == ShareResultStatus.success
+                ? 'Compartilhamento do relatório aberto com sucesso.'
+                : 'Compartilhamento do relatório cancelado.',
+          ),
+          duration: Duration(seconds: 3),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro ao exportar relatório: $error')),
+      );
+    } finally {
+      if (mounted) setState(() => _isExportingEventsSummary = false);
+    }
   }
 
   
