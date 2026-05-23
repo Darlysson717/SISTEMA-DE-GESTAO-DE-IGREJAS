@@ -59,7 +59,6 @@ create table if not exists public.eventos (
   link_transmissao text,
 
   -- Conteudo
-  resumo_curto text not null,
   descricao text not null,
 
   -- Midia

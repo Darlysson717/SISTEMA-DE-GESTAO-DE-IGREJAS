@@ -72,6 +72,7 @@ class AppEvent {
   });
 
   factory AppEvent.fromJson(Map<String, dynamic> json) {
+    final descricao = (json['descricao'] as String?) ?? '';
     return AppEvent(
       id: json['id'] as String,
       userId: json['user_id'] as String,
@@ -89,8 +90,11 @@ class AppEvent {
       tipoLocal: (json['tipo_local'] as String?) ?? 'presencial',
       endereco: json['endereco'] as String?,
       linkTransmissao: json['link_transmissao'] as String?,
-      resumoCurto: (json['resumo_curto'] as String?) ?? '',
-      descricao: (json['descricao'] as String?) ?? '',
+      resumoCurto: _buildResumoCurto(
+        descricao,
+        json['resumo_curto'] as String?,
+      ),
+      descricao: descricao,
       imagemCapaUrl: json['imagem_capa_url'] as String?,
       galeriaImagensUrls:
           ((json['galeria_imagens_urls'] as List<dynamic>?) ?? const [])
@@ -138,6 +142,25 @@ class AppEvent {
     final parts = value.split(':');
     if (parts.length < 2) return value;
     return '${parts[0]}:${parts[1]}';
+  }
+
+  static String _buildResumoCurto(String descricao, String? legacyResumo) {
+    final trimmedLegacyResumo = (legacyResumo ?? '').trim();
+    if (trimmedLegacyResumo.isNotEmpty) {
+      return trimmedLegacyResumo;
+    }
+
+    final trimmedDescricao = descricao.trim();
+    if (trimmedDescricao.isEmpty) {
+      return '';
+    }
+
+    const maxLength = 120;
+    if (trimmedDescricao.length <= maxLength) {
+      return trimmedDescricao;
+    }
+
+    return '${trimmedDescricao.substring(0, maxLength - 1).trimRight()}...';
   }
 
   String? get imagemCapaUrlVersionada =>

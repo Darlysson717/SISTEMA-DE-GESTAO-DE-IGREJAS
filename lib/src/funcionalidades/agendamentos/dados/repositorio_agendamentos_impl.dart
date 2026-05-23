@@ -411,11 +411,11 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
     final timeValue = _formatTimeForDb(startsAt);
 
     final existingAppointments = await _client
-        .from('appointments')
-        .select('service_id, scheduled_time')
-        .eq('user_id', uid)
-        .eq('scheduled_date', dateValue)
-        .neq('status', 'cancelled');
+      .from('appointments')
+      .select('service_id, scheduled_time')
+      .eq('user_id', uid)
+      .eq('scheduled_date', dateValue)
+      .neq('status', 'cancelado');
 
     final existingList = (existingAppointments as List<dynamic>);
     final hasSameService = existingList.any(
@@ -440,7 +440,7 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
         .eq('service_id', serviceId)
         .eq('scheduled_date', dateValue)
         .eq('scheduled_time', timeValue)
-        .inFilter('status', ['scheduled', 'confirmed'])
+        .inFilter('status', ['agendado'])
         .limit(1)
         .maybeSingle();
 
@@ -455,7 +455,7 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
       'service_id': serviceId,
       'scheduled_date': dateValue,
       'scheduled_time': timeValue,
-      'status': 'confirmed',
+      'status': 'agendado',
     });
   }
 
@@ -487,7 +487,7 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
           .select('scheduled_time')
           .eq('service_id', serviceId)
           .eq('scheduled_date', dateValue)
-          .inFilter('status', ['scheduled', 'confirmed']);
+          .inFilter('status', ['agendado']);
     }
 
     final bookedTimes = <String>{};
@@ -574,13 +574,17 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
       }
     }
 
-    final deletedRows = await _client
+    final updatedRows = await _client
         .from('appointments')
-        .delete()
+        .update({
+          'status': 'cancelado',
+          'cancelled_at': DateTime.now().toIso8601String(),
+          'cancelled_by': currentUid,
+        })
         .eq('id', appointmentId)
         .select('id');
 
-    final rows = (deletedRows as List<dynamic>);
+    final rows = (updatedRows as List<dynamic>);
     if (rows.isEmpty) {
       throw Exception(
         'Não foi possível cancelar este agendamento. Verifique as permissões e tente novamente.',
@@ -664,7 +668,7 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
           'scheduled_date': dateValue,
           'scheduled_time': timeValue,
           'service_id': serviceId,
-          'status': 'confirmed',
+          'status': 'agendado',
         })
         .eq('id', appointmentId);
   }
@@ -883,7 +887,7 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
       startsAt: startsAt,
       endsAt: endsAt,
       status: parseAppointmentStatus(
-        (appointment['status'] as String?) ?? 'confirmed',
+        (appointment['status'] as String?) ?? 'agendado',
       ),
       serviceType: service?['tipo_atendimento'] as String?,
       location: service?['local'] as String?,

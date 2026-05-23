@@ -523,4 +523,138 @@ class AdminRepository {
       requesterEmail: requesterProfile?['email'] as String?,
     );
   }
+
+  Future<String> exportAppointmentsReport() async {
+    final now = DateTime.now();
+    final start = (now.month == 1)
+        ? DateTime(now.year - 1, 12, 1)
+        : DateTime(now.year, now.month - 1, 1);
+    final end = now;
+
+    final rows = await _client
+        .from('appointments')
+        .select('id, created_at, user_id, service_id, scheduled_time, scheduled_date, status')
+        .gte('created_at', start.toIso8601String())
+        .lte('created_at', end.toIso8601String())
+        .order('created_at', ascending: true);
+
+    final rowsList = (rows as List<dynamic>).cast<Map<String, dynamic>>();
+    final serviceIds = <String>{};
+    final profileIds = <String>{};
+
+    for (final r in rowsList) {
+      final sid = r['service_id'] as String?;
+      final uid = r['user_id'] as String?;
+      if (sid != null && sid.isNotEmpty) serviceIds.add(sid);
+      if (uid != null && uid.isNotEmpty) profileIds.add(uid);
+    }
+
+    // Fetch services
+    Map<String, Map<String, dynamic>> servicesById = {};
+    if (serviceIds.isNotEmpty) {
+      final svcRows = await _client
+          .from('servicos')
+          .select('id, categoria, nome_profissional, user_id')
+          .inFilter('id', serviceIds.toList());
+      for (final s in (svcRows as List<dynamic>)) {
+        final m = s as Map<String, dynamic>;
+        servicesById[m['id'] as String] = m;
+        final owner = m['user_id'] as String?;
+        if (owner != null && owner.isNotEmpty) profileIds.add(owner);
+      }
+    }
+
+    // Fetch profiles for community users and professionals
+    final profilesById = <String, String>{};
+    if (profileIds.isNotEmpty) {
+      final profRows = await _client
+          .from('profiles')
+          .select('id, full_name, email')
+          .inFilter('id', profileIds.toList());
+      for (final p in (profRows as List<dynamic>)) {
+        final m = p as Map<String, dynamic>;
+        final id = m['id'] as String;
+        final name = (m['full_name'] as String?) ?? (m['email'] as String?) ?? '';
+        profilesById[id] = name;
+      }
+    }
+
+    final buffer = StringBuffer();
+    buffer.writeln('DATA DA SOLICITAÇÃO;NOME;SOLICITAÇÃO;PROFISSIONAL;HORÁRIO AGENDADO;DIA AGENDADO;DIA DA SEMANA;STATUS');
+
+    for (final map in rowsList) {
+      final createdRaw = (map['created_at'] as String?) ?? '';
+      final created = _formatDateOnly(createdRaw);
+      final uid = (map['user_id'] as String?) ?? '';
+      final sid = (map['service_id'] as String?) ?? '';
+      final scheduledTime = (map['scheduled_time'] as String?) ?? '';
+      final scheduledDate = (map['scheduled_date'] as String?) ?? '';
+      final statusRaw = (map['status'] as String?) ?? '';
+
+      final communityName = profilesById[uid] ?? 'Sem nome';
+      final service = servicesById[sid];
+      final solicitation = service == null
+          ? 'Serviço'
+          : (service['categoria'] as String?) ?? 'Serviço';
+      final professional = service == null
+          ? ''
+          : (service['nome_profissional'] as String?) ?? profilesById[service['user_id'] as String] ?? '';
+
+      final dayOfWeek = _weekdayLabelFromDateString(scheduledDate);
+      final status = statusRaw.toLowerCase().contains('cancel')
+          ? 'cancelado'
+          : (statusRaw.toLowerCase().contains('conclu') || statusRaw.toLowerCase().contains('complete'))
+              ? 'concluido'
+              : statusRaw;
+
+      buffer.writeln(
+        '${_escapeCsvField(created)};${_escapeCsvField(communityName)};${_escapeCsvField(solicitation)};${_escapeCsvField(professional)};${_escapeCsvField(scheduledTime)};${_escapeCsvField(scheduledDate)};${_escapeCsvField(dayOfWeek)};${_escapeCsvField(status)}',
+      );
+    }
+
+    return buffer.toString();
+  }
+
+  String _weekdayLabelFromDateString(String date) {
+    try {
+      if (date.isEmpty) return '';
+      final parts = date.split('-');
+      if (parts.length < 3) return '';
+      final y = int.tryParse(parts[0]) ?? 1970;
+      final m = int.tryParse(parts[1]) ?? 1;
+      final d = int.tryParse(parts[2]) ?? 1;
+      final dt = DateTime(y, m, d);
+      switch (dt.weekday) {
+        case DateTime.monday:
+          return 'Segunda';
+        case DateTime.tuesday:
+          return 'Terça';
+        case DateTime.wednesday:
+          return 'Quarta';
+        case DateTime.thursday:
+          return 'Quinta';
+        case DateTime.friday:
+          return 'Sexta';
+        case DateTime.saturday:
+          return 'Sábado';
+        case DateTime.sunday:
+          return 'Domingo';
+      }
+    } catch (_) {}
+    return '';
+  }
+
+  String _formatDateOnly(String datetime) {
+    if (datetime.isEmpty) return '';
+    if (datetime.contains('T')) return datetime.split('T').first;
+    if (datetime.contains(' ')) return datetime.split(' ').first;
+    return datetime;
+  }
+
+  String _escapeCsvField(String field) {
+    if (field.contains(';') || field.contains('"') || field.contains('\n')) {
+      return '"${field.replaceAll('"', '""')}"';
+    }
+    return field;
+  }
 }

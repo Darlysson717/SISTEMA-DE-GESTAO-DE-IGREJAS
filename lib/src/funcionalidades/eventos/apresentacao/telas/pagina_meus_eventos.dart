@@ -4,6 +4,7 @@ import 'package:centro_social_app/src/funcionalidades/eventos/apresentacao/telas
 import 'package:centro_social_app/src/funcionalidades/eventos/apresentacao/telas/pagina_detalhes_evento.dart';
 import 'package:centro_social_app/src/funcionalidades/eventos/apresentacao/provedores/provedores_eventos.dart';
 import 'package:centro_social_app/src/funcionalidades/eventos/apresentacao/componentes/card_feed_evento.dart';
+import 'package:centro_social_app/src/nucleo/navegacao/observador_rotas.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -15,9 +16,30 @@ class MyEventsPage extends ConsumerStatefulWidget {
   ConsumerState<MyEventsPage> createState() => _MyEventsPageState();
 }
 
-class _MyEventsPageState extends ConsumerState<MyEventsPage> {
+class _MyEventsPageState extends ConsumerState<MyEventsPage> with RouteAware {
   String? _deletingEventId;
   String _statusFilter = 'todos';
+  List<AppEvent> _currentEvents = const [];
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route is PageRoute<dynamic>) {
+      routeObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void dispose() {
+    routeObserver.unsubscribe(this);
+    super.dispose();
+  }
+
+  @override
+  void didPopNext() {
+    _refreshEventFeeds();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,6 +49,7 @@ class _MyEventsPageState extends ConsumerState<MyEventsPage> {
       appBar: AppBar(title: const Text('MEUS EVENTOS')),
       body: eventsAsync.when(
         data: (events) {
+          _currentEvents = events;
           final filteredEvents = _applyStatusFilter(events);
 
           if (events.isEmpty) {
@@ -239,6 +262,10 @@ class _MyEventsPageState extends ConsumerState<MyEventsPage> {
   void _refreshEventFeeds() {
     ref.invalidate(myEventsProvider);
     ref.invalidate(publishedEventsProvider);
+    for (final event in _currentEvents) {
+      ref.invalidate(eventRegistrationsProvider(event.id));
+      ref.invalidate(eventRegistrationStatsProvider(event.id));
+    }
   }
 
   Widget _buildRegistrationsNamesSection(AppEvent event) {

@@ -14,10 +14,10 @@ final myEventsProvider = StreamProvider<List<AppEvent>>((ref) {
   return repository.watchMyEvents();
 });
 
-final publishedEventsProvider = StreamProvider<List<AppEvent>>((ref) {
+final publishedEventsProvider = FutureProvider<List<AppEvent>>((ref) async {
   ref.watch(authStateChangesProvider);
   final repository = ref.watch(eventsRepositoryProvider);
-  return repository.watchPublishedEvents();
+  return repository.listPublishedEvents();
 });
 
 final eventRegistrationsProvider =

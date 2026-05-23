@@ -166,6 +166,9 @@ class _EventDetailsPageState extends ConsumerState<EventDetailsPage> {
         volunteerWhatsapp: volunteerWhatsapp,
       );
 
+      ref.invalidate(eventRegistrationsProvider(eventId));
+      ref.invalidate(eventRegistrationStatsProvider(eventId));
+
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

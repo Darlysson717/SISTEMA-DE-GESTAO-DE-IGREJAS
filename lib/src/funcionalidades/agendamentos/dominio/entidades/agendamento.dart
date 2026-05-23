@@ -4,13 +4,13 @@ extension AppointmentStatusX on AppointmentStatus {
   String get value {
     switch (this) {
       case AppointmentStatus.scheduled:
-        return 'confirmed';
+        return 'agendado';
       case AppointmentStatus.completed:
-        return 'completed';
+        return 'concluido';
       case AppointmentStatus.cancelled:
-        return 'cancelled';
+        return 'cancelado';
       case AppointmentStatus.noShow:
-        return 'cancelled';
+        return 'faltou';
     }
   }
 
@@ -30,11 +30,11 @@ extension AppointmentStatusX on AppointmentStatus {
 
 AppointmentStatus parseAppointmentStatus(String status) {
   switch (status) {
-    case 'confirmed':
+    case 'agendado':
       return AppointmentStatus.scheduled;
-    case 'completed':
+    case 'concluido':
       return AppointmentStatus.completed;
-    case 'cancelled':
+    case 'cancelado':
       return AppointmentStatus.cancelled;
     default:
       return AppointmentStatus.scheduled;

@@ -52,3 +52,9 @@ final authorizedPublishersProvider = FutureProvider<List<AuthorizedPublisher>>((
   final repository = ref.watch(adminRepositoryProvider);
   return repository.listAuthorizedPublishers();
 });
+
+final servicesReportProvider = FutureProvider<String>((ref) async {
+  ref.watch(authStateChangesProvider);
+  final repository = ref.watch(adminRepositoryProvider);
+  return repository.exportAppointmentsReport();
+});

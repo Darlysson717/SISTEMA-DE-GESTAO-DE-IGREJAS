@@ -26,7 +26,6 @@ class _AnnounceEventPageState extends ConsumerState<AnnounceEventPage> {
   final _nameController = TextEditingController();
   final _addressController = TextEditingController();
   final _streamLinkController = TextEditingController();
-  final _shortSummaryController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _maxSeatsController = TextEditingController();
   final _volunteerCountController = TextEditingController();
@@ -88,7 +87,7 @@ class _AnnounceEventPageState extends ConsumerState<AnnounceEventPage> {
 
   bool get _isEditing => widget.initialEvent != null;
 
-  int get _requiredFieldsTotal => 8;
+  int get _requiredFieldsTotal => 7;
 
   int get _requiredFieldsDone {
     var completed = 0;
@@ -96,7 +95,6 @@ class _AnnounceEventPageState extends ConsumerState<AnnounceEventPage> {
     if ((_selectedCategory ?? '').trim().isNotEmpty) completed++;
     if (_startDate != null) completed++;
     if (_endDate != null) completed++;
-    if (_shortSummaryController.text.trim().isNotEmpty) completed++;
     if (_descriptionController.text.trim().isNotEmpty) completed++;
     if (_contactNameController.text.trim().isNotEmpty) completed++;
     if (_contactPhoneController.text.trim().isNotEmpty) completed++;
@@ -140,7 +138,6 @@ class _AnnounceEventPageState extends ConsumerState<AnnounceEventPage> {
     _locationType = _fromTipoLocal(event.tipoLocal);
     _addressController.text = event.endereco ?? '';
     _streamLinkController.text = event.linkTransmissao ?? '';
-    _shortSummaryController.text = event.resumoCurto;
     _descriptionController.text = event.descricao;
     _existingCoverImageUrl = event.imagemCapaUrl;
     _existingGalleryImagesUrls = List<String>.from(event.galeriaImagensUrls);
@@ -177,7 +174,6 @@ class _AnnounceEventPageState extends ConsumerState<AnnounceEventPage> {
     _nameController.dispose();
     _addressController.dispose();
     _streamLinkController.dispose();
-    _shortSummaryController.dispose();
     _descriptionController.dispose();
     _maxSeatsController.dispose();
     _volunteerCountController.dispose();
@@ -193,7 +189,6 @@ class _AnnounceEventPageState extends ConsumerState<AnnounceEventPage> {
   void _attachCompletionListeners() {
     final controllers = [
       _nameController,
-      _shortSummaryController,
       _descriptionController,
       _contactNameController,
       _contactPhoneController,
@@ -480,16 +475,6 @@ class _AnnounceEventPageState extends ConsumerState<AnnounceEventPage> {
       title: 'Descricao',
       child: Column(
         children: [
-          TextFormField(
-            controller: _shortSummaryController,
-            decoration: const InputDecoration(
-              labelText: 'Resumo curto *',
-              hintText: 'Texto que aparece no card do evento',
-            ),
-            maxLength: 120,
-            validator: _requiredValidator,
-          ),
-          const SizedBox(height: 12),
           TextFormField(
             controller: _descriptionController,
             decoration: const InputDecoration(
@@ -1007,7 +992,7 @@ class _AnnounceEventPageState extends ConsumerState<AnnounceEventPage> {
       tipoLocal: _locationType.name,
       endereco: _addressController.text.trim(),
       linkTransmissao: _streamLinkController.text.trim(),
-      resumoCurto: _shortSummaryController.text.trim(),
+      resumoCurto: _buildResumoCurto(),
       descricao: _descriptionController.text.trim(),
       imagemCapaUrl: _existingCoverImageUrl,
       galeriaImagensUrls: _existingGalleryImagesUrls,
@@ -1142,7 +1127,7 @@ class _AnnounceEventPageState extends ConsumerState<AnnounceEventPage> {
       linkTransmissao: _locationType == _EventLocationType.presencial
           ? null
           : _streamLinkController.text.trim(),
-      resumoCurto: _shortSummaryController.text.trim(),
+      resumoCurto: _buildResumoCurto(),
       descricao: _descriptionController.text.trim(),
       eventoPago: _isPaidEvent,
       limiteVagas: _parsePositiveInt(_maxSeatsController.text),
@@ -1179,6 +1164,20 @@ class _AnnounceEventPageState extends ConsumerState<AnnounceEventPage> {
       _publicationTime!.hour,
       _publicationTime!.minute,
     );
+  }
+
+  String _buildResumoCurto() {
+    final description = _descriptionController.text.trim();
+    if (description.isEmpty) {
+      return '';
+    }
+
+    const maxLength = 120;
+    if (description.length <= maxLength) {
+      return description;
+    }
+
+    return '${description.substring(0, maxLength - 1).trimRight()}...';
   }
 
   String _toSqlRepetition(String value) {
