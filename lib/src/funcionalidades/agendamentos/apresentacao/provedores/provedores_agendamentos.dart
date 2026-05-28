@@ -17,16 +17,16 @@ final professionalsProvider = FutureProvider<List<Professional>>((ref) async {
   return repository.listProfessionals();
 });
 
-final publishedServicesProvider = StreamProvider<List<Service>>((ref) {
+final publishedServicesProvider = FutureProvider<List<Service>>((ref) async {
   ref.watch(authStateChangesProvider);
   final repository = ref.watch(schedulingRepositoryProvider);
-  return repository.watchPublishedServices();
+  return repository.listPublishedServices();
 });
 
-final myServicesProvider = StreamProvider<List<Service>>((ref) {
+final myServicesProvider = FutureProvider<List<Service>>((ref) async {
   ref.watch(authStateChangesProvider);
   final repository = ref.watch(schedulingRepositoryProvider);
-  return repository.watchMyServices();
+  return repository.listMyServices();
 });
 
 final communityAppointmentsProvider = StreamProvider<List<Appointment>>((ref) {

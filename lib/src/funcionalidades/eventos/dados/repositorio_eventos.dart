@@ -159,6 +159,33 @@ class EventsRepository {
         });
   }
 
+  Future<List<AppEvent>> listPublishedEvents() async {
+    final rows = await _client
+        .from('eventos')
+        .select()
+        .neq('status', 'cancelado')
+        .order('publicado_em', ascending: false);
+
+    final now = DateTime.now();
+    return (rows as List<dynamic>)
+        .map((row) => AppEvent.fromJson(row as Map<String, dynamic>))
+        .where((event) {
+          if (event.status == 'publicado') {
+            return true;
+          }
+
+          if (event.status == 'agendado') {
+            if (event.publicadoEm == null) {
+              return false;
+            }
+            return !event.publicadoEm!.isAfter(now);
+          }
+
+          return false;
+        })
+        .toList();
+  }
+
   Stream<List<EventRegistrationEntry>> watchEventRegistrations(String eventId) {
     return _client
         .from('event_registrations')
@@ -298,7 +325,6 @@ class EventsRepository {
         'tipo_local': input.tipoLocal,
         'endereco': _nullable(input.endereco),
         'link_transmissao': _nullable(input.linkTransmissao),
-        'resumo_curto': input.resumoCurto,
         'descricao': input.descricao,
         'imagem_capa_url': coverImageUrl,
         'galeria_imagens_urls': galleryUrls,

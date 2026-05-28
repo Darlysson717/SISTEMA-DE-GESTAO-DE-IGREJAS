@@ -165,84 +165,148 @@ class _ServicePatientsPageState extends ConsumerState<ServicePatientsPage> {
                           ),
                         ),
                         const SizedBox(height: 10),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: OutlinedButton.icon(
-                          onPressed: () async {
-                            final confirmed = await showDialog<bool>(
-                              context: context,
-                              builder: (_) => AlertDialog(
-                                title: const Text('Cancelar agendamento'),
-                                content: const Text(
-                                  'Deseja cancelar este agendamento por imprevisto?',
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            OutlinedButton.icon(
+                              onPressed: () async {
+                                try {
+                                  await ref
+                                      .read(schedulingRepositoryProvider)
+                                      .updateAppointmentStatus(
+                                        appointmentId: appointment.id,
+                                        status: AppointmentStatus.completed,
+                                      );
+
+                                  // Hide locally only after server confirms
+                                  setState(() {
+                                    _locallyCancelledIds.add(appointment.id);
+                                  });
+
+                                  ref.invalidate(communityAppointmentsProvider);
+                                  ref.invalidate(
+                                    professionalAppointmentsProvider,
+                                  );
+                                  ref.invalidate(
+                                    professionalTodayAppointmentsProvider,
+                                  );
+                                  ref.invalidate(allAppointmentsProvider);
+
+                                  if (!context.mounted) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Presença confirmada com sucesso.',
+                                      ),
+                                    ),
+                                  );
+                                } catch (error, stack) {
+                                  // debug
+                                  // ignore: avoid_print
+                                  print('Erro ao confirmar presença: $error');
+                                  // ignore: avoid_print
+                                  print(stack);
+                                  if (!context.mounted) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        'Erro ao confirmar presença: ${error.toString()}',
+                                      ),
+                                    ),
+                                  );
+                                }
+                              },
+                              style: OutlinedButton.styleFrom(
+                                side: BorderSide(
+                                  color: Colors.white.withValues(alpha: 0.7),
                                 ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () =>
-                                        Navigator.pop(context, false),
-                                    child: const Text('Não'),
-                                  ),
-                                  TextButton(
-                                    onPressed: () =>
-                                        Navigator.pop(context, true),
-                                    child: const Text('Sim, cancelar'),
-                                  ),
-                                ],
+                                foregroundColor: Colors.white,
                               ),
-                            );
-
-                            if (confirmed != true) {
-                              return;
-                            }
-
-                            setState(() {
-                              _locallyCancelledIds.add(appointment.id);
-                            });
-
-                            try {
-                              await ref
-                                  .read(schedulingRepositoryProvider)
-                                  .cancelAppointment(appointment.id);
-
-                              ref.invalidate(communityAppointmentsProvider);
-                              ref.invalidate(professionalAppointmentsProvider);
-                              ref.invalidate(
-                                professionalTodayAppointmentsProvider,
-                              );
-                              ref.invalidate(allAppointmentsProvider);
-
-                              if (!context.mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Agendamento cancelado com sucesso.',
-                                  ),
-                                ),
-                              );
-                            } catch (error) {
-                              if (!mounted) return;
-                              setState(() {
-                                _locallyCancelledIds.remove(appointment.id);
-                              });
-                              if (!context.mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    'Erro ao cancelar agendamento: $error',
-                                  ),
-                                ),
-                              );
-                            }
-                          },
-                          style: OutlinedButton.styleFrom(
-                            side: BorderSide(
-                              color: Colors.white.withValues(alpha: 0.7),
+                              icon: const Icon(Icons.check_circle_outline, size: 18),
+                              label: const Text('Confirmar presença'),
                             ),
-                            foregroundColor: Colors.white,
-                          ),
-                          icon: const Icon(Icons.cancel_outlined, size: 18),
-                          label: const Text('Cancelar agendamento'),
-                        ),
+                            const SizedBox(height: 8),
+                            OutlinedButton.icon(
+                              onPressed: () async {
+                                final confirmed = await showDialog<bool>(
+                                  context: context,
+                                  builder: (_) => AlertDialog(
+                                    title: const Text('Cancelar agendamento'),
+                                    content: const Text(
+                                      'Deseja cancelar este agendamento por imprevisto?',
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.pop(context, false),
+                                        child: const Text('Não'),
+                                      ),
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.pop(context, true),
+                                        child: const Text('Sim, cancelar'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+
+                                if (confirmed != true) {
+                                  return;
+                                }
+
+                                try {
+                                  await ref
+                                      .read(schedulingRepositoryProvider)
+                                      .cancelAppointment(appointment.id);
+
+                                  // Hide locally only after server confirms
+                                  setState(() {
+                                    _locallyCancelledIds.add(appointment.id);
+                                  });
+
+                                  ref.invalidate(communityAppointmentsProvider);
+                                  ref.invalidate(
+                                    professionalAppointmentsProvider,
+                                  );
+                                  ref.invalidate(
+                                    professionalTodayAppointmentsProvider,
+                                  );
+                                  ref.invalidate(allAppointmentsProvider);
+
+                                  if (!context.mounted) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Agendamento cancelado com sucesso.',
+                                      ),
+                                    ),
+                                  );
+                                } catch (error, stack) {
+                                  // debug
+                                  // ignore: avoid_print
+                                  print('Erro ao cancelar agendamento: $error');
+                                  // ignore: avoid_print
+                                  print(stack);
+                                  if (!context.mounted) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        'Erro ao cancelar agendamento: ${error.toString()}',
+                                      ),
+                                    ),
+                                  );
+                                }
+                              },
+                              style: OutlinedButton.styleFrom(
+                                side: BorderSide(
+                                  color: Colors.white.withValues(alpha: 0.7),
+                                ),
+                                foregroundColor: Colors.white,
+                              ),
+                              icon: const Icon(Icons.cancel_outlined, size: 18),
+                              label: const Text('Cancelar agendamento'),
+                            ),
+                          ],
                         ),
                       ],
                     ),

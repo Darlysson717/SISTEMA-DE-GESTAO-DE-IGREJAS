@@ -341,29 +341,6 @@ class ProfilePage extends ConsumerWidget {
                         ),
                         textAlign: TextAlign.center,
                       ),
-                      SizedBox(height: isSmallScreen ? 20 : 24),
-                      OutlinedButton.icon(
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Editar perfil em breve.'),
-                            ),
-                          );
-                        },
-                        icon: const Icon(Icons.edit_outlined),
-                        label: const Text('Editar perfil'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFF7C3AED),
-                          side: const BorderSide(color: Color(0xFF7C3AED)),
-                          padding: EdgeInsets.symmetric(
-                            horizontal: isSmallScreen ? 20 : 24,
-                            vertical: isSmallScreen ? 12 : 16,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      ),
                     ],
                   ),
                 ),
@@ -416,6 +393,20 @@ class ProfilePage extends ConsumerWidget {
                       itemBuilder: (context, index) => actions[index],
                     );
                   },
+                ),
+
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Center(
+                    child: Text(
+                      'Developed by Darlison de Sousa / DS TECH',
+                      style: TextStyle(
+                        color: const Color(0xFF64748B).withValues(alpha: 0.85),
+                        fontSize: isSmallScreen ? 12 : 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
                 ),
 
                 // Espaço final

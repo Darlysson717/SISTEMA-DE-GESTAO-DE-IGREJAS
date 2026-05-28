@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:excel/excel.dart';
 
 const String superAdminEmail = 'darlison.pires.corporativo@gmail.com';
 
@@ -522,5 +523,319 @@ class AdminRepository {
           DateTime.now(),
       requesterEmail: requesterProfile?['email'] as String?,
     );
+  }
+
+  Future<String> exportAppointmentsReport() async {
+    final now = DateTime.now();
+    final start = (now.month == 1)
+        ? DateTime(now.year - 1, 12, 1)
+        : DateTime(now.year, now.month - 1, 1);
+    final end = now;
+
+    final rows = await _client
+        .from('appointments')
+        .select('id, created_at, user_id, service_id, scheduled_time, scheduled_date, status')
+        .gte('created_at', start.toIso8601String())
+        .lte('created_at', end.toIso8601String())
+        .order('created_at', ascending: true);
+
+    final rowsList = (rows as List<dynamic>).cast<Map<String, dynamic>>();
+    final serviceIds = <String>{};
+    final profileIds = <String>{};
+
+    for (final r in rowsList) {
+      final sid = r['service_id'] as String?;
+      final uid = r['user_id'] as String?;
+      if (sid != null && sid.isNotEmpty) serviceIds.add(sid);
+      if (uid != null && uid.isNotEmpty) profileIds.add(uid);
+    }
+
+    // Fetch services
+    Map<String, Map<String, dynamic>> servicesById = {};
+    if (serviceIds.isNotEmpty) {
+      final svcRows = await _client
+          .from('servicos')
+          .select('id, categoria, nome_profissional, user_id')
+          .inFilter('id', serviceIds.toList());
+      for (final s in (svcRows as List<dynamic>)) {
+        final m = s as Map<String, dynamic>;
+        servicesById[m['id'] as String] = m;
+        final owner = m['user_id'] as String?;
+        if (owner != null && owner.isNotEmpty) profileIds.add(owner);
+      }
+    }
+
+    // Fetch profiles for community users and professionals
+    final profilesById = <String, String>{};
+    if (profileIds.isNotEmpty) {
+      final profRows = await _client
+          .from('profiles')
+          .select('id, full_name, email')
+          .inFilter('id', profileIds.toList());
+      for (final p in (profRows as List<dynamic>)) {
+        final m = p as Map<String, dynamic>;
+        final id = m['id'] as String;
+        final name = (m['full_name'] as String?) ?? (m['email'] as String?) ?? '';
+        profilesById[id] = name;
+      }
+    }
+
+    final buffer = StringBuffer();
+    buffer.writeln('DATA DA SOLICITAÇÃO;NOME;SOLICITAÇÃO;PROFISSIONAL;HORÁRIO AGENDADO;DIA AGENDADO;DIA DA SEMANA;STATUS');
+
+    for (final map in rowsList) {
+      final createdRaw = (map['created_at'] as String?) ?? '';
+      final created = _formatDateOnly(createdRaw);
+      final uid = (map['user_id'] as String?) ?? '';
+      final sid = (map['service_id'] as String?) ?? '';
+      final scheduledTime = (map['scheduled_time'] as String?) ?? '';
+      final scheduledDate = (map['scheduled_date'] as String?) ?? '';
+      final statusRaw = (map['status'] as String?) ?? '';
+
+      final communityName = profilesById[uid] ?? 'Sem nome';
+      final service = servicesById[sid];
+      final solicitation = service == null
+          ? 'Serviço'
+          : (service['categoria'] as String?) ?? 'Serviço';
+      final professional = service == null
+          ? ''
+          : (service['nome_profissional'] as String?) ?? profilesById[service['user_id'] as String] ?? '';
+
+      final dayOfWeek = _weekdayLabelFromDateString(scheduledDate);
+      final status = statusRaw.toLowerCase().contains('cancel')
+          ? 'cancelado'
+          : (statusRaw.toLowerCase().contains('conclu') || statusRaw.toLowerCase().contains('complete'))
+              ? 'concluido'
+              : statusRaw;
+
+      buffer.writeln(
+        '${_escapeCsvField(created)};${_escapeCsvField(communityName)};${_escapeCsvField(solicitation)};${_escapeCsvField(professional)};${_escapeCsvField(scheduledTime)};${_escapeCsvField(scheduledDate)};${_escapeCsvField(dayOfWeek)};${_escapeCsvField(status)}',
+      );
+    }
+
+    return buffer.toString();
+  }
+
+  String _weekdayLabelFromDateString(String date) {
+    try {
+      if (date.isEmpty) return '';
+      final parts = date.split('-');
+      if (parts.length < 3) return '';
+      final y = int.tryParse(parts[0]) ?? 1970;
+      final m = int.tryParse(parts[1]) ?? 1;
+      final d = int.tryParse(parts[2]) ?? 1;
+      final dt = DateTime(y, m, d);
+      switch (dt.weekday) {
+        case DateTime.monday:
+          return 'Segunda';
+        case DateTime.tuesday:
+          return 'Terça';
+        case DateTime.wednesday:
+          return 'Quarta';
+        case DateTime.thursday:
+          return 'Quinta';
+        case DateTime.friday:
+          return 'Sexta';
+        case DateTime.saturday:
+          return 'Sábado';
+        case DateTime.sunday:
+          return 'Domingo';
+      }
+    } catch (_) {}
+    return '';
+  }
+
+  String _formatDateOnly(String datetime) {
+    if (datetime.isEmpty) return '';
+    if (datetime.contains('T')) return datetime.split('T').first;
+    if (datetime.contains(' ')) return datetime.split(' ').first;
+    return datetime;
+  }
+
+  String _escapeCsvField(String field) {
+    if (field.contains(';') || field.contains('"') || field.contains('\n')) {
+      return '"${field.replaceAll('"', '""')}"';
+    }
+    return field;
+  }
+
+  Future<List<int>> exportEventsSummaryXlsx() async {
+    final now = DateTime.now();
+    final start = (now.month == 1)
+        ? DateTime(now.year - 1, 12, 1)
+        : DateTime(now.year, now.month - 1, 1);
+    final end = now;
+
+    // Load events created in the window
+    final eventRows = await _client
+      .from('eventos')
+      .select('id, nome, status, categoria, evento_pago, permitir_voluntarios, requer_inscricao, limite_vagas, data_inicio, data_fim, created_at')
+        .gte('created_at', start.toIso8601String())
+        .lte('created_at', end.toIso8601String())
+        .order('created_at', ascending: true);
+
+    final events = (eventRows as List<dynamic>)
+        .map((r) => r as Map<String, dynamic>)
+        .toList();
+
+    final eventIds = events.map((e) => e['id'] as String).where((id) => id.isNotEmpty).toList();
+
+    // Load registration stats
+    final registrationStatsByEvent = <String, Map<String, int>>{};
+    if (eventIds.isNotEmpty) {
+      final regs = await _client
+          .from('event_registrations')
+          .select('event_id, interesse')
+          .inFilter('event_id', eventIds);
+
+      for (final r in (regs as List<dynamic>)) {
+        final map = r as Map<String, dynamic>;
+        final eid = (map['event_id'] as String?)?.trim() ?? '';
+        if (eid.isEmpty) continue;
+        final interest = (map['interesse'] as String?)?.trim().toLowerCase() ?? '';
+        final stats = registrationStatsByEvent.putIfAbsent(eid, () => {'total': 0, 'participants': 0, 'volunteers': 0});
+        stats['total'] = (stats['total'] ?? 0) + 1;
+        if (interest == 'voluntario' || interest == 'volunteer') {
+          stats['volunteers'] = (stats['volunteers'] ?? 0) + 1;
+        } else {
+          stats['participants'] = (stats['participants'] ?? 0) + 1;
+        }
+      }
+    }
+
+    // Aggregate metrics
+    final statusCounts = <String, int>{};
+    final categoryCounts = <String, int>{};
+    var eventsWithRegistrations = 0;
+    var eventsWithVolunteers = 0;
+    var paidEvents = 0;
+    var totalRegistrations = 0;
+    var totalParticipants = 0;
+    var totalVolunteers = 0;
+
+    for (final e in events) {
+      final status = (e['status'] as String?) ?? 'Sem status';
+      statusCounts[status] = (statusCounts[status] ?? 0) + 1;
+
+      final category = ((e['categoria'] as String?) ?? '').trim();
+      final catKey = category.isEmpty ? 'Sem categoria' : category;
+      categoryCounts[catKey] = (categoryCounts[catKey] ?? 0) + 1;
+
+      final isPaid = (e['evento_pago'] as bool?) ?? false;
+      if (isPaid) paidEvents += 1;
+
+      final allowsVolunteers = (e['permitir_voluntarios'] as bool?) ?? false;
+      if (allowsVolunteers) eventsWithVolunteers += 1;
+
+      final stats = registrationStatsByEvent[e['id'] as String];
+      if (stats != null && (stats['total'] ?? 0) > 0) {
+        eventsWithRegistrations += 1;
+        totalRegistrations += (stats['total'] ?? 0);
+        totalParticipants += (stats['participants'] ?? 0);
+        totalVolunteers += (stats['volunteers'] ?? 0);
+      }
+    }
+
+    final excel = Excel.createExcel();
+    final defaultName = excel.getDefaultSheet();
+    if (defaultName != null && defaultName != 'Resumo') {
+      excel.rename(defaultName, 'Resumo');
+    }
+
+    final sheet = excel['Resumo'];
+
+    sheet.appendRow([TextCellValue('Relatório de Eventos')]);
+    sheet.appendRow(const [null]);
+    sheet.appendRow([TextCellValue('Indicador'), TextCellValue('Valor')]);
+
+    final metricRows = <List<CellValue?>>[
+      [TextCellValue('Total de eventos'), IntCellValue(events.length)],
+      [TextCellValue('Eventos com inscrição'), IntCellValue(eventsWithRegistrations)],
+      [TextCellValue('Eventos pagos'), IntCellValue(paidEvents)],
+      [TextCellValue('Eventos com voluntarios'), IntCellValue(eventsWithVolunteers)],
+      [TextCellValue('Total de inscricoes'), IntCellValue(totalRegistrations)],
+      [TextCellValue('Total de participantes'), IntCellValue(totalParticipants)],
+      [TextCellValue('Total de voluntarios'), IntCellValue(totalVolunteers)],
+    ];
+
+    for (final row in metricRows) {
+      sheet.appendRow(row);
+    }
+
+    sheet.appendRow(const [null]);
+    sheet.appendRow([TextCellValue('Eventos por status'), null]);
+    sheet.appendRow([TextCellValue('Status'), TextCellValue('Quantidade')]);
+    for (final entry in statusCounts.entries) {
+      sheet.appendRow([TextCellValue(entry.key), IntCellValue(entry.value)]);
+    }
+
+    sheet.appendRow(const [null]);
+    sheet.appendRow([TextCellValue('Eventos por categoria'), null]);
+    sheet.appendRow([TextCellValue('Categoria'), TextCellValue('Quantidade')]);
+    final categories = categoryCounts.keys.toList()..sort();
+    for (final c in categories) {
+      sheet.appendRow([TextCellValue(c), IntCellValue(categoryCounts[c] ?? 0)]);
+    }
+
+    // --- Aba detalhada 'Eventos' ---
+    final eventsSheet = excel['Eventos'];
+    eventsSheet.appendRow([
+      TextCellValue('ID'),
+      TextCellValue('Nome'),
+      TextCellValue('Categoria'),
+      TextCellValue('Pago'),
+      TextCellValue('Permite Voluntários'),
+      TextCellValue('Requer Inscrição'),
+      TextCellValue('Limite Vagas'),
+      TextCellValue('Data Início'),
+      TextCellValue('Data Fim'),
+      TextCellValue('Criado Em'),
+      TextCellValue('Status'),
+      TextCellValue('Inscrições Totais'),
+      TextCellValue('Participantes'),
+      TextCellValue('Voluntários'),
+    ]);
+
+    for (final e in events) {
+      final id = (e['id'] as String?) ?? '';
+      final name = (e['nome'] as String?) ?? '';
+      final category = (e['categoria'] as String?) ?? '';
+      final paid = ((e['evento_pago'] as bool?) ?? false) ? 'Sim' : 'Não';
+      final allowsVol = ((e['permitir_voluntarios'] as bool?) ?? false) ? 'Sim' : 'Não';
+      final requiresReg = ((e['requer_inscricao'] as bool?) ?? false) ? 'Sim' : 'Não';
+      final limit = (e['limite_vagas'] is int) ? IntCellValue(e['limite_vagas'] as int) : null;
+      final dataInicio = (e['data_inicio'] as String?) ?? '';
+      final dataFim = (e['data_fim'] as String?) ?? '';
+      final createdAt = (e['created_at'] as String?) ?? '';
+      final status = (e['status'] as String?) ?? '';
+
+      final stats = registrationStatsByEvent[id] ?? {'total': 0, 'participants': 0, 'volunteers': 0};
+      final total = (stats['total'] ?? 0);
+      final participants = (stats['participants'] ?? 0);
+      final volunteers = (stats['volunteers'] ?? 0);
+
+      final row = <CellValue?>[
+        TextCellValue(id),
+        TextCellValue(name),
+        TextCellValue(category),
+        TextCellValue(paid),
+        TextCellValue(allowsVol),
+        TextCellValue(requiresReg),
+        limit,
+        TextCellValue(dataInicio),
+        TextCellValue(dataFim),
+        TextCellValue(createdAt),
+        TextCellValue(status),
+        IntCellValue(total),
+        IntCellValue(participants),
+        IntCellValue(volunteers),
+      ];
+
+      eventsSheet.appendRow(row);
+    }
+
+    final bytes = excel.encode();
+    if (bytes == null) throw Exception('Não foi possível gerar XLSX.');
+    return bytes;
   }
 }
