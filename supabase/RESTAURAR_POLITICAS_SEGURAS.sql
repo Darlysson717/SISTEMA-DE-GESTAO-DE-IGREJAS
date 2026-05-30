@@ -19,5 +19,7 @@ ON storage.objects
 FOR SELECT
 USING (bucket_id = 'servicos_images');
 
+-- Bucket público não precisa de policy SELECT em storage.objects.
+
 -- VERIFICAÇÃO
 SELECT 'Políticas de segurança restauradas com sucesso!' as status;

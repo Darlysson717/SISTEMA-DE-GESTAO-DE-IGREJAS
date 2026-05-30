@@ -152,6 +152,7 @@ on conflict (id) do nothing;
 -- Políticas para o bucket
 drop policy if exists "Users can upload their own service images" on storage.objects;
 drop policy if exists "Anyone can view service images" on storage.objects;
+drop policy if exists "Users can delete their own service images" on storage.objects;
 
 create policy "Users can upload their own service images"
 on storage.objects
@@ -165,6 +166,19 @@ create policy "Anyone can view service images"
 on storage.objects
 for select
 using (bucket_id = 'servicos_images');
+
+create policy "Users can delete their own service images"
+on storage.objects
+for delete
+using (
+  bucket_id = 'servicos_images'
+  and auth.uid()::text = (storage.foldername(name))[1]
+);
+
+-- Appointment uniqueness: one active slot per service/date/time.
+create unique index if not exists appointments_unique_active_slot
+on public.appointments(service_id, scheduled_date, scheduled_time)
+where status = 'agendado';
 
 -- Mensagem de sucesso
 select 'Setup simplificado realizado com sucesso! Qualquer usuário pode criar serviços.' as status;

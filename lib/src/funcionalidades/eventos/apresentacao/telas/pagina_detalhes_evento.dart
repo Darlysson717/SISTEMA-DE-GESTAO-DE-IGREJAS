@@ -26,7 +26,7 @@ class _EventDetailsPageState extends ConsumerState<EventDetailsPage> {
     final bottomPadding = MediaQuery.of(context).padding.bottom;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Detalhes do evento')),
+      appBar: AppBar(title: const Text('Detalhes do Evento')),
       body: SingleChildScrollView(
         padding: EdgeInsets.only(bottom: bottomPadding + 24),
         child: Column(

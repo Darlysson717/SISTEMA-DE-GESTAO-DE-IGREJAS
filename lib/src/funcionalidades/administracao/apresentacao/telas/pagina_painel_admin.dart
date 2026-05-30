@@ -32,17 +32,32 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage> {
     final isAdminAsync = ref.watch(isCurrentUserAdminProvider);
     final isSuperAdmin = ref.watch(isCurrentUserSuperAdminProvider);
     final adminsAsync = ref.watch(adminUsersProvider);
+    final authenticatedUsersCountAsync = ref.watch(
+      authenticatedUsersCountProvider,
+    );
     final pendingRequestsAsync = ref.watch(pendingPublishRequestsProvider);
     final authorizedPublishersAsync = ref.watch(authorizedPublishersProvider);
     final bottomPadding = MediaQuery.of(context).padding.bottom;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('ADMINISTRADOR'),
+        title: const Text('Administrador'),
         centerTitle: false,
         elevation: 0,
         backgroundColor: const Color(0xFF0F172A),
         foregroundColor: Colors.white,
+        titleTextStyle: const TextStyle(
+          color: Colors.white,
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.15,
+        ),
+        toolbarTextStyle: const TextStyle(
+          color: Colors.white,
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+          letterSpacing: 0.1,
+        ),
       ),
       body: isAdminAsync.when(
         data: (isAdmin) {
@@ -86,6 +101,7 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage> {
               onRefresh: () async {
                 ref.invalidate(isCurrentUserAdminProvider);
                 ref.invalidate(adminUsersProvider);
+                ref.invalidate(authenticatedUsersCountProvider);
                 ref.invalidate(pendingPublishRequestsProvider);
                 ref.invalidate(authorizedPublishersProvider);
                 await Future<void>.delayed(const Duration(milliseconds: 200));
@@ -154,6 +170,16 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage> {
                         ),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 12),
+                  _AdminStatCard(
+                    label: 'Usuários autenticados',
+                    value: authenticatedUsersCountAsync.maybeWhen(
+                      data: (count) => count.toString(),
+                      orElse: () => '...',
+                    ),
+                    icon: Icons.people_alt_outlined,
+                    accentColor: const Color(0xFF059669),
                   ),
                   const SizedBox(height: 16),
                   _SectionSurface(

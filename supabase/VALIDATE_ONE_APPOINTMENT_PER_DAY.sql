@@ -13,7 +13,7 @@ begin
   where user_id = new.user_id
     and service_id = new.service_id
     and scheduled_date = new.scheduled_date
-    and status != 'cancelled'
+    and status != 'cancelado'
     and id != coalesce(new.id, ''::uuid);
 
   if same_service_count > 0 then
@@ -27,7 +27,7 @@ begin
   where user_id = new.user_id
     and scheduled_date = new.scheduled_date
     and scheduled_time = new.scheduled_time
-    and status != 'cancelled'
+    and status != 'cancelado'
     and id != coalesce(new.id, ''::uuid);
 
   if conflict_count > 0 then
@@ -45,5 +45,5 @@ create trigger trg_validate_appointment_rules
 before insert or update of scheduled_date, scheduled_time, user_id, service_id, status
 on public.appointments
 for each row
-when (new.status != 'cancelled')
+when (new.status != 'cancelado')
 execute function public.validate_appointment_rules();

@@ -956,264 +956,229 @@ class _ServiceCard extends StatelessWidget {
     final screenSize = MediaQuery.of(context).size;
     final isSmallScreen = screenSize.width < 600;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => onShowDetails(context, service),
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Padding(
-        padding: EdgeInsets.all(isSmallScreen ? 20 : 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header com avatar e informações principais
-            Row(
-              children: [
-                // Avatar do profissional
-                Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: const Color(0xFF059669).withValues(alpha: 0.2),
-                      width: 2,
+          padding: EdgeInsets.all(isSmallScreen ? 20 : 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: const Color(0xFF059669).withValues(alpha: 0.2),
+                        width: 2,
+                      ),
                     ),
+                    child: service.imagemProfissional != null
+                        ? CircleAvatar(
+                            backgroundImage: NetworkImage(
+                              service.imagemProfissional!,
+                            ),
+                            radius: isSmallScreen ? 24 : 28,
+                          )
+                        : CircleAvatar(
+                            radius: isSmallScreen ? 24 : 28,
+                            backgroundColor: const Color(
+                              0xFF059669,
+                            ).withValues(alpha: 0.1),
+                            child: Icon(
+                              Icons.person,
+                              color: const Color(0xFF059669),
+                              size: isSmallScreen ? 24 : 28,
+                            ),
+                          ),
                   ),
-                  child: service.imagemProfissional != null
-                      ? CircleAvatar(
-                          backgroundImage: NetworkImage(
-                            service.imagemProfissional!,
-                          ),
-                          radius: isSmallScreen ? 24 : 28,
-                        )
-                      : CircleAvatar(
-                          radius: isSmallScreen ? 24 : 28,
-                          backgroundColor: const Color(
-                            0xFF059669,
-                          ).withValues(alpha: 0.1),
-                          child: Icon(
-                            Icons.person,
-                            color: const Color(0xFF059669),
-                            size: isSmallScreen ? 24 : 28,
-                          ),
-                        ),
-                ),
-                SizedBox(width: isSmallScreen ? 16 : 20),
-
-                // Informações do serviço
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        service.nome,
-                        style: TextStyle(
-                          fontSize: isSmallScreen ? 18 : 20,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF1E293B),
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      SizedBox(height: isSmallScreen ? 4 : 6),
-                      Text(
-                        service.nomeProfissional,
-                        style: TextStyle(
-                          fontSize: isSmallScreen ? 14 : 16,
-                          color: const Color(0xFF64748B),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      SizedBox(height: isSmallScreen ? 2 : 4),
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: isSmallScreen ? 8 : 10,
-                          vertical: isSmallScreen ? 4 : 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF059669).withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          service.categoria,
+                  SizedBox(width: isSmallScreen ? 16 : 20),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          service.nome,
                           style: TextStyle(
-                            fontSize: isSmallScreen ? 12 : 14,
-                            color: const Color(0xFF059669),
+                            fontSize: isSmallScreen ? 18 : 20,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF1E293B),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        SizedBox(height: isSmallScreen ? 4 : 6),
+                        Text(
+                          service.nomeProfissional,
+                          style: TextStyle(
+                            fontSize: isSmallScreen ? 14 : 16,
+                            color: const Color(0xFF64748B),
                             fontWeight: FontWeight.w500,
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Botão de agendar
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF059669), Color(0xFF0D9488)],
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: ElevatedButton(
-                    onPressed: () => onShowDetails(context, service),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.transparent,
-                      shadowColor: Colors.transparent,
-                      padding: EdgeInsets.symmetric(
-                        horizontal: isSmallScreen ? 16 : 20,
-                        vertical: isSmallScreen ? 10 : 12,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                    child: Text(
-                      'Agendar',
-                      style: TextStyle(
-                        fontSize: isSmallScreen ? 14 : 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            // Descrição do serviço
-            if (service.descricao.isNotEmpty) ...[
-              SizedBox(height: isSmallScreen ? 16 : 20),
-              Text(
-                service.descricao,
-                style: TextStyle(
-                  fontSize: isSmallScreen ? 14 : 16,
-                  color: const Color(0xFF64748B),
-                  height: 1.5,
-                ),
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-
-            // Detalhes do atendimento
-            SizedBox(height: isSmallScreen ? 16 : 20),
-            Container(
-              padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF8FAFC),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
-              ),
-              child: Row(
-                children: [
-                  // Duração
-                  Expanded(
-                    child: Row(
-                      children: [
+                        SizedBox(height: isSmallScreen ? 2 : 4),
                         Container(
-                          padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: isSmallScreen ? 8 : 10,
+                            vertical: isSmallScreen ? 4 : 6,
+                          ),
                           decoration: BoxDecoration(
                             color: const Color(
-                              0xFFF59E0B,
+                              0xFF059669,
                             ).withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: Icon(
-                            Icons.access_time,
-                            color: const Color(0xFFF59E0B),
-                            size: isSmallScreen ? 16 : 18,
+                          child: Text(
+                            service.categoria,
+                            style: TextStyle(
+                              fontSize: isSmallScreen ? 12 : 14,
+                              color: const Color(0xFF059669),
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
-                        ),
-                        SizedBox(width: isSmallScreen ? 12 : 16),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Duração',
-                              style: TextStyle(
-                                fontSize: isSmallScreen ? 12 : 14,
-                                color: const Color(0xFF64748B),
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            Text(
-                              '${service.duracaoAtendimento ?? 60} min',
-                              style: TextStyle(
-                                fontSize: isSmallScreen ? 14 : 16,
-                                color: const Color(0xFF1E293B),
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  SizedBox(width: isSmallScreen ? 16 : 20),
-
-                  // Tipo de atendimento
-                  Expanded(
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
-                          decoration: BoxDecoration(
-                            color: service.tipoAtendimento == 'presencial'
-                                ? const Color(0xFF059669).withValues(alpha: 0.1)
-                                : const Color(
-                                    0xFF6366F1,
-                                  ).withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Icon(
-                            service.tipoAtendimento == 'presencial'
-                                ? Icons.location_on
-                                : Icons.videocam,
-                            color: service.tipoAtendimento == 'presencial'
-                                ? const Color(0xFF059669)
-                                : const Color(0xFF6366F1),
-                            size: isSmallScreen ? 16 : 18,
-                          ),
-                        ),
-                        SizedBox(width: isSmallScreen ? 12 : 16),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Atendimento',
-                              style: TextStyle(
-                                fontSize: isSmallScreen ? 12 : 14,
-                                color: const Color(0xFF64748B),
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            Text(
-                              service.tipoAtendimento == 'presencial'
-                                  ? 'Presencial'
-                                  : 'Online',
-                              style: TextStyle(
-                                fontSize: isSmallScreen ? 14 : 16,
-                                color: const Color(0xFF1E293B),
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
                         ),
                       ],
                     ),
                   ),
                 ],
               ),
-            ),
-          ],
+              if (service.descricao.isNotEmpty) ...[
+                SizedBox(height: isSmallScreen ? 16 : 20),
+                Text(
+                  service.descricao,
+                  style: TextStyle(
+                    fontSize: isSmallScreen ? 14 : 16,
+                    color: const Color(0xFF64748B),
+                    height: 1.5,
+                  ),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+              SizedBox(height: isSmallScreen ? 16 : 20),
+              Container(
+                padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
+                            decoration: BoxDecoration(
+                              color: const Color(
+                                0xFFF59E0B,
+                              ).withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(
+                              Icons.access_time,
+                              color: const Color(0xFFF59E0B),
+                              size: isSmallScreen ? 16 : 18,
+                            ),
+                          ),
+                          SizedBox(width: isSmallScreen ? 12 : 16),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Duração',
+                                style: TextStyle(
+                                  fontSize: isSmallScreen ? 12 : 14,
+                                  color: const Color(0xFF64748B),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              Text(
+                                '${service.duracaoAtendimento ?? 60} min',
+                                style: TextStyle(
+                                  fontSize: isSmallScreen ? 14 : 16,
+                                  color: const Color(0xFF1E293B),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(width: isSmallScreen ? 16 : 20),
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
+                            decoration: BoxDecoration(
+                              color: service.tipoAtendimento == 'presencial'
+                                  ? const Color(
+                                      0xFF059669,
+                                    ).withValues(alpha: 0.1)
+                                  : const Color(
+                                      0xFF6366F1,
+                                    ).withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(
+                              service.tipoAtendimento == 'presencial'
+                                  ? Icons.location_on
+                                  : Icons.videocam,
+                              color: service.tipoAtendimento == 'presencial'
+                                  ? const Color(0xFF059669)
+                                  : const Color(0xFF6366F1),
+                              size: isSmallScreen ? 16 : 18,
+                            ),
+                          ),
+                          SizedBox(width: isSmallScreen ? 12 : 16),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Atendimento',
+                                style: TextStyle(
+                                  fontSize: isSmallScreen ? 12 : 14,
+                                  color: const Color(0xFF64748B),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              Text(
+                                service.tipoAtendimento == 'presencial'
+                                    ? 'Presencial'
+                                    : 'Online',
+                                style: TextStyle(
+                                  fontSize: isSmallScreen ? 14 : 16,
+                                  color: const Color(0xFF1E293B),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

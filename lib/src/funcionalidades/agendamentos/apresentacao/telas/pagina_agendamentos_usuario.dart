@@ -30,6 +30,18 @@ class _UserAppointmentsPageState extends ConsumerState<UserAppointmentsPage> {
         title: const Text('Meus Agendamentos'),
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
+        titleTextStyle: const TextStyle(
+          color: Colors.white,
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.15,
+        ),
+        toolbarTextStyle: const TextStyle(
+          color: Colors.white,
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+          letterSpacing: 0.1,
+        ),
       ),
       body: appointmentsAsync.when(
         data: (appointments) {
@@ -163,6 +175,17 @@ class _UserAppointmentsPageState extends ConsumerState<UserAppointmentsPage> {
     List<CancellationNotice> notices = const [],
   }) {
     if (appointments.isEmpty && notices.isEmpty) {
+      if (isScheduled) {
+        return ListView(
+          padding: EdgeInsets.fromLTRB(16, 16, 16, bottomPadding + 24),
+          children: [
+            _buildScheduledReminderCard(),
+            const SizedBox(height: 16),
+            _buildEmptyScheduledState(),
+          ],
+        );
+      }
+
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -209,14 +232,20 @@ class _UserAppointmentsPageState extends ConsumerState<UserAppointmentsPage> {
 
     return ListView.builder(
       padding: EdgeInsets.fromLTRB(16, 16, 16, bottomPadding + 24),
-      itemCount: appointments.length + (isScheduled ? 0 : notices.length),
+      itemCount: appointments.length + (isScheduled ? 1 : notices.length),
       itemBuilder: (context, index) {
+        if (isScheduled && index == 0) {
+          return _buildScheduledReminderCard();
+        }
+
         if (!isScheduled && index < notices.length) {
           final notice = notices[index];
           return _buildCancellationNoticeCard(notice);
         }
 
-        final appointmentIndex = isScheduled ? index : index - notices.length;
+        final appointmentIndex = isScheduled
+            ? index - 1
+            : index - notices.length;
         final appointment = appointments[appointmentIndex];
         final canCancel =
             isScheduled &&
@@ -534,6 +563,104 @@ class _UserAppointmentsPageState extends ConsumerState<UserAppointmentsPage> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildScheduledReminderCard() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFFFFF7ED), Color(0xFFFFEDD5)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Color(0xFFF59E0B), width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: Color(0xFFF59E0B).withValues(alpha: 0.12),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF59E0B).withValues(alpha: 0.16),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.info_outline, color: Color(0xFFB45309)),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                Text(
+                  'Confira antes de sair de casa',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF92400E),
+                  ),
+                ),
+                SizedBox(height: 6),
+                Text(
+                  'Antes de se deslocar, confirme se o agendamento continua ativo. Se o profissional cancelar, você evita a viagem perdida.',
+                  style: TextStyle(
+                    fontSize: 14,
+                    height: 1.35,
+                    color: Color(0xFF9A3412),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyScheduledState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.calendar_today_outlined,
+              size: 64,
+              color: Colors.grey[500],
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'Nenhum agendamento futuro',
+            style: TextStyle(
+              fontSize: 20,
+              color: Colors.grey[700],
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Explore nossos serviços e agende seu primeiro atendimento',
+            style: TextStyle(fontSize: 16, color: Colors.grey[500]),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
     );
   }
 

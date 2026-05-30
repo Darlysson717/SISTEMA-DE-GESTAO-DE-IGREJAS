@@ -175,7 +175,12 @@ class _OfferServiceFormState extends ConsumerState<OfferServiceForm> {
         return;
       }
 
-      final XFile? image = await _picker.pickImage(source: source);
+      final XFile? image = await _picker.pickImage(
+        source: source,
+        imageQuality: 75,
+        maxWidth: 1600,
+        maxHeight: 1600,
+      );
       if (image != null) {
         setState(() {
           _selectedImage = File(image.path);
@@ -390,14 +395,6 @@ class _OfferServiceFormState extends ConsumerState<OfferServiceForm> {
         'DEBUG: Current session: ${Supabase.instance.client.auth.currentSession}',
       );
 
-      final finalProfileCheck = await Supabase.instance.client
-          .from('profiles')
-          .select('id')
-          .eq('id', userId)
-          .single();
-
-      print('DEBUG: Verificação final passou: ${finalProfileCheck['id']}');
-
       final payload = {
         'user_id': userId,
         'nome': _nomeController.text.trim(),
@@ -443,8 +440,7 @@ class _OfferServiceFormState extends ConsumerState<OfferServiceForm> {
 
         if (_selectedImage != null &&
             previousImageUrl != null &&
-            imageUrl != null &&
-            previousImageUrl != imageUrl) {
+            previousImageUrl.trim().isNotEmpty) {
           try {
             await _deleteStorageImageByUrl(previousImageUrl);
           } catch (deleteOldImageError) {

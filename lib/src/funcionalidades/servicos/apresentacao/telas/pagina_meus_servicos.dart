@@ -16,7 +16,7 @@ class MyServicesPage extends ConsumerWidget {
     final isSmallScreen = screenSize.width < 600;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Meus Servicos')),
+      appBar: AppBar(title: const Text('Meus Serviços')),
       body: servicesAsync.when(
         data: (services) =>
             _buildContent(context, ref, services, isSmallScreen, bottomPadding),

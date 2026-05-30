@@ -15,6 +15,6 @@ drop index if exists public.appointments_unique_active_slot;
 
 create unique index if not exists appointments_unique_active_slot
 on public.appointments(service_id, scheduled_date, scheduled_time)
-where status in ('scheduled', 'confirmed');
+where status in ('agendado');
 
 select 'Unicidade de slot de agendamento corrigida com sucesso.' as status;

@@ -44,7 +44,10 @@ class _AdaptiveEventImageState extends State<AdaptiveEventImage> {
   Widget build(BuildContext context) {
     final imageUrl = widget.imageUrl?.trim();
     if (imageUrl == null || imageUrl.isEmpty) {
-      return _buildFallback();
+      return AspectRatio(
+        aspectRatio: widget.defaultAspectRatio.clamp(0.6, 2.2).toDouble(),
+        child: _buildFallback(),
+      );
     }
 
     final rawAspectRatio = _aspectRatio ?? widget.defaultAspectRatio;

@@ -29,6 +29,17 @@ final adminUsersProvider = FutureProvider<List<AdminUser>>((ref) async {
   return repository.listAdmins();
 });
 
+final authenticatedUsersCountProvider = FutureProvider<int>((ref) async {
+  ref.watch(authStateChangesProvider);
+  final repository = ref.watch(adminRepositoryProvider);
+  final isAdmin = await repository.isCurrentUserAdmin();
+  if (!isAdmin) {
+    return 0;
+  }
+
+  return repository.countAuthenticatedUsers();
+});
+
 final publishAccessStateProvider = FutureProvider<PublishAccessState>((
   ref,
 ) async {

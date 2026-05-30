@@ -126,6 +126,7 @@ on conflict (id) do nothing;
 drop policy if exists "Users can upload their own service images" on storage.objects;
 drop policy if exists "Anyone can view service images" on storage.objects;
 drop policy if exists "Users can delete their own service images" on storage.objects;
+drop policy if exists "Users can delete their own service images" on storage.objects;
 
 create policy "Users can upload their own service images"
 on storage.objects
@@ -139,6 +140,14 @@ create policy "Anyone can view service images"
 on storage.objects
 for select
 using (bucket_id = 'servicos_images');
+
+create policy "Users can delete their own service images"
+on storage.objects
+for delete
+using (
+  bucket_id = 'servicos_images'
+  and auth.uid()::text = (storage.foldername(name))[1]
+);
 
 create policy "Users can delete their own service images"
 on storage.objects

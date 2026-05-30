@@ -439,7 +439,7 @@ class ProfilePage extends ConsumerWidget {
       ),
       ProfileActionTile(
         icon: Icons.campaign_outlined,
-        label: 'ANUNCIAR EVENTO',
+        label: 'Anunciar Evento',
         onTap: () async {
           await Navigator.push(
             context,
@@ -451,7 +451,7 @@ class ProfilePage extends ConsumerWidget {
       ),
       ProfileActionTile(
         icon: Icons.event_note_outlined,
-        label: 'MEUS EVENTOS',
+        label: 'Meus Eventos',
         onTap: () async {
           await Navigator.push(
             context,
@@ -463,7 +463,7 @@ class ProfilePage extends ConsumerWidget {
       ),
       ProfileActionTile(
         icon: Icons.work_outline,
-        label: 'Meus Servicos',
+        label: 'Meus Serviços',
         onTap: () {
           Navigator.push(
             context,
@@ -483,7 +483,7 @@ class ProfilePage extends ConsumerWidget {
         actions.length - 1,
         ProfileActionTile(
           icon: Icons.admin_panel_settings_outlined,
-          label: 'ADMINISTRADOR',
+          label: 'Administrador',
           onTap: () {
             Navigator.push(
               context,

@@ -188,6 +188,20 @@ class AdminRepository {
     return admins;
   }
 
+  Future<int> countAuthenticatedUsers() async {
+    final result = await _client.rpc('get_authenticated_users_count');
+
+    if (result is num) {
+      return result.toInt();
+    }
+
+    if (result is String) {
+      return int.parse(result);
+    }
+
+    throw Exception('Não foi possível obter o total de usuários autenticados.');
+  }
+
   Future<void> addAdminByEmail(String email) async {
     if (!isCurrentUserSuperAdmin) {
       throw Exception('Apenas o super administrador pode adicionar admins.');
@@ -411,7 +425,9 @@ class AdminRepository {
         .maybeSingle();
     final targetEmail = (profile?['email'] as String?)?.trim().toLowerCase();
     if (targetEmail == superAdminEmail) {
-      throw Exception('A permissão do super administrador não pode ser revogada.');
+      throw Exception(
+        'A permissão do super administrador não pode ser revogada.',
+      );
     }
 
     final reviewerId = _client.auth.currentUser?.id;
@@ -534,7 +550,9 @@ class AdminRepository {
 
     final rows = await _client
         .from('appointments')
-        .select('id, created_at, user_id, service_id, scheduled_time, scheduled_date, status')
+        .select(
+          'id, created_at, user_id, service_id, scheduled_time, scheduled_date, status',
+        )
         .gte('created_at', start.toIso8601String())
         .lte('created_at', end.toIso8601String())
         .order('created_at', ascending: true);
@@ -575,13 +593,16 @@ class AdminRepository {
       for (final p in (profRows as List<dynamic>)) {
         final m = p as Map<String, dynamic>;
         final id = m['id'] as String;
-        final name = (m['full_name'] as String?) ?? (m['email'] as String?) ?? '';
+        final name =
+            (m['full_name'] as String?) ?? (m['email'] as String?) ?? '';
         profilesById[id] = name;
       }
     }
 
     final buffer = StringBuffer();
-    buffer.writeln('DATA DA SOLICITAÇÃO;NOME;SOLICITAÇÃO;PROFISSIONAL;HORÁRIO AGENDADO;DIA AGENDADO;DIA DA SEMANA;STATUS');
+    buffer.writeln(
+      'DATA DA SOLICITAÇÃO;NOME;SOLICITAÇÃO;PROFISSIONAL;HORÁRIO AGENDADO;DIA AGENDADO;DIA DA SEMANA;STATUS',
+    );
 
     for (final map in rowsList) {
       final createdRaw = (map['created_at'] as String?) ?? '';
@@ -599,14 +620,17 @@ class AdminRepository {
           : (service['categoria'] as String?) ?? 'Serviço';
       final professional = service == null
           ? ''
-          : (service['nome_profissional'] as String?) ?? profilesById[service['user_id'] as String] ?? '';
+          : (service['nome_profissional'] as String?) ??
+                profilesById[service['user_id'] as String] ??
+                '';
 
       final dayOfWeek = _weekdayLabelFromDateString(scheduledDate);
       final status = statusRaw.toLowerCase().contains('cancel')
           ? 'cancelado'
-          : (statusRaw.toLowerCase().contains('conclu') || statusRaw.toLowerCase().contains('complete'))
-              ? 'concluido'
-              : statusRaw;
+          : (statusRaw.toLowerCase().contains('conclu') ||
+                statusRaw.toLowerCase().contains('complete'))
+          ? 'concluido'
+          : statusRaw;
 
       buffer.writeln(
         '${_escapeCsvField(created)};${_escapeCsvField(communityName)};${_escapeCsvField(solicitation)};${_escapeCsvField(professional)};${_escapeCsvField(scheduledTime)};${_escapeCsvField(scheduledDate)};${_escapeCsvField(dayOfWeek)};${_escapeCsvField(status)}',
@@ -668,8 +692,10 @@ class AdminRepository {
 
     // Load events created in the window
     final eventRows = await _client
-      .from('eventos')
-      .select('id, nome, status, categoria, evento_pago, permitir_voluntarios, requer_inscricao, limite_vagas, data_inicio, data_fim, created_at')
+        .from('eventos')
+        .select(
+          'id, nome, status, categoria, evento_pago, permitir_voluntarios, requer_inscricao, limite_vagas, data_inicio, data_fim, created_at',
+        )
         .gte('created_at', start.toIso8601String())
         .lte('created_at', end.toIso8601String())
         .order('created_at', ascending: true);
@@ -678,7 +704,10 @@ class AdminRepository {
         .map((r) => r as Map<String, dynamic>)
         .toList();
 
-    final eventIds = events.map((e) => e['id'] as String).where((id) => id.isNotEmpty).toList();
+    final eventIds = events
+        .map((e) => e['id'] as String)
+        .where((id) => id.isNotEmpty)
+        .toList();
 
     // Load registration stats
     final registrationStatsByEvent = <String, Map<String, int>>{};
@@ -692,8 +721,12 @@ class AdminRepository {
         final map = r as Map<String, dynamic>;
         final eid = (map['event_id'] as String?)?.trim() ?? '';
         if (eid.isEmpty) continue;
-        final interest = (map['interesse'] as String?)?.trim().toLowerCase() ?? '';
-        final stats = registrationStatsByEvent.putIfAbsent(eid, () => {'total': 0, 'participants': 0, 'volunteers': 0});
+        final interest =
+            (map['interesse'] as String?)?.trim().toLowerCase() ?? '';
+        final stats = registrationStatsByEvent.putIfAbsent(
+          eid,
+          () => {'total': 0, 'participants': 0, 'volunteers': 0},
+        );
         stats['total'] = (stats['total'] ?? 0) + 1;
         if (interest == 'voluntario' || interest == 'volunteer') {
           stats['volunteers'] = (stats['volunteers'] ?? 0) + 1;
@@ -750,11 +783,20 @@ class AdminRepository {
 
     final metricRows = <List<CellValue?>>[
       [TextCellValue('Total de eventos'), IntCellValue(events.length)],
-      [TextCellValue('Eventos com inscrição'), IntCellValue(eventsWithRegistrations)],
+      [
+        TextCellValue('Eventos com inscrição'),
+        IntCellValue(eventsWithRegistrations),
+      ],
       [TextCellValue('Eventos pagos'), IntCellValue(paidEvents)],
-      [TextCellValue('Eventos com voluntarios'), IntCellValue(eventsWithVolunteers)],
+      [
+        TextCellValue('Eventos com voluntarios'),
+        IntCellValue(eventsWithVolunteers),
+      ],
       [TextCellValue('Total de inscricoes'), IntCellValue(totalRegistrations)],
-      [TextCellValue('Total de participantes'), IntCellValue(totalParticipants)],
+      [
+        TextCellValue('Total de participantes'),
+        IntCellValue(totalParticipants),
+      ],
       [TextCellValue('Total de voluntarios'), IntCellValue(totalVolunteers)],
     ];
 
@@ -801,15 +843,23 @@ class AdminRepository {
       final name = (e['nome'] as String?) ?? '';
       final category = (e['categoria'] as String?) ?? '';
       final paid = ((e['evento_pago'] as bool?) ?? false) ? 'Sim' : 'Não';
-      final allowsVol = ((e['permitir_voluntarios'] as bool?) ?? false) ? 'Sim' : 'Não';
-      final requiresReg = ((e['requer_inscricao'] as bool?) ?? false) ? 'Sim' : 'Não';
-      final limit = (e['limite_vagas'] is int) ? IntCellValue(e['limite_vagas'] as int) : null;
+      final allowsVol = ((e['permitir_voluntarios'] as bool?) ?? false)
+          ? 'Sim'
+          : 'Não';
+      final requiresReg = ((e['requer_inscricao'] as bool?) ?? false)
+          ? 'Sim'
+          : 'Não';
+      final limit = (e['limite_vagas'] is int)
+          ? IntCellValue(e['limite_vagas'] as int)
+          : null;
       final dataInicio = (e['data_inicio'] as String?) ?? '';
       final dataFim = (e['data_fim'] as String?) ?? '';
       final createdAt = (e['created_at'] as String?) ?? '';
       final status = (e['status'] as String?) ?? '';
 
-      final stats = registrationStatsByEvent[id] ?? {'total': 0, 'participants': 0, 'volunteers': 0};
+      final stats =
+          registrationStatsByEvent[id] ??
+          {'total': 0, 'participants': 0, 'volunteers': 0};
       final total = (stats['total'] ?? 0);
       final participants = (stats['participants'] ?? 0);
       final volunteers = (stats['volunteers'] ?? 0);

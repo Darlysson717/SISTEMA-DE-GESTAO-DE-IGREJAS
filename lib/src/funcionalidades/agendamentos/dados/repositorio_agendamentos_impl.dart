@@ -411,11 +411,11 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
     final timeValue = _formatTimeForDb(startsAt);
 
     final existingAppointments = await _client
-      .from('appointments')
-      .select('service_id, scheduled_time')
-      .eq('user_id', uid)
-      .eq('scheduled_date', dateValue)
-      .neq('status', 'cancelado');
+        .from('appointments')
+        .select('service_id, scheduled_time')
+        .eq('user_id', uid)
+        .eq('scheduled_date', dateValue)
+        .neq('status', 'cancelado');
 
     final existingList = (existingAppointments as List<dynamic>);
     final hasSameService = existingList.any(
@@ -450,13 +450,27 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
       );
     }
 
-    await _client.from('appointments').insert({
-      'user_id': uid,
-      'service_id': serviceId,
-      'scheduled_date': dateValue,
-      'scheduled_time': timeValue,
-      'status': 'agendado',
-    });
+    try {
+      await _client.from('appointments').insert({
+        'user_id': uid,
+        'service_id': serviceId,
+        'scheduled_date': dateValue,
+        'scheduled_time': timeValue,
+        'status': 'agendado',
+      });
+    } catch (error) {
+      final errorMessage = error.toString();
+      if (errorMessage.contains('appointments_unique_active_slot') ||
+          errorMessage.contains(
+            'duplicate key value violates unique constraint',
+          ) ||
+          errorMessage.contains('23505')) {
+        throw Exception(
+          'Este horário já está indisponível, pois foi agendado por outra pessoa.',
+        );
+      }
+      rethrow;
+    }
   }
 
   @override

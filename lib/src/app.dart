@@ -21,12 +21,22 @@ class CentroSocialApp extends StatelessWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      supportedLocales: const [
-        Locale('pt', 'BR'),
-      ],
+      supportedLocales: const [Locale('pt', 'BR')],
       theme: base.copyWith(
         scaffoldBackgroundColor: const Color(0xFFF8FAFC),
-        appBarTheme: const AppBarTheme(centerTitle: false),
+        appBarTheme: base.appBarTheme.copyWith(
+          centerTitle: false,
+          titleTextStyle: base.textTheme.titleLarge?.copyWith(
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.15,
+          ),
+          toolbarTextStyle: base.textTheme.titleMedium?.copyWith(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+            letterSpacing: 0.1,
+          ),
+        ),
         cardTheme: const CardThemeData(
           elevation: 0,
           margin: EdgeInsets.zero,

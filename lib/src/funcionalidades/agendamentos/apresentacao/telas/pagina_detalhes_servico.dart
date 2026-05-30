@@ -6,6 +6,7 @@ import 'package:centro_social_app/src/funcionalidades/agendamentos/dominio/entid
 import 'package:centro_social_app/src/funcionalidades/agendamentos/dominio/entidades/agendamento.dart';
 import 'package:centro_social_app/src/funcionalidades/agendamentos/apresentacao/provedores/provedores_agendamentos.dart';
 import 'package:centro_social_app/src/funcionalidades/agendamentos/apresentacao/telas/pagina_agendamentos_usuario.dart';
+import 'package:centro_social_app/src/funcionalidades/eventos/apresentacao/componentes/imagem_evento_adaptativa.dart';
 
 class ServiceDetailsPage extends ConsumerStatefulWidget {
   final Service service;
@@ -178,13 +179,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
   }
 
   DateTime _combineDateAndTime(DateTime date, TimeOfDay time) {
-    return DateTime(
-      date.year,
-      date.month,
-      date.day,
-      time.hour,
-      time.minute,
-    );
+    return DateTime(date.year, date.month, date.day, time.hour, time.minute);
   }
 
   bool _sameMinute(DateTime a, DateTime b) {
@@ -269,10 +264,15 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
             'Você já possui um agendamento para este serviço neste dia.';
         helperMessage = 'Para agendar novamente, escolha outro dia.';
       } else if (errorMessage.contains('já está indisponível')) {
-        friendlyMessage = 'Este horário acabou de ser ocupado por outra pessoa.';
+        friendlyMessage =
+            'Este horário acabou de ser ocupado por outra pessoa.';
         helperMessage = 'Atualize e escolha outro horário disponível.';
-      } else if (errorMessage.contains('appointments_one_per_service_per_day') ||
-          errorMessage.contains('duplicate key value violates unique constraint')) {
+      } else if (errorMessage.contains(
+            'appointments_one_per_service_per_day',
+          ) ||
+          errorMessage.contains(
+            'duplicate key value violates unique constraint',
+          )) {
         friendlyMessage = 'Este horário já foi ocupado por outra pessoa.';
         helperMessage = 'Selecione outro horário disponível.';
       }
@@ -571,7 +571,10 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
     );
   }
 
-  Future<void> _showAvailableTimes(DateTime date, List<_TimeSlot> timeSlots) async {
+  Future<void> _showAvailableTimes(
+    DateTime date,
+    List<_TimeSlot> timeSlots,
+  ) async {
     final repository = ref.read(schedulingRepositoryProvider);
     Set<String> bookedTimesFromBackend = <String>{};
     try {
@@ -633,20 +636,22 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                               final slotStartUtc = slotStartLocal.toUtc();
                               isPast = slotStartLocal.isBefore(now);
                               final slotTimeKey = _toHourMinute(slotStartLocal);
-                              isBooked = bookedAppointments.any(
-                                (appointment) =>
-                                    _sameMinute(
-                                      appointment.startsAt,
-                                      slotStartLocal,
-                                    ) ||
-                                    _sameMinute(
-                                      appointment.startsAt,
-                                      slotStartUtc,
-                                    ),
-                              ) ||
-                              bookedTimesFromBackend.contains(slotTimeKey);
+                              isBooked =
+                                  bookedAppointments.any(
+                                    (appointment) =>
+                                        _sameMinute(
+                                          appointment.startsAt,
+                                          slotStartLocal,
+                                        ) ||
+                                        _sameMinute(
+                                          appointment.startsAt,
+                                          slotStartUtc,
+                                        ),
+                                  ) ||
+                                  bookedTimesFromBackend.contains(slotTimeKey);
                             }
-                            final isDisabled = !slot.isValid || isPast || isBooked;
+                            final isDisabled =
+                                !slot.isValid || isPast || isBooked;
                             final availableColor = const Color(0xFF059669);
                             final unavailableColor = const Color(0xFFDC2626);
                             return ChoiceChip(
@@ -710,7 +715,6 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
       service.duracaoAtendimento,
     );
     _timeSlotsCache = timeSlots;
-    final headerImageTopInset = MediaQuery.paddingOf(context).top + kToolbarHeight;
 
     return Scaffold(
       body: Container(
@@ -723,98 +727,59 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
         ),
         child: CustomScrollView(
           slivers: [
-            // App Bar com imagem do profissional
             SliverAppBar(
-              expandedHeight: isSmallScreen ? 380 : 480,
+              expandedHeight: 0,
               pinned: true,
-              flexibleSpace: FlexibleSpaceBar(
-                background: Container(
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [Color(0xFF059669), Color(0xFF0D9488)],
-                    ),
-                  ),
-                  child: Stack(
-                    children: [
-                      if (service.imagemProfissional != null)
-                        Positioned(
-                          top: headerImageTopInset,
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          child: Image.network(
-                            service.imagemProfissional!,
-                            fit: BoxFit.cover,
-                            loadingBuilder: (context, child, loadingProgress) {
-                              if (loadingProgress == null) {
-                                return child;
-                              }
-                              return const SizedBox.shrink();
-                            },
-                            errorBuilder: (context, error, stackTrace) =>
-                                const SizedBox.shrink(),
-                          ),
-                        ),
-
-                      // Overlay para legibilidade do conteúdo
-                      Positioned(
-                        top: headerImageTopInset,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        child: Container(
-                          color: Colors.black.withValues(alpha: 0.3),
-                        ),
-                      ),
-
-                      // Nome do profissional próximo à borda inferior da imagem
-                      Positioned(
-                        left: 16,
-                        right: 16,
-                        bottom: isSmallScreen ? 14 : 18,
-                        child: Center(
-                          child: Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: isSmallScreen ? 20 : 24,
-                              vertical: isSmallScreen ? 12 : 16,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF059669),
-                              borderRadius: BorderRadius.circular(25),
-                            ),
-                            child: Text(
-                              service.nomeProfissional,
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: isSmallScreen ? 20 : 24,
-                                fontWeight: FontWeight.w600,
-                                shadows: [
-                                  Shadow(
-                                    color: Colors.black.withValues(alpha: 0.3),
-                                    offset: const Offset(0, 2),
-                                    blurRadius: 4,
-                                  ),
-                                ],
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
               backgroundColor: const Color(0xFF059669),
+              foregroundColor: Colors.white,
               leading: IconButton(
                 icon: const Icon(Icons.arrow_back, color: Colors.white),
                 onPressed: () => Navigator.of(context).pop(),
               ),
-              title: Text(
-                'Detalhes do Serviço',
-                style: const TextStyle(color: Colors.white),
+              title: const Text('Detalhes do Serviço'),
+            ),
+
+            SliverToBoxAdapter(
+              child: Stack(
+                children: [
+                  AdaptiveEventImage(
+                    imageUrl: service.imagemProfissional,
+                    defaultAspectRatio: isSmallScreen ? 4 / 3 : 16 / 9,
+                  ),
+                  Positioned(
+                    left: 16,
+                    right: 16,
+                    bottom: isSmallScreen ? 14 : 18,
+                    child: Center(
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isSmallScreen ? 20 : 24,
+                          vertical: isSmallScreen ? 12 : 16,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF059669),
+                          borderRadius: BorderRadius.circular(25),
+                        ),
+                        child: Text(
+                          service.nomeProfissional,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: isSmallScreen ? 20 : 24,
+                            fontWeight: FontWeight.w600,
+                            shadows: [
+                              Shadow(
+                                color: Colors.black.withValues(alpha: 0.3),
+                                offset: const Offset(0, 2),
+                                blurRadius: 4,
+                              ),
+                            ],
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
 

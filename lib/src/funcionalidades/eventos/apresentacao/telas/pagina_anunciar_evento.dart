@@ -207,7 +207,7 @@ class _AnnounceEventPageState extends ConsumerState<AnnounceEventPage> {
     final bottomPadding = MediaQuery.of(context).padding.bottom;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('ANUNCIAR EVENTO')),
+      appBar: AppBar(title: const Text('Anunciar Evento')),
       body: Form(
         key: _formKey,
         child: SingleChildScrollView(

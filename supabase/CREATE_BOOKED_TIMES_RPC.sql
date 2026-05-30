@@ -14,7 +14,7 @@ as $$
   from public.appointments a
   where a.service_id = p_service_id
     and a.scheduled_date = p_scheduled_date
-    and a.status in ('scheduled', 'confirmed')
+    and a.status in ('agendado')
   order by 1;
 $$;
 

@@ -22,7 +22,7 @@ begin
       using (
         (
           auth.uid() = community_user_id
-          and status in ('scheduled', 'confirmed')
+          and status in ('agendado')
         )
         or exists (
           select 1
@@ -34,7 +34,7 @@ begin
       with check (
         (
           auth.uid() = community_user_id
-          and status in ('scheduled', 'confirmed', 'cancelled')
+          and status in ('agendado', 'cancelado')
         )
         or exists (
           select 1
@@ -58,7 +58,7 @@ begin
       using (
         (
           auth.uid() = user_id
-          and status in ('scheduled', 'confirmed')
+          and status in ('agendado')
         )
         or exists (
           select 1
@@ -70,7 +70,7 @@ begin
       with check (
         (
           auth.uid() = user_id
-          and status in ('scheduled', 'confirmed', 'cancelled')
+          and status in ('agendado', 'cancelado')
         )
         or exists (
           select 1

@@ -47,7 +47,7 @@ class _MyEventsPageState extends ConsumerState<MyEventsPage> with RouteAware {
     final bottomPadding = MediaQuery.of(context).padding.bottom;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('MEUS EVENTOS')),
+      appBar: AppBar(title: const Text('Meus Eventos')),
       body: eventsAsync.when(
         data: (events) {
           _currentEvents = events;
