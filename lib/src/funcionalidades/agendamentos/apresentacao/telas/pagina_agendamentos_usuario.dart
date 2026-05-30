@@ -23,6 +23,7 @@ class _UserAppointmentsPageState extends ConsumerState<UserAppointmentsPage> {
     final cancellationMessagesAsync = ref.watch(cancellationMessagesProvider);
     final now =
         ref.watch(appointmentsNowTickerProvider).value ?? DateTime.now();
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
 
     return Scaffold(
       appBar: AppBar(
@@ -38,7 +39,10 @@ class _UserAppointmentsPageState extends ConsumerState<UserAppointmentsPage> {
 
           if (appointments.isEmpty) {
             if (cancellationMessages.isNotEmpty) {
-              return _buildCancellationNoticesList(cancellationMessages);
+              return _buildCancellationNoticesList(
+                context,
+                cancellationMessages,
+              );
             }
 
             return Center(
@@ -107,12 +111,14 @@ class _UserAppointmentsPageState extends ConsumerState<UserAppointmentsPage> {
                         scheduledAppointments,
                         isScheduled: true,
                         now: now,
+                        bottomPadding: bottomPadding,
                       ),
                       _buildAppointmentsList(
                         pastAppointments,
                         isScheduled: false,
                         now: now,
                         notices: cancellationMessages,
+                        bottomPadding: bottomPadding,
                       ),
                     ],
                   ),
@@ -153,6 +159,7 @@ class _UserAppointmentsPageState extends ConsumerState<UserAppointmentsPage> {
     List<Appointment> appointments, {
     required bool isScheduled,
     required DateTime now,
+    required double bottomPadding,
     List<CancellationNotice> notices = const [],
   }) {
     if (appointments.isEmpty && notices.isEmpty) {
@@ -197,11 +204,11 @@ class _UserAppointmentsPageState extends ConsumerState<UserAppointmentsPage> {
     }
 
     if (!isScheduled && appointments.isEmpty && notices.isNotEmpty) {
-      return _buildCancellationNoticesList(notices);
+      return _buildCancellationNoticesList(context, notices);
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.fromLTRB(16, 16, 16, bottomPadding + 24),
       itemCount: appointments.length + (isScheduled ? 0 : notices.length),
       itemBuilder: (context, index) {
         if (!isScheduled && index < notices.length) {
@@ -483,7 +490,9 @@ class _UserAppointmentsPageState extends ConsumerState<UserAppointmentsPage> {
                                       .cancelAppointment(appointment.id);
 
                                   ref.invalidate(communityAppointmentsProvider);
-                                  ref.invalidate(professionalAppointmentsProvider);
+                                  ref.invalidate(
+                                    professionalAppointmentsProvider,
+                                  );
                                   ref.invalidate(
                                     professionalTodayAppointmentsProvider,
                                   );
@@ -563,9 +572,17 @@ class _UserAppointmentsPageState extends ConsumerState<UserAppointmentsPage> {
     }
   }
 
-  Widget _buildCancellationNoticesList(List<CancellationNotice> notices) {
+  Widget _buildCancellationNoticesList(
+    BuildContext context,
+    List<CancellationNotice> notices,
+  ) {
     return ListView.builder(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.fromLTRB(
+        16,
+        16,
+        16,
+        MediaQuery.of(context).padding.bottom + 24,
+      ),
       itemCount: notices.length,
       itemBuilder: (context, index) =>
           _buildCancellationNoticeCard(notices[index]),
@@ -574,10 +591,9 @@ class _UserAppointmentsPageState extends ConsumerState<UserAppointmentsPage> {
 
   Widget _buildCancellationNoticeCard(CancellationNotice notice) {
     final scheduledAt = notice.scheduledAt;
-    final dateLabel =
-        scheduledAt == null
-            ? null
-            : '${formatDate(scheduledAt)} • ${scheduledAt.hour.toString().padLeft(2, '0')}:${scheduledAt.minute.toString().padLeft(2, '0')}';
+    final dateLabel = scheduledAt == null
+        ? null
+        : '${formatDate(scheduledAt)} • ${scheduledAt.hour.toString().padLeft(2, '0')}:${scheduledAt.minute.toString().padLeft(2, '0')}';
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -618,7 +634,8 @@ class _UserAppointmentsPageState extends ConsumerState<UserAppointmentsPage> {
               const SizedBox(height: 4),
               Text('Data e horário: $dateLabel'),
             ],
-            if (notice.location != null && notice.location!.trim().isNotEmpty) ...[
+            if (notice.location != null &&
+                notice.location!.trim().isNotEmpty) ...[
               const SizedBox(height: 4),
               Text('Local: ${notice.location!}'),
             ],

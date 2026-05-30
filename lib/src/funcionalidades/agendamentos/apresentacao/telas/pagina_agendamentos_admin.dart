@@ -28,6 +28,7 @@ class _AdminAppointmentsPageState extends ConsumerState<AdminAppointmentsPage> {
   Widget build(BuildContext context) {
     final professionalsAsync = ref.watch(professionalsProvider);
     final appointmentsAsync = ref.watch(allAppointmentsProvider);
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
 
     return DefaultTabController(
       length: 2,
@@ -50,7 +51,7 @@ class _AdminAppointmentsPageState extends ConsumerState<AdminAppointmentsPage> {
           child: TabBarView(
             children: [
               ListView(
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.fromLTRB(16, 16, 16, bottomPadding + 24),
                 children: [
                   _buildProfessionalForm(context),
                   const SizedBox(height: 16),
@@ -71,13 +72,15 @@ class _AdminAppointmentsPageState extends ConsumerState<AdminAppointmentsPage> {
                       return Column(
                         children: items
                             .map(
-                              (professional) =>
-                                  _ProfessionalAdminCard(professional: professional),
+                              (professional) => _ProfessionalAdminCard(
+                                professional: professional,
+                              ),
                             )
                             .toList(),
                       );
                     },
-                    loading: () => const Center(child: CircularProgressIndicator()),
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
                     error: (error, _) => Card(
                       child: ListTile(
                         title: Text('Erro ao carregar profissionais: $error'),
@@ -87,7 +90,7 @@ class _AdminAppointmentsPageState extends ConsumerState<AdminAppointmentsPage> {
                 ],
               ),
               ListView(
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.fromLTRB(16, 16, 16, bottomPadding + 24),
                 children: [
                   appointmentsAsync.when(
                     data: (items) {
@@ -120,7 +123,8 @@ class _AdminAppointmentsPageState extends ConsumerState<AdminAppointmentsPage> {
                             .toList(),
                       );
                     },
-                    loading: () => const Center(child: CircularProgressIndicator()),
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
                     error: (error, _) => Card(
                       child: ListTile(
                         title: Text('Erro ao carregar atendimentos: $error'),
@@ -181,24 +185,30 @@ class _AdminAppointmentsPageState extends ConsumerState<AdminAppointmentsPage> {
                     return;
                   }
 
-                  await ref.read(schedulingRepositoryProvider).upsertProfessionalByEmail(
-                    email: _emailController.text,
-                    specialty: _specialtyController.text,
-                    isActive: _isActive,
-                  );
+                  await ref
+                      .read(schedulingRepositoryProvider)
+                      .upsertProfessionalByEmail(
+                        email: _emailController.text,
+                        specialty: _specialtyController.text,
+                        isActive: _isActive,
+                      );
                   ref.invalidate(professionalsProvider);
                   if (!context.mounted) {
                     return;
                   }
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Profissional atualizado com sucesso.')),
+                    const SnackBar(
+                      content: Text('Profissional atualizado com sucesso.'),
+                    ),
                   );
                 } catch (error) {
                   if (!context.mounted) {
                     return;
                   }
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Erro ao salvar profissional: $error')),
+                    SnackBar(
+                      content: Text('Erro ao salvar profissional: $error'),
+                    ),
                   );
                 }
               },
@@ -348,12 +358,14 @@ class _ProfessionalAdminCard extends ConsumerWidget {
                   final endText =
                       '${end!.hour.toString().padLeft(2, '0')}:${end!.minute.toString().padLeft(2, '0')}:00';
 
-                  await ref.read(schedulingRepositoryProvider).addAvailability(
-                    professionalId: professional.id,
-                    dayOfWeek: selectedDay,
-                    startTime: startText,
-                    endTime: endText,
-                  );
+                  await ref
+                      .read(schedulingRepositoryProvider)
+                      .addAvailability(
+                        professionalId: professional.id,
+                        dayOfWeek: selectedDay,
+                        startTime: startText,
+                        endTime: endText,
+                      );
 
                   ref.invalidate(professionalsProvider);
 

@@ -11,7 +11,8 @@ class ServicePatientsPage extends ConsumerStatefulWidget {
   const ServicePatientsPage({super.key, required this.service});
 
   @override
-  ConsumerState<ServicePatientsPage> createState() => _ServicePatientsPageState();
+  ConsumerState<ServicePatientsPage> createState() =>
+      _ServicePatientsPageState();
 }
 
 class _ServicePatientsPageState extends ConsumerState<ServicePatientsPage> {
@@ -22,6 +23,7 @@ class _ServicePatientsPageState extends ConsumerState<ServicePatientsPage> {
     final appointmentsAsync = ref.watch(professionalAppointmentsProvider);
     final now =
         ref.watch(appointmentsNowTickerProvider).value ?? DateTime.now();
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Próximos Pacientes')),
@@ -52,7 +54,7 @@ class _ServicePatientsPageState extends ConsumerState<ServicePatientsPage> {
           }
 
           return ListView.builder(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.fromLTRB(16, 16, 16, bottomPadding + 24),
             itemCount: upcoming.length,
             itemBuilder: (context, index) {
               final appointment = upcoming[index];
@@ -222,7 +224,10 @@ class _ServicePatientsPageState extends ConsumerState<ServicePatientsPage> {
                                 ),
                                 foregroundColor: Colors.white,
                               ),
-                              icon: const Icon(Icons.check_circle_outline, size: 18),
+                              icon: const Icon(
+                                Icons.check_circle_outline,
+                                size: 18,
+                              ),
                               label: const Text('Confirmar presença'),
                             ),
                             const SizedBox(height: 8),

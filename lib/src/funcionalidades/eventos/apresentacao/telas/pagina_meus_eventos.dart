@@ -44,6 +44,7 @@ class _MyEventsPageState extends ConsumerState<MyEventsPage> with RouteAware {
   @override
   Widget build(BuildContext context) {
     final eventsAsync = ref.watch(myEventsProvider);
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
 
     return Scaffold(
       appBar: AppBar(title: const Text('MEUS EVENTOS')),
@@ -53,7 +54,7 @@ class _MyEventsPageState extends ConsumerState<MyEventsPage> with RouteAware {
           final filteredEvents = _applyStatusFilter(events);
 
           if (events.isEmpty) {
-            return _buildEmptyState(context);
+            return _buildEmptyState(context, bottomPadding);
           }
 
           return Column(
@@ -86,7 +87,12 @@ class _MyEventsPageState extends ConsumerState<MyEventsPage> with RouteAware {
                         ),
                       )
                     : ListView.separated(
-                        padding: const EdgeInsets.all(16),
+                        padding: EdgeInsets.fromLTRB(
+                          16,
+                          16,
+                          16,
+                          bottomPadding + 24,
+                        ),
                         itemCount: filteredEvents.length,
                         separatorBuilder: (_, __) => const SizedBox(height: 16),
                         itemBuilder: (context, index) {
@@ -182,10 +188,10 @@ class _MyEventsPageState extends ConsumerState<MyEventsPage> with RouteAware {
     );
   }
 
-  Widget _buildEmptyState(BuildContext context) {
+  Widget _buildEmptyState(BuildContext context, double bottomPadding) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.fromLTRB(24, 24, 24, 24 + bottomPadding),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [

@@ -204,12 +204,14 @@ class _AnnounceEventPageState extends ConsumerState<AnnounceEventPage> {
 
   @override
   Widget build(BuildContext context) {
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+
     return Scaffold(
       appBar: AppBar(title: const Text('ANUNCIAR EVENTO')),
       body: Form(
         key: _formKey,
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+          padding: EdgeInsets.fromLTRB(16, 16, 16, bottomPadding + 28),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

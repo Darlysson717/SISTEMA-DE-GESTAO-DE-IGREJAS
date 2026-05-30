@@ -23,10 +23,12 @@ class _EventDetailsPageState extends ConsumerState<EventDetailsPage> {
     final event = widget.event;
     final repository = ref.watch(eventsRepositoryProvider);
     final registrationsAsync = ref.watch(eventRegistrationsProvider(event.id));
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Detalhes do evento')),
       body: SingleChildScrollView(
+        padding: EdgeInsets.only(bottom: bottomPadding + 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

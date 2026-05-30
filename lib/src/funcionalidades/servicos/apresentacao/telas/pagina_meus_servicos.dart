@@ -12,13 +12,14 @@ class MyServicesPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final servicesAsync = ref.watch(myServicesProvider);
     final screenSize = MediaQuery.of(context).size;
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
     final isSmallScreen = screenSize.width < 600;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Meus Servicos')),
       body: servicesAsync.when(
         data: (services) =>
-            _buildContent(context, ref, services, isSmallScreen),
+            _buildContent(context, ref, services, isSmallScreen, bottomPadding),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Center(
           child: Padding(
@@ -38,11 +39,17 @@ class MyServicesPage extends ConsumerWidget {
     WidgetRef ref,
     List<Service> services,
     bool isSmallScreen,
+    double bottomPadding,
   ) {
     if (services.isEmpty) {
       return Center(
         child: Padding(
-          padding: EdgeInsets.all(isSmallScreen ? 20 : 24),
+          padding: EdgeInsets.fromLTRB(
+            isSmallScreen ? 20 : 24,
+            isSmallScreen ? 20 : 24,
+            isSmallScreen ? 20 : 24,
+            bottomPadding + (isSmallScreen ? 20 : 24),
+          ),
           child: const Text(
             'Voce ainda nao possui servicos cadastrados.',
             textAlign: TextAlign.center,
@@ -52,7 +59,12 @@ class MyServicesPage extends ConsumerWidget {
     }
 
     return ListView.separated(
-      padding: EdgeInsets.all(isSmallScreen ? 20 : 24),
+      padding: EdgeInsets.fromLTRB(
+        isSmallScreen ? 20 : 24,
+        isSmallScreen ? 20 : 24,
+        isSmallScreen ? 20 : 24,
+        bottomPadding + (isSmallScreen ? 20 : 24),
+      ),
       itemCount: services.length,
       separatorBuilder: (_, __) => SizedBox(height: isSmallScreen ? 12 : 16),
       itemBuilder: (context, index) {

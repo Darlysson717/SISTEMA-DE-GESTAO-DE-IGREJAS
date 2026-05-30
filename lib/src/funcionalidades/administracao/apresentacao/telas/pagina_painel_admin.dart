@@ -34,6 +34,7 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage> {
     final adminsAsync = ref.watch(adminUsersProvider);
     final pendingRequestsAsync = ref.watch(pendingPublishRequestsProvider);
     final authorizedPublishersAsync = ref.watch(authorizedPublishersProvider);
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
 
     return Scaffold(
       appBar: AppBar(
@@ -90,7 +91,7 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage> {
                 await Future<void>.delayed(const Duration(milliseconds: 200));
               },
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                padding: EdgeInsets.fromLTRB(16, 16, 16, bottomPadding + 24),
                 children: [
                   _AdminHeroCard(
                     title: 'Painel do administrador',
@@ -591,14 +592,12 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage> {
                                           strokeWidth: 2,
                                           valueColor:
                                               AlwaysStoppedAnimation<Color>(
-                                            Color(0xFF0F172A),
-                                          ),
+                                                Color(0xFF0F172A),
+                                              ),
                                         ),
                                       )
                                     : const Icon(Icons.download_outlined),
-                                label: const Text(
-                                  'Exportar Eventos (Resumo)',
-                                ),
+                                label: const Text('Exportar Eventos (Resumo)'),
                               ),
                             ],
                           ),
@@ -937,12 +936,7 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage> {
     final csvWithBom = '${String.fromCharCode(0xFEFF)}$csvContent';
 
     return Share.shareXFiles(
-      [
-        XFile.fromData(
-          utf8.encode(csvWithBom),
-          mimeType: 'text/csv',
-        ),
-      ],
+      [XFile.fromData(utf8.encode(csvWithBom), mimeType: 'text/csv')],
       text: 'Relatório de agendamentos',
       fileNameOverrides: [fileName],
     );
@@ -997,8 +991,6 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage> {
       if (mounted) setState(() => _isExportingEventsSummary = false);
     }
   }
-
-  
 }
 
 class _SectionSurface extends StatelessWidget {

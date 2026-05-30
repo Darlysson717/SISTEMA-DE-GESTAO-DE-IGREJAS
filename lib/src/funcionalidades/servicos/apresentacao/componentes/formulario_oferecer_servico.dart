@@ -506,9 +506,12 @@ class _OfferServiceFormState extends ConsumerState<OfferServiceForm> {
 
   @override
   Widget build(BuildContext context) {
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+
     return Form(
       key: _formKey,
       child: SingleChildScrollView(
+        padding: EdgeInsets.only(bottom: bottomPadding + 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
