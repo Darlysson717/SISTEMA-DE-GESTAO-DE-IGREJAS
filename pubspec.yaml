@@ -47,6 +47,7 @@ dependencies:
   shared_preferences: ^2.5.3
   excel: ^4.0.6
   share_plus: ^10.1.4
+  google_fonts: ^5.0.0
 
 dev_dependencies:
   flutter_test:
@@ -69,6 +70,11 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  assets:
+    - Imagens/LOGO DEPARTAMENTO.png
+    - Imagens/direita folhas.png
+    - Imagens/esquerda folhas.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:
