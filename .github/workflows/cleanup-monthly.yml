@@ -1,0 +1,27 @@
+name: Cleanup old events and appointments
+
+on:
+  schedule:
+    # At 00:00 UTC on day-of-month 1.
+    - cron: '0 0 1 * *'
+  workflow_dispatch:
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Dart
+        uses: dart-lang/setup-dart@v1
+        with:
+          sdk: 'stable'
+
+      - name: Get dependencies
+        run: dart pub get
+
+      - name: Run cleanup (apply)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: dart run tool/cleanup_old_events_and_appointments.dart --apply
