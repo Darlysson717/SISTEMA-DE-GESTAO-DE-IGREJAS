@@ -15,10 +15,10 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Setup Dart
-        uses: dart-lang/setup-dart@v1
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
         with:
-          sdk: 'stable'
+          channel: stable
 
       - name: Validate secrets
         env:
@@ -31,7 +31,7 @@ jobs:
           fi
 
       - name: Get dependencies
-        run: dart pub get
+        run: flutter pub get
 
       - name: Run cleanup (apply)
         env:
