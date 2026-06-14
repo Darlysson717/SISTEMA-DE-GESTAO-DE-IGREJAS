@@ -167,10 +167,11 @@ class _ServicePatientsPageState extends ConsumerState<ServicePatientsPage> {
                           ),
                         ),
                         const SizedBox(height: 10),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            OutlinedButton.icon(
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            final isCompact = constraints.maxWidth < 420;
+
+                            final confirmButton = _buildActionButton(
                               onPressed: () async {
                                 try {
                                   await ref
@@ -218,20 +219,11 @@ class _ServicePatientsPageState extends ConsumerState<ServicePatientsPage> {
                                   );
                                 }
                               },
-                              style: OutlinedButton.styleFrom(
-                                side: BorderSide(
-                                  color: Colors.white.withValues(alpha: 0.7),
-                                ),
-                                foregroundColor: Colors.white,
-                              ),
-                              icon: const Icon(
-                                Icons.check_circle_outline,
-                                size: 18,
-                              ),
-                              label: const Text('Confirmar presença'),
-                            ),
-                            const SizedBox(height: 8),
-                            OutlinedButton.icon(
+                              icon: Icons.check_circle_outline,
+                              label: 'Confirmar presença',
+                            );
+
+                            final cancelButton = _buildActionButton(
                               onPressed: () async {
                                 final confirmed = await showDialog<bool>(
                                   context: context,
@@ -302,16 +294,29 @@ class _ServicePatientsPageState extends ConsumerState<ServicePatientsPage> {
                                   );
                                 }
                               },
-                              style: OutlinedButton.styleFrom(
-                                side: BorderSide(
-                                  color: Colors.white.withValues(alpha: 0.7),
-                                ),
-                                foregroundColor: Colors.white,
-                              ),
-                              icon: const Icon(Icons.cancel_outlined, size: 18),
-                              label: const Text('Cancelar agendamento'),
-                            ),
-                          ],
+                              icon: Icons.cancel_outlined,
+                              label: 'Cancelar agendamento',
+                            );
+
+                            if (isCompact) {
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  confirmButton,
+                                  const SizedBox(height: 8),
+                                  cancelButton,
+                                ],
+                              );
+                            }
+
+                            return Row(
+                              children: [
+                                Expanded(child: confirmButton),
+                                const SizedBox(width: 8),
+                                Expanded(child: cancelButton),
+                              ],
+                            );
+                          },
                         ),
                       ],
                     ),
@@ -349,5 +354,27 @@ class _ServicePatientsPageState extends ConsumerState<ServicePatientsPage> {
     }
     return '${parts.first.substring(0, 1)}${parts.last.substring(0, 1)}'
         .toUpperCase();
+  }
+
+  Widget _buildActionButton({
+    required VoidCallback onPressed,
+    required IconData icon,
+    required String label,
+  }) {
+    return OutlinedButton.icon(
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        side: BorderSide(color: Colors.white.withValues(alpha: 0.7)),
+        foregroundColor: Colors.white,
+        minimumSize: const Size.fromHeight(44),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      ),
+      icon: Icon(icon, size: 18),
+      label: Text(
+        label,
+        textAlign: TextAlign.center,
+        softWrap: true,
+      ),
+    );
   }
 }
