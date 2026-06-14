@@ -13,6 +13,8 @@ import 'package:centro_social_app/src/funcionalidades/agendamentos/apresentacao/
 import 'package:centro_social_app/src/funcionalidades/agendamentos/apresentacao/telas/pagina_agendamentos_usuario.dart';
 import 'package:centro_social_app/src/funcionalidades/agendamentos/apresentacao/provedores/provedores_agendamentos.dart';
 import 'package:centro_social_app/src/funcionalidades/agendamentos/dominio/entidades/servico.dart';
+import 'package:centro_social_app/src/funcionalidades/inicio/apresentacao/provedores/provedores_atualizacao.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   final AppUser currentUser;
@@ -209,6 +211,7 @@ class _HomePageState extends ConsumerState<HomePage> {
   @override
   Widget build(BuildContext context) {
     final eventsAsync = ref.watch(publishedEventsProvider);
+    final updateAsync = ref.watch(appUpdateProvider);
 
     return PopScope(
       canPop: _currentIndex == 0, // Permite fechar apenas na primeira aba
@@ -222,7 +225,7 @@ class _HomePageState extends ConsumerState<HomePage> {
         body: IndexedStack(
           index: _currentIndex,
           children: [
-            _buildInicioTab(context, eventsAsync, ref),
+            _buildInicioTab(context, eventsAsync, updateAsync),
             _buildAgendamentosTab(context),
             _buildPerfilTab(context),
           ],
@@ -234,7 +237,7 @@ class _HomePageState extends ConsumerState<HomePage> {
   Widget _buildInicioTab(
     BuildContext context,
     AsyncValue<List<AppEvent>> eventsAsync,
-    WidgetRef ref,
+    AsyncValue<AppUpdateInfo?> updateAsync,
   ) {
     final screenSize = MediaQuery.of(context).size;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
@@ -364,6 +367,32 @@ class _HomePageState extends ConsumerState<HomePage> {
           ),
 
           _buildNavigationChips(0),
+
+          updateAsync.when(
+            data: (updateInfo) {
+              if (updateInfo == null) {
+                return const SliverToBoxAdapter(child: SizedBox.shrink());
+              }
+
+              return SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    contentPadding.left,
+                    20,
+                    contentPadding.right,
+                    0,
+                  ),
+                  child: _buildUpdateCard(
+                    context,
+                    updateInfo,
+                    isSmallScreen,
+                  ),
+                ),
+              );
+            },
+            loading: () => const SliverToBoxAdapter(child: SizedBox.shrink()),
+            error: (_, __) => const SliverToBoxAdapter(child: SizedBox.shrink()),
+          ),
 
           // Seção de Eventos
           SliverToBoxAdapter(
@@ -500,6 +529,145 @@ class _HomePageState extends ConsumerState<HomePage> {
         ],
       ),
     );
+  }
+
+  Widget _buildUpdateCard(
+    BuildContext context,
+    AppUpdateInfo updateInfo,
+    bool isSmallScreen,
+  ) {
+    final verticalPadding = isSmallScreen ? 18.0 : 22.0;
+    final horizontalPadding = isSmallScreen ? 18.0 : 22.0;
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF1E3A8A), Color(0xFF2563EB)],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF1E3A8A).withValues(alpha: 0.24),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            right: -18,
+            top: -18,
+            child: Container(
+              width: 96,
+              height: 96,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.08),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          Positioned(
+            left: -20,
+            bottom: -24,
+            child: Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.05),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          Padding(
+            padding: EdgeInsets.symmetric(
+              vertical: verticalPadding,
+              horizontal: horizontalPadding,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.16),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const Icon(
+                        Icons.system_update_alt,
+                        color: Colors.white,
+                        size: 28,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            updateInfo.title,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Nova versão: ${updateInfo.displayVersion}',
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.9),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  updateInfo.message,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.92),
+                    fontSize: isSmallScreen ? 14 : 15,
+                    height: 1.45,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: () => _openUpdateLink(updateInfo.link),
+                    icon: const Icon(Icons.open_in_new),
+                    label: const Text('Abrir atualização no GitHub'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: const Color(0xFF1D4ED8),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      textStyle: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _openUpdateLink(String link) async {
+    final uri = Uri.parse(link);
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
   Future<void> _registerEventInterest(
@@ -1029,6 +1197,8 @@ class _ServiceCard extends StatelessWidget {
                             color: const Color(0xFF64748B),
                             fontWeight: FontWeight.w500,
                           ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
                         SizedBox(height: isSmallScreen ? 2 : 4),
                         Container(
@@ -1077,104 +1247,55 @@ class _ServiceCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
                 ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Row(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isCompact = constraints.maxWidth < 360;
+
+                    final durationInfo = _ServiceInfoBlock(
+                      icon: Icons.access_time,
+                      iconColor: const Color(0xFFF59E0B),
+                      iconBackground: const Color(0xFFF59E0B),
+                      title: 'Duração',
+                      value: '${service.duracaoAtendimento ?? 60} min',
+                      isSmallScreen: isSmallScreen,
+                    );
+
+                    final attendanceInfo = _ServiceInfoBlock(
+                      icon: service.tipoAtendimento == 'presencial'
+                          ? Icons.location_on
+                          : Icons.videocam,
+                      iconColor: service.tipoAtendimento == 'presencial'
+                          ? const Color(0xFF059669)
+                          : const Color(0xFF6366F1),
+                      iconBackground: service.tipoAtendimento == 'presencial'
+                          ? const Color(0xFF059669)
+                          : const Color(0xFF6366F1),
+                      title: 'Atendimento',
+                      value: service.tipoAtendimento == 'presencial'
+                          ? 'Presencial'
+                          : 'Online',
+                      isSmallScreen: isSmallScreen,
+                    );
+
+                    if (isCompact) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Container(
-                            padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
-                            decoration: BoxDecoration(
-                              color: const Color(
-                                0xFFF59E0B,
-                              ).withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Icon(
-                              Icons.access_time,
-                              color: const Color(0xFFF59E0B),
-                              size: isSmallScreen ? 16 : 18,
-                            ),
-                          ),
-                          SizedBox(width: isSmallScreen ? 12 : 16),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Duração',
-                                style: TextStyle(
-                                  fontSize: isSmallScreen ? 12 : 14,
-                                  color: const Color(0xFF64748B),
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              Text(
-                                '${service.duracaoAtendimento ?? 60} min',
-                                style: TextStyle(
-                                  fontSize: isSmallScreen ? 14 : 16,
-                                  color: const Color(0xFF1E293B),
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
+                          durationInfo,
+                          const SizedBox(height: 12),
+                          attendanceInfo,
                         ],
-                      ),
-                    ),
-                    SizedBox(width: isSmallScreen ? 16 : 20),
-                    Expanded(
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
-                            decoration: BoxDecoration(
-                              color: service.tipoAtendimento == 'presencial'
-                                  ? const Color(
-                                      0xFF059669,
-                                    ).withValues(alpha: 0.1)
-                                  : const Color(
-                                      0xFF6366F1,
-                                    ).withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Icon(
-                              service.tipoAtendimento == 'presencial'
-                                  ? Icons.location_on
-                                  : Icons.videocam,
-                              color: service.tipoAtendimento == 'presencial'
-                                  ? const Color(0xFF059669)
-                                  : const Color(0xFF6366F1),
-                              size: isSmallScreen ? 16 : 18,
-                            ),
-                          ),
-                          SizedBox(width: isSmallScreen ? 12 : 16),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Atendimento',
-                                style: TextStyle(
-                                  fontSize: isSmallScreen ? 12 : 14,
-                                  color: const Color(0xFF64748B),
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              Text(
-                                service.tipoAtendimento == 'presencial'
-                                    ? 'Presencial'
-                                    : 'Online',
-                                style: TextStyle(
-                                  fontSize: isSmallScreen ? 14 : 16,
-                                  color: const Color(0xFF1E293B),
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                      );
+                    }
+
+                    return Row(
+                      children: [
+                        Expanded(child: durationInfo),
+                        SizedBox(width: isSmallScreen ? 16 : 20),
+                        Expanded(child: attendanceInfo),
+                      ],
+                    );
+                  },
                 ),
               ),
             ],
@@ -1229,6 +1350,70 @@ class _NavigationChip extends StatelessWidget {
       ),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+    );
+  }
+}
+
+class _ServiceInfoBlock extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final Color iconBackground;
+  final String title;
+  final String value;
+  final bool isSmallScreen;
+
+  const _ServiceInfoBlock({
+    required this.icon,
+    required this.iconColor,
+    required this.iconBackground,
+    required this.title,
+    required this.value,
+    required this.isSmallScreen,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
+          decoration: BoxDecoration(
+            color: iconBackground.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(
+            icon,
+            color: iconColor,
+            size: isSmallScreen ? 16 : 18,
+          ),
+        ),
+        SizedBox(width: isSmallScreen ? 12 : 16),
+        Flexible(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: isSmallScreen ? 12 : 14,
+                  color: const Color(0xFF64748B),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: isSmallScreen ? 14 : 16,
+                  color: const Color(0xFF1E293B),
+                  fontWeight: FontWeight.w600,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
