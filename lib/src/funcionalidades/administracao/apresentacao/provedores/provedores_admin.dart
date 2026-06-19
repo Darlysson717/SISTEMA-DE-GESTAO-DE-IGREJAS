@@ -75,3 +75,23 @@ final eventsSummaryReportProvider = FutureProvider<List<int>>((ref) async {
   final repository = ref.watch(adminRepositoryProvider);
   return repository.exportEventsSummaryXlsx();
 });
+
+// ======== EVENT PUBLISH ACCESS PROVIDERS ========
+
+final eventPublishAccessStateProvider = FutureProvider<EventPublishAccessState>((ref) async {
+  ref.watch(authStateChangesProvider);
+  final repository = ref.watch(adminRepositoryProvider);
+  return repository.getCurrentUserEventPublishAccess();
+});
+
+final pendingEventPublishRequestsProvider = FutureProvider<List<EventPublishRequest>>((ref) async {
+  ref.watch(authStateChangesProvider);
+  final repository = ref.watch(adminRepositoryProvider);
+  return repository.listPendingEventPublishRequests();
+});
+
+final eventAuthorizedPublishersProvider = FutureProvider<List<EventAuthorizedPublisher>>((ref) async {
+  ref.watch(authStateChangesProvider);
+  final repository = ref.watch(adminRepositoryProvider);
+  return repository.listEventAuthorizedPublishers();
+});

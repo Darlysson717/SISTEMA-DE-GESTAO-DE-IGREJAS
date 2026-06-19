@@ -92,6 +92,58 @@ class AuthorizedPublisher {
   });
 }
 
+// ======== EVENT PUBLISH REQUEST CLASSES ========
+
+class EventPublishRequest {
+  final String id;
+  final String userId;
+  final String requesterName;
+  final String eventName;
+  final PublishRequestStatus status;
+  final DateTime createdAt;
+  final String? requesterEmail;
+
+  const EventPublishRequest({
+    required this.id,
+    required this.userId,
+    required this.requesterName,
+    required this.eventName,
+    required this.status,
+    required this.createdAt,
+    required this.requesterEmail,
+  });
+}
+
+class EventPublishAccessState {
+  final bool canPublish;
+  final EventPublishRequest? latestRequest;
+  final bool wasRevoked;
+  final DateTime? revokedAt;
+
+  const EventPublishAccessState({
+    required this.canPublish,
+    required this.latestRequest,
+    required this.wasRevoked,
+    required this.revokedAt,
+  });
+}
+
+class EventAuthorizedPublisher {
+  final String userId;
+  final String email;
+  final String? fullName;
+  final bool isActive;
+  final bool isSuperAdmin;
+
+  const EventAuthorizedPublisher({
+    required this.userId,
+    required this.email,
+    required this.fullName,
+    required this.isActive,
+    required this.isSuperAdmin,
+  });
+}
+
 class AdminRepository {
   final SupabaseClient _client;
 
@@ -245,6 +297,303 @@ class AdminRepository {
     }
 
     await _client.from('app_admins').delete().eq('user_id', userId);
+  }
+
+  // ======== EVENT PUBLISH REQUEST METHODS ========
+
+  Future<EventPublishAccessState> getCurrentUserEventPublishAccess() async {
+    final uid = _client.auth.currentUser?.id;
+    if (uid == null) {
+      return const EventPublishAccessState(
+        canPublish: false,
+        latestRequest: null,
+        wasRevoked: false,
+        revokedAt: null,
+      );
+    }
+
+    bool canPublish = false;
+    bool wasRevoked = false;
+    DateTime? revokedAt;
+    try {
+      final permission = await _client
+          .from('event_publish_permissions')
+          .select('is_active, revoked_at')
+          .eq('user_id', uid)
+          .limit(1)
+          .maybeSingle();
+      canPublish = (permission?['is_active'] as bool?) ?? false;
+      final revokedAtRaw = permission?['revoked_at'] as String?;
+      revokedAt = DateTime.tryParse(revokedAtRaw ?? '');
+      wasRevoked = !canPublish && revokedAt != null;
+    } catch (_) {
+      // Table may not exist yet - treat as no permission
+    }
+
+    try {
+      final latestRow = await _client
+          .from('event_publish_requests')
+          .select('id, user_id, requester_name, event_name, status, created_at')
+          .eq('user_id', uid)
+          .order('created_at', ascending: false)
+          .limit(1)
+          .maybeSingle();
+
+      return EventPublishAccessState(
+        canPublish: canPublish,
+        latestRequest: latestRow == null ? null : _mapEventPublishRequest(latestRow),
+        wasRevoked: wasRevoked,
+        revokedAt: revokedAt,
+      );
+    } catch (_) {
+      // Table may not exist yet
+      return EventPublishAccessState(
+        canPublish: canPublish,
+        latestRequest: null,
+        wasRevoked: wasRevoked,
+        revokedAt: revokedAt,
+      );
+    }
+  }
+
+  Future<void> submitEventPublishRequest({
+    required String requesterName,
+    required String eventName,
+  }) async {
+    final uid = _client.auth.currentUser?.id;
+    if (uid == null) {
+      throw Exception('Usuário não autenticado.');
+    }
+
+    final cleanName = requesterName.trim();
+    final cleanEvent = eventName.trim();
+    if (cleanName.isEmpty || cleanEvent.isEmpty) {
+      throw Exception('Informe nome e evento.');
+    }
+
+    try {
+      final hasActivePermission = await _client
+          .from('event_publish_permissions')
+          .select('user_id')
+          .eq('user_id', uid)
+          .eq('is_active', true)
+          .limit(1)
+          .maybeSingle();
+
+      if (hasActivePermission != null) {
+        return;
+      }
+    } catch (_) {
+      // Table may not exist yet - continue to submit request
+    }
+
+    try {
+      final pending = await _client
+          .from('event_publish_requests')
+          .select('id')
+          .eq('user_id', uid)
+          .eq('status', 'pending')
+          .limit(1)
+          .maybeSingle();
+
+      if (pending != null) {
+        await _client
+            .from('event_publish_requests')
+            .update({'requester_name': cleanName, 'event_name': cleanEvent})
+            .eq('id', pending['id'] as String)
+            .eq('user_id', uid)
+            .eq('status', 'pending');
+        return;
+      }
+    } catch (_) {
+      // Table may not exist yet - continue to insert
+    }
+
+    try {
+      await _client.from('event_publish_requests').insert({
+        'user_id': uid,
+        'requester_name': cleanName,
+        'event_name': cleanEvent,
+        'status': 'pending',
+      });
+    } catch (e) {
+      throw Exception(
+        'Não foi possível enviar a solicitação. Execute o script SQL SETUP_EVENT_PUBLISH_PERMISSION.sql no Supabase primeiro. Erro: $e',
+      );
+    }
+  }
+
+  Future<List<EventPublishRequest>> listPendingEventPublishRequests() async {
+    final isAdmin = await isCurrentUserAdmin();
+    if (!isAdmin) {
+      return [];
+    }
+
+    try {
+      final rows = await _client
+          .from('event_publish_requests')
+          .select('''
+            id,
+            user_id,
+            requester_name,
+            event_name,
+            status,
+            created_at,
+            requester_profile:profiles!event_publish_requests_user_id_fkey(
+              email
+            )
+          ''')
+          .eq('status', 'pending')
+          .order('created_at', ascending: true);
+
+      return (rows as List<dynamic>)
+          .map((row) => _mapEventPublishRequest(row as Map<String, dynamic>))
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<List<EventAuthorizedPublisher>> listEventAuthorizedPublishers() async {
+    final isAdmin = await isCurrentUserAdmin();
+    if (!isAdmin) {
+      return [];
+    }
+
+    try {
+      final rows = await _client
+          .from('event_publish_permissions')
+          .select('''
+            user_id,
+            is_active,
+            profiles:profiles!event_publish_permissions_user_id_fkey(
+              email,
+              full_name
+            )
+          ''')
+          .eq('is_active', true)
+          .order('granted_at', ascending: true);
+
+      return (rows as List<dynamic>).map((row) {
+        final map = row as Map<String, dynamic>;
+        final profile = map['profiles'] as Map<String, dynamic>?;
+        final email = (profile?['email'] as String?) ?? '';
+        return EventAuthorizedPublisher(
+          userId: map['user_id'] as String,
+          email: email,
+          fullName: profile?['full_name'] as String?,
+          isActive: (map['is_active'] as bool?) ?? false,
+          isSuperAdmin: email.trim().toLowerCase() == superAdminEmail,
+        );
+      }).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<void> revokeEventPublishPermission(String userId) async {
+    final isAdmin = await isCurrentUserAdmin();
+    if (!isAdmin) {
+      throw Exception('Acesso negado.');
+    }
+
+    final profile = await _client
+        .from('profiles')
+        .select('email')
+        .eq('id', userId)
+        .maybeSingle();
+    final targetEmail = (profile?['email'] as String?)?.trim().toLowerCase();
+    if (targetEmail == superAdminEmail) {
+      throw Exception(
+        'A permissão do super administrador não pode ser revogada.',
+      );
+    }
+
+    final reviewerId = _client.auth.currentUser?.id;
+
+    try {
+      await _client
+          .from('event_publish_permissions')
+          .update({
+            'is_active': false,
+            'revoked_by': reviewerId,
+            'revoked_at': DateTime.now().toIso8601String(),
+          })
+          .eq('user_id', userId)
+          .eq('is_active', true);
+    } catch (e) {
+      throw Exception(
+        'Não foi possível revogar. Execute o script SQL SETUP_EVENT_PUBLISH_PERMISSION.sql no Supabase primeiro. Erro: $e',
+      );
+    }
+  }
+
+  Future<void> reviewEventPublishRequest({
+    required String requestId,
+    required bool approved,
+  }) async {
+    final isAdmin = await isCurrentUserAdmin();
+    if (!isAdmin) {
+      throw Exception('Acesso negado.');
+    }
+
+    final reviewerId = _client.auth.currentUser?.id;
+
+    try {
+      final requestRow = await _client
+          .from('event_publish_requests')
+          .select('id, user_id')
+          .eq('id', requestId)
+          .maybeSingle();
+
+      if (requestRow == null) {
+        throw Exception('Solicitação não encontrada.');
+      }
+
+      final requestUserId = requestRow['user_id'] as String;
+
+      await _client
+          .from('event_publish_requests')
+          .update({
+            'status': approved ? 'approved' : 'rejected',
+            'reviewed_by': reviewerId,
+            'reviewed_at': DateTime.now().toIso8601String(),
+          })
+          .eq('id', requestId)
+          .eq('status', 'pending');
+
+      if (approved) {
+        await _client.from('event_publish_permissions').upsert({
+          'user_id': requestUserId,
+          'is_active': true,
+          'granted_by': reviewerId,
+          'granted_at': DateTime.now().toIso8601String(),
+          'revoked_by': null,
+          'revoked_at': null,
+        }, onConflict: 'user_id');
+      }
+    } catch (e) {
+      throw Exception(
+        'Não foi possível revisar a solicitação. Execute o script SQL SETUP_EVENT_PUBLISH_PERMISSION.sql no Supabase primeiro. Erro: $e',
+      );
+    }
+  }
+
+  EventPublishRequest _mapEventPublishRequest(Map<String, dynamic> map) {
+    final requesterProfile = map['requester_profile'] as Map<String, dynamic>?;
+    return EventPublishRequest(
+      id: map['id'] as String,
+      userId: map['user_id'] as String,
+      requesterName: (map['requester_name'] as String?) ?? '',
+      eventName: (map['event_name'] as String?) ?? '',
+      status: parsePublishRequestStatus(
+        (map['status'] as String?) ?? 'pending',
+      ),
+      createdAt:
+          DateTime.tryParse((map['created_at'] as String?) ?? '') ??
+          DateTime.now(),
+      requesterEmail: requesterProfile?['email'] as String?,
+    );
   }
 
   Future<PublishAccessState> getCurrentUserPublishAccess() async {

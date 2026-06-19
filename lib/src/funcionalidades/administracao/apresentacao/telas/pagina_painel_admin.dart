@@ -1,4 +1,5 @@
 import 'package:centro_social_app/src/funcionalidades/administracao/apresentacao/provedores/provedores_admin.dart';
+import 'package:centro_social_app/src/funcionalidades/administracao/dados/repositorio_admin.dart';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
@@ -37,6 +38,8 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage> {
     );
     final pendingRequestsAsync = ref.watch(pendingPublishRequestsProvider);
     final authorizedPublishersAsync = ref.watch(authorizedPublishersProvider);
+    final pendingEventRequestsAsync = ref.watch(pendingEventPublishRequestsProvider);
+    final eventAuthorizedPublishersAsync = ref.watch(eventAuthorizedPublishersProvider);
     final bottomPadding = MediaQuery.of(context).padding.bottom;
 
     return Scaffold(
@@ -104,6 +107,8 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage> {
                 ref.invalidate(authenticatedUsersCountProvider);
                 ref.invalidate(pendingPublishRequestsProvider);
                 ref.invalidate(authorizedPublishersProvider);
+                ref.invalidate(pendingEventPublishRequestsProvider);
+                ref.invalidate(eventAuthorizedPublishersProvider);
                 await Future<void>.delayed(const Duration(milliseconds: 200));
               },
               child: ListView(
@@ -444,6 +449,252 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage> {
                                                             request.id
                                                         ? null
                                                         : () => _reviewRequest(
+                                                            request.id,
+                                                            approved: false,
+                                                          ),
+                                                    icon: const Icon(
+                                                      Icons.cancel_outlined,
+                                                    ),
+                                                    label: const Text(
+                                                      'Reprovar',
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    )
+                                    .toList(),
+                              );
+                            },
+                            loading: () => const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 12),
+                              child: Center(child: CircularProgressIndicator()),
+                            ),
+                            error: (error, _) =>
+                                Text('Erro ao carregar solicitações: $error'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _SectionSurface(
+                    child: Padding(
+                      padding: const EdgeInsets.all(0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Autorizados a publicar eventos',
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                  color: const Color(0xFF0F172A),
+                                ),
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Lista de pessoas com permissão ativa para publicar eventos.',
+                            style: TextStyle(color: Color(0xFF475569)),
+                          ),
+                          const SizedBox(height: 12),
+                          eventAuthorizedPublishersAsync.when(
+                            data: (publishers) {
+                              if (publishers.isEmpty) {
+                                return const Padding(
+                                  padding: EdgeInsets.only(bottom: 4),
+                                  child: Text(
+                                    'Nenhuma pessoa autorizada no momento.',
+                                    style: TextStyle(color: Color(0xFF64748B)),
+                                  ),
+                                );
+                              }
+
+                              return Column(
+                                children: publishers
+                                    .map(
+                                      (publisher) => ListTile(
+                                        contentPadding: EdgeInsets.zero,
+                                        leading: const Icon(
+                                          Icons.verified_user_outlined,
+                                          color: Color(0xFF2563EB),
+                                        ),
+                                        title: Text(
+                                          publisher.fullName
+                                                      ?.trim()
+                                                      .isNotEmpty ==
+                                                  true
+                                              ? publisher.fullName!
+                                              : publisher.email,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                        subtitle: Text(
+                                          publisher.email,
+                                          style: const TextStyle(
+                                            color: Color(0xFF64748B),
+                                          ),
+                                        ),
+                                        trailing: OutlinedButton.icon(
+                                          onPressed:
+                                              _revokingUserId ==
+                                                      publisher.userId ||
+                                                  publisher.isSuperAdmin
+                                              ? null
+                                              : () =>
+                                                    _handleRevokeEventPublishPermission(
+                                                      publisher.userId,
+                                                      publisher.email,
+                                                    ),
+                                          icon:
+                                              _revokingUserId ==
+                                                  publisher.userId
+                                              ? const SizedBox(
+                                                  width: 16,
+                                                  height: 16,
+                                                  child:
+                                                      CircularProgressIndicator(
+                                                        strokeWidth: 2,
+                                                      ),
+                                                )
+                                              : const Icon(
+                                                  Icons.block_outlined,
+                                                  size: 18,
+                                                ),
+                                          label: Text(
+                                            publisher.isSuperAdmin
+                                                ? 'Protegido'
+                                                : 'Revogar',
+                                          ),
+                                        ),
+                                      ),
+                                    )
+                                    .toList(),
+                              );
+                            },
+                            loading: () => const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 12),
+                              child: Center(child: CircularProgressIndicator()),
+                            ),
+                            error: (error, _) =>
+                                Text('Erro ao carregar autorizados: $error'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _SectionSurface(
+                    child: Padding(
+                      padding: const EdgeInsets.all(0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Solicitações de publicação de eventos',
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                  color: const Color(0xFF0F172A),
+                                ),
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Aprove ou reprove solicitações para primeira publicação de eventos.',
+                            style: TextStyle(color: Color(0xFF475569)),
+                          ),
+                          const SizedBox(height: 12),
+                          pendingEventRequestsAsync.when(
+                            data: (requests) {
+                              if (requests.isEmpty) {
+                                return const Padding(
+                                  padding: EdgeInsets.only(bottom: 4),
+                                  child: Text(
+                                    'Nenhuma solicitação pendente no momento.',
+                                    style: TextStyle(color: Color(0xFF64748B)),
+                                  ),
+                                );
+                              }
+
+                              return Column(
+                                children: requests
+                                    .map(
+                                      (request) => Card(
+                                        margin: const EdgeInsets.only(
+                                          bottom: 10,
+                                        ),
+                                        color: const Color(0xFFF8FAFC),
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(14),
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                request.requesterName,
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.w800,
+                                                ),
+                                              ),
+                                              if ((request.requesterEmail ?? '')
+                                                  .trim()
+                                                  .isNotEmpty)
+                                                Text(
+                                                  request.requesterEmail!,
+                                                  style: const TextStyle(
+                                                    color: Color(0xFF64748B),
+                                                  ),
+                                                ),
+                                              const SizedBox(height: 6),
+                                              Text(
+                                                'Evento: ${request.eventName}',
+                                                style: const TextStyle(
+                                                  color: Color(0xFF334155),
+                                                ),
+                                              ),
+                                              const SizedBox(height: 10),
+                                              Row(
+                                                children: [
+                                                  FilledButton.icon(
+                                                    onPressed:
+                                                        _reviewingRequestId ==
+                                                            request.id
+                                                        ? null
+                                                        : () => _reviewEventRequest(
+                                                            request.id,
+                                                            approved: true,
+                                                          ),
+                                                    icon:
+                                                        _reviewingRequestId ==
+                                                            request.id
+                                                        ? const SizedBox(
+                                                            width: 16,
+                                                            height: 16,
+                                                            child:
+                                                                CircularProgressIndicator(
+                                                                  strokeWidth:
+                                                                      2,
+                                                                ),
+                                                          )
+                                                        : const Icon(
+                                                            Icons
+                                                                .check_circle_outline,
+                                                          ),
+                                                    label: const Text(
+                                                      'Aprovar',
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  OutlinedButton.icon(
+                                                    onPressed:
+                                                        _reviewingRequestId ==
+                                                            request.id
+                                                        ? null
+                                                        : () => _reviewEventRequest(
                                                             request.id,
                                                             approved: false,
                                                           ),
@@ -857,6 +1108,101 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage> {
     } finally {
       if (mounted) {
         setState(() => _revokingUserId = null);
+      }
+    }
+  }
+
+  Future<void> _handleRevokeEventPublishPermission(
+    String userId,
+    String email,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Revogar permissão'),
+        content: Text('Deseja revogar a permissão de publicação de eventos para $email?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Revogar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) {
+      return;
+    }
+
+    setState(() => _revokingUserId = userId);
+    try {
+      await ref.read(adminRepositoryProvider).revokeEventPublishPermission(userId);
+      ref.invalidate(eventAuthorizedPublishersProvider);
+
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Permissão de publicação de eventos revogada com sucesso.'),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro ao revogar permissão: $error')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _revokingUserId = null);
+      }
+    }
+  }
+
+  Future<void> _reviewEventRequest(
+    String requestId, {
+    required bool approved,
+  }) async {
+    setState(() => _reviewingRequestId = requestId);
+    try {
+      await ref
+          .read(adminRepositoryProvider)
+          .reviewEventPublishRequest(requestId: requestId, approved: approved);
+
+      ref.invalidate(pendingEventPublishRequestsProvider);
+      ref.invalidate(eventAuthorizedPublishersProvider);
+
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            approved
+                ? 'Solicitação de evento aprovada com sucesso.'
+                : 'Solicitação de evento reprovada com sucesso.',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro ao revisar solicitação: $error')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _reviewingRequestId = null);
       }
     }
   }

@@ -23,3 +23,7 @@ Safety notes
 
 - Always keep a recent database backup before running destructive operations.
 - The Service Role key must be stored as a secret and never exposed in client code.
+
+Status
+
+- **Secrets:** `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are configured in the repository (verified 2026-06-04).

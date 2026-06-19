@@ -1,5 +1,6 @@
 import 'package:centro_social_app/src/funcionalidades/administracao/apresentacao/telas/pagina_painel_admin.dart';
 import 'package:centro_social_app/src/funcionalidades/administracao/apresentacao/provedores/provedores_admin.dart';
+import 'package:centro_social_app/src/funcionalidades/eventos/apresentacao/telas/pagina_acesso_publicar_evento.dart';
 import 'package:centro_social_app/src/funcionalidades/eventos/apresentacao/telas/pagina_anunciar_evento.dart';
 import 'package:centro_social_app/src/funcionalidades/eventos/apresentacao/provedores/provedores_eventos.dart';
 import 'package:centro_social_app/src/funcionalidades/autenticacao/dominio/entidades/usuario_app.dart';
@@ -443,7 +444,7 @@ class ProfilePage extends ConsumerWidget {
         onTap: () async {
           await Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const AnnounceEventPage()),
+            MaterialPageRoute(builder: (_) => const PublishEventAccessPage()),
           );
           ref.invalidate(myEventsProvider);
           ref.invalidate(publishedEventsProvider);
