@@ -1,7 +1,8 @@
-import 'package:centro_social_app/src/funcionalidades/administracao/apresentacao/provedores/provedores_admin.dart';
-import 'package:centro_social_app/src/funcionalidades/administracao/dados/repositorio_admin.dart';
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:centro_social_app/src/funcionalidades/administracao/apresentacao/provedores/provedores_admin.dart';
+import 'package:centro_social_app/src/funcionalidades/administracao/dados/repositorio_admin.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
@@ -21,11 +22,33 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage> {
   bool _isExportingEventsSummary = false;
   String? _reviewingRequestId;
   String? _revokingUserId;
+  Timer? _pollingTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _startPolling();
+  }
 
   @override
   void dispose() {
+    _pollingTimer?.cancel();
     _emailController.dispose();
     super.dispose();
+  }
+
+  void _startPolling() {
+    _pollingTimer?.cancel();
+    _pollingTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      if (!mounted) return;
+      ref.invalidate(isCurrentUserAdminProvider);
+      ref.invalidate(adminUsersProvider);
+      ref.invalidate(authenticatedUsersCountProvider);
+      ref.invalidate(pendingPublishRequestsProvider);
+      ref.invalidate(authorizedPublishersProvider);
+      ref.invalidate(pendingEventPublishRequestsProvider);
+      ref.invalidate(eventAuthorizedPublishersProvider);
+    });
   }
 
   @override

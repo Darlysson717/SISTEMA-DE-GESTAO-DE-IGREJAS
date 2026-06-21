@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:centro_social_app/src/funcionalidades/administracao/dados/repositorio_admin.dart';
 import 'package:centro_social_app/src/funcionalidades/administracao/apresentacao/provedores/provedores_admin.dart';
 import 'package:centro_social_app/src/funcionalidades/autenticacao/apresentacao/provedores/provedores_autenticacao.dart';
@@ -27,12 +28,28 @@ class _PublishServiceAccessPageState
   Future<bool>? _showApprovedGateFuture;
   String? _showApprovedGateUserId;
   bool _isAutoNavigating = false;
+  Timer? _pollingTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _startPolling();
+  }
 
   @override
   void dispose() {
+    _pollingTimer?.cancel();
     _nameController.dispose();
     _serviceController.dispose();
     super.dispose();
+  }
+
+  void _startPolling() {
+    _pollingTimer?.cancel();
+    _pollingTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      if (!mounted) return;
+      ref.invalidate(publishAccessStateProvider);
+    });
   }
 
   @override

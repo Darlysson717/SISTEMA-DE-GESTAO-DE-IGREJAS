@@ -201,20 +201,7 @@ class _MyEventsPageState extends ConsumerState<MyEventsPage> with RouteAware {
               'Você ainda não possui eventos cadastrados.',
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: () async {
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const AnnounceEventPage()),
-                );
 
-                if (!mounted) return;
-                _refreshEventFeeds();
-              },
-              icon: const Icon(Icons.add_circle_outline),
-              label: const Text('Anunciar evento'),
-            ),
           ],
         ),
       ),
