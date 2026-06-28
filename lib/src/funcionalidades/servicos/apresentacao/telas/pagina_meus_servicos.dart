@@ -5,11 +5,22 @@ import 'package:centro_social_app/src/funcionalidades/agendamentos/apresentacao/
 import 'package:centro_social_app/src/funcionalidades/servicos/apresentacao/telas/pagina_oferecer_servico.dart';
 import 'package:centro_social_app/src/funcionalidades/servicos/apresentacao/telas/pagina_pacientes_servico.dart';
 
-class MyServicesPage extends ConsumerWidget {
+class MyServicesPage extends ConsumerStatefulWidget {
   const MyServicesPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MyServicesPage> createState() => _MyServicesPageState();
+}
+
+class _MyServicesPageState extends ConsumerState<MyServicesPage> {
+  Future<void> _refreshServices() async {
+    ref.invalidate(myServicesProvider);
+    ref.invalidate(publishedServicesProvider);
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final servicesAsync = ref.watch(myServicesProvider);
     final screenSize = MediaQuery.of(context).size;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
@@ -17,17 +28,34 @@ class MyServicesPage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Meus Serviços')),
-      body: servicesAsync.when(
-        data: (services) =>
-            _buildContent(context, ref, services, isSmallScreen, bottomPadding),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => Center(
-          child: Padding(
-            padding: EdgeInsets.all(isSmallScreen ? 20 : 24),
-            child: Text(
-              'Erro ao carregar servicos: $error',
-              textAlign: TextAlign.center,
-            ),
+      body: RefreshIndicator(
+        onRefresh: _refreshServices,
+        child: servicesAsync.when(
+          data: (services) =>
+              _buildContent(context, ref, services, isSmallScreen, bottomPadding),
+          loading: () => ListView(
+            children: [
+              SizedBox(
+                height: MediaQuery.of(context).size.height * 0.6,
+                child: const Center(child: CircularProgressIndicator()),
+              ),
+            ],
+          ),
+          error: (error, _) => ListView(
+            children: [
+              SizedBox(
+                height: MediaQuery.of(context).size.height * 0.5,
+                child: Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(isSmallScreen ? 20 : 24),
+                    child: Text(
+                      'Erro ao carregar servicos: $error',
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),

@@ -100,6 +100,17 @@ class _HomePageState extends ConsumerState<HomePage> {
     return null;
   }
 
+  Future<void> _refreshInicioTab() async {
+    ref.invalidate(publishedEventsProvider);
+    ref.invalidate(appUpdateProvider);
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+  }
+
+  Future<void> _refreshAgendamentosTab() async {
+    ref.invalidate(publishedServicesProvider);
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+  }
+
   SliverToBoxAdapter _buildNavigationChips(int selectedIndex) {
     final controller = _chipsControllers[selectedIndex];
 
@@ -265,268 +276,271 @@ class _HomePageState extends ConsumerState<HomePage> {
           colors: [Color(0xFFF8FAFC), Color(0xFFFFFFFF)],
         ),
       ),
-      child: CustomScrollView(
-        slivers: [
-          // Header atrativo
-          SliverToBoxAdapter(
-            child: Container(
-              padding: headerPadding,
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFF6366F1), // Indigo
-                    Color(0xFF8B5CF6), // Purple
-                  ],
-                ),
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(32),
-                  bottomRight: Radius.circular(32),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Icon(
-                          Icons.waving_hand,
-                          color: Colors.white,
-                          size: isSmallScreen ? 28 : 32,
-                        ),
-                      ),
-                      SizedBox(width: isSmallScreen ? 16 : 20),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Olá, seja bem-vindo!',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: titleFontSize,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            SizedBox(height: isSmallScreen ? 4 : 8),
-                            Text(
-                              'Comunidade IADET',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: subtitleFontSize,
-                                fontWeight: FontWeight.w300,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+      child: RefreshIndicator(
+        onRefresh: _refreshInicioTab,
+        child: CustomScrollView(
+          slivers: [
+            // Header atrativo
+            SliverToBoxAdapter(
+              child: Container(
+                padding: headerPadding,
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(0xFF6366F1), // Indigo
+                      Color(0xFF8B5CF6), // Purple
                     ],
                   ),
-                  SizedBox(height: isSmallScreen ? 24 : 32),
-                  Container(
-                    padding: EdgeInsets.all(isSmallScreen ? 20 : 24),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        width: 1,
-                      ),
-                    ),
-                    child: Row(
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(32),
+                    bottomRight: Radius.circular(32),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
                       children: [
-                        Icon(
-                          Icons.info_outline,
-                          color: Colors.white,
-                          size: isSmallScreen ? 24 : 28,
+                        Container(
+                          padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Icon(
+                            Icons.waving_hand,
+                            color: Colors.white,
+                            size: isSmallScreen ? 28 : 32,
+                          ),
                         ),
                         SizedBox(width: isSmallScreen ? 16 : 20),
                         Expanded(
-                          child: Text(
-                            'Aqui você encontra eventos, atendimentos e serviços gratuitos da nossa comunidade.',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: isSmallScreen ? 14 : 16,
-                              height: 1.4,
-                            ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Olá, seja bem-vindo!',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: titleFontSize,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              SizedBox(height: isSmallScreen ? 4 : 8),
+                              Text(
+                                'Comunidade IADET',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: subtitleFontSize,
+                                  fontWeight: FontWeight.w300,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          _buildNavigationChips(0),
-
-          updateAsync.when(
-            data: (updateInfo) {
-              if (updateInfo == null) {
-                return const SliverToBoxAdapter(child: SizedBox.shrink());
-              }
-
-              return SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    contentPadding.left,
-                    20,
-                    contentPadding.right,
-                    0,
-                  ),
-                  child: _buildUpdateCard(
-                    context,
-                    updateInfo,
-                    isSmallScreen,
-                  ),
-                ),
-              );
-            },
-            loading: () => const SliverToBoxAdapter(child: SizedBox.shrink()),
-            error: (_, __) => const SliverToBoxAdapter(child: SizedBox.shrink()),
-          ),
-
-          // Seção de Eventos
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(
-                contentPadding.left,
-                isSmallScreen ? 32 : 48,
-                contentPadding.right,
-                isSmallScreen ? 16 : 20,
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF6366F1).withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      Icons.event_available,
-                      color: const Color(0xFF6366F1),
-                      size: isSmallScreen ? 20 : 24,
-                    ),
-                  ),
-                  SizedBox(width: isSmallScreen ? 12 : 16),
-                  Text(
-                    'Eventos e ações em destaque',
-                    style: TextStyle(
-                      fontSize: sectionTitleFontSize,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF1E293B),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          eventsAsync.when(
-            data: (events) {
-              if (events.isEmpty) {
-                return SliverToBoxAdapter(
-                  child: Padding(
-                    padding: contentPadding,
-                    child: Container(
-                      padding: const EdgeInsets.all(24),
+                    SizedBox(height: isSmallScreen ? 24 : 32),
+                    Container(
+                      padding: EdgeInsets.all(isSmallScreen ? 20 : 24),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: Colors.white.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.08),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.info_outline,
+                            color: Colors.white,
+                            size: isSmallScreen ? 24 : 28,
+                          ),
+                          SizedBox(width: isSmallScreen ? 16 : 20),
+                          Expanded(
+                            child: Text(
+                              'Aqui você encontra eventos, atendimentos e serviços gratuitos da nossa comunidade.',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: isSmallScreen ? 14 : 16,
+                                height: 1.4,
+                              ),
+                            ),
                           ),
                         ],
                       ),
-                      child: const Text(
-                        'Nenhum evento publicado no momento.',
-                        textAlign: TextAlign.center,
-                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            _buildNavigationChips(0),
+
+            updateAsync.when(
+              data: (updateInfo) {
+                if (updateInfo == null) {
+                  return const SliverToBoxAdapter(child: SizedBox.shrink());
+                }
+
+                return SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      contentPadding.left,
+                      20,
+                      contentPadding.right,
+                      0,
+                    ),
+                    child: _buildUpdateCard(
+                      context,
+                      updateInfo,
+                      isSmallScreen,
                     ),
                   ),
                 );
-              }
+              },
+              loading: () => const SliverToBoxAdapter(child: SizedBox.shrink()),
+              error: (_, __) => const SliverToBoxAdapter(child: SizedBox.shrink()),
+            ),
 
-              return SliverPadding(
-                padding: contentPadding,
-                sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate((context, index) {
-                    final event = events[index];
-                    return Padding(
-                      padding: EdgeInsets.only(
-                        bottom: index == events.length - 1
-                            ? 0
-                            : (isSmallScreen ? 16 : 20),
+            // Seção de Eventos
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  contentPadding.left,
+                  isSmallScreen ? 32 : 48,
+                  contentPadding.right,
+                  isSmallScreen ? 16 : 20,
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF6366F1).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      child: EventFeedCard(
-                        event: event,
-                        onCardTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => EventDetailsPage(event: event),
+                      child: Icon(
+                        Icons.event_available,
+                        color: const Color(0xFF6366F1),
+                        size: isSmallScreen ? 20 : 24,
+                      ),
+                    ),
+                    SizedBox(width: isSmallScreen ? 12 : 16),
+                    Text(
+                      'Eventos e ações em destaque',
+                      style: TextStyle(
+                        fontSize: sectionTitleFontSize,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF1E293B),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            eventsAsync.when(
+              data: (events) {
+                if (events.isEmpty) {
+                  return SliverToBoxAdapter(
+                    child: Padding(
+                      padding: contentPadding,
+                      child: Container(
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.08),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
                             ),
-                          );
-                        },
-                        onPrimaryAction: () => _registerEventInterest(
-                          context,
-                          event,
-                          EventInterestType.participante,
+                          ],
                         ),
-                        onVolunteerAction: event.permitirVoluntarios
-                            ? () => _registerEventInterest(
-                                context,
-                                event,
-                                EventInterestType.voluntario,
-                              )
-                            : null,
+                        child: const Text(
+                          'Nenhum evento publicado no momento.',
+                          textAlign: TextAlign.center,
+                        ),
                       ),
-                    );
-                  }, childCount: events.length),
-                ),
-              );
-            },
-            loading: () => const SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.all(32),
-                child: Center(child: CircularProgressIndicator()),
-              ),
-            ),
-            error: (error, _) => SliverToBoxAdapter(
-              child: Padding(
-                padding: contentPadding,
-                child: Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    'Erro ao carregar eventos: $error',
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ),
-            ),
-          ),
+                    ),
+                  );
+                }
 
-          // Espaço final considerando bottom padding
-          SliverToBoxAdapter(
-            child: SizedBox(height: (isSmallScreen ? 32 : 48) + bottomPadding),
-          ),
-        ],
+                return SliverPadding(
+                  padding: contentPadding,
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate((context, index) {
+                      final event = events[index];
+                      return Padding(
+                        padding: EdgeInsets.only(
+                          bottom: index == events.length - 1
+                              ? 0
+                              : (isSmallScreen ? 16 : 20),
+                        ),
+                        child: EventFeedCard(
+                          event: event,
+                          onCardTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => EventDetailsPage(event: event),
+                              ),
+                            );
+                          },
+                          onPrimaryAction: () => _registerEventInterest(
+                            context,
+                            event,
+                            EventInterestType.participante,
+                          ),
+                          onVolunteerAction: event.permitirVoluntarios
+                              ? () => _registerEventInterest(
+                                  context,
+                                  event,
+                                  EventInterestType.voluntario,
+                                )
+                              : null,
+                        ),
+                      );
+                    }, childCount: events.length),
+                  ),
+                );
+              },
+              loading: () => const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.all(32),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+              ),
+              error: (error, _) => SliverToBoxAdapter(
+                child: Padding(
+                  padding: contentPadding,
+                  child: Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      'Erro ao carregar eventos: $error',
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+            // Espaço final considerando bottom padding
+            SliverToBoxAdapter(
+              child: SizedBox(height: (isSmallScreen ? 32 : 48) + bottomPadding),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -767,328 +781,331 @@ class _HomePageState extends ConsumerState<HomePage> {
           colors: [Color(0xFFF8FAFC), Color(0xFFFFFFFF)],
         ),
       ),
-      child: CustomScrollView(
-        slivers: [
-          // Header atrativo para Agendamentos
-          SliverToBoxAdapter(
-            child: Container(
-              padding: headerPadding,
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFF059669), // Green
-                    Color(0xFF0D9488), // Teal
-                  ],
-                ),
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(32),
-                  bottomRight: Radius.circular(32),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Icon(
-                          Icons.calendar_month,
-                          color: Colors.white,
-                          size: isSmallScreen ? 28 : 32,
-                        ),
-                      ),
-                      SizedBox(width: isSmallScreen ? 16 : 20),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Meus Agendamentos',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: titleFontSize,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            SizedBox(height: isSmallScreen ? 4 : 8),
-                            Text(
-                              'Gerencie seus compromissos',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: subtitleFontSize,
-                                fontWeight: FontWeight.w300,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+      child: RefreshIndicator(
+        onRefresh: _refreshAgendamentosTab,
+        child: CustomScrollView(
+          slivers: [
+            // Header atrativo para Agendamentos
+            SliverToBoxAdapter(
+              child: Container(
+                padding: headerPadding,
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(0xFF059669), // Green
+                      Color(0xFF0D9488), // Teal
                     ],
                   ),
-                  SizedBox(height: isSmallScreen ? 24 : 32),
-                  Container(
-                    padding: EdgeInsets.all(isSmallScreen ? 20 : 24),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        width: 1,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.info_outline,
-                          color: Colors.white,
-                          size: isSmallScreen ? 24 : 28,
-                        ),
-                        SizedBox(width: isSmallScreen ? 16 : 20),
-                        Expanded(
-                          child: Text(
-                            'Aqui você pode visualizar seus agendamentos e encontrar novos serviços disponíveis.',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: isSmallScreen ? 14 : 16,
-                              height: 1.4,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(32),
+                    bottomRight: Radius.circular(32),
                   ),
-                ],
-              ),
-            ),
-          ),
-
-          _buildNavigationChips(1),
-
-          // Conteúdo dos agendamentos
-          SliverPadding(
-            padding: contentPadding,
-            sliver: SliverList(
-              delegate: SliverChildListDelegate([
-                SizedBox(height: isSmallScreen ? 32 : 48),
-
-                // Próximo atendimento
-                InkWell(
-                  onTap: () {
-                    // Navegar para a tela de agendamentos do usuário
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const UserAppointmentsPage(),
-                      ),
-                    );
-                  },
-                  borderRadius: BorderRadius.circular(20),
-                  child: Container(
-                    padding: EdgeInsets.all(isSmallScreen ? 20 : 24),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.08),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Row(
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
                       children: [
                         Container(
                           padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
                           decoration: BoxDecoration(
-                            color: const Color(
-                              0xFFF59E0B,
-                            ).withValues(alpha: 0.1),
+                            color: Colors.white.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: Icon(
-                            Icons.pending_actions_outlined,
-                            color: const Color(0xFFF59E0B),
-                            size: isSmallScreen ? 24 : 28,
+                            Icons.calendar_month,
+                            color: Colors.white,
+                            size: isSmallScreen ? 28 : 32,
                           ),
                         ),
                         SizedBox(width: isSmallScreen ? 16 : 20),
                         Expanded(
-                          child: Text(
-                            'Próximo atendimento',
-                            style: TextStyle(
-                              fontSize: isSmallScreen ? 16 : 18,
-                              fontWeight: FontWeight.w600,
-                              color: const Color(0xFF1E293B),
-                            ),
-                          ),
-                        ),
-                        Icon(
-                          Icons.arrow_forward_ios,
-                          color: Colors.grey[400],
-                          size: isSmallScreen ? 16 : 20,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                SizedBox(height: isSmallScreen ? 32 : 48),
-
-                // Seção de Serviços Disponíveis
-                Row(
-                  children: [
-                    Container(
-                      padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF059669).withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        Icons.medical_services_outlined,
-                        color: const Color(0xFF059669),
-                        size: isSmallScreen ? 20 : 24,
-                      ),
-                    ),
-                    SizedBox(width: isSmallScreen ? 12 : 16),
-                    Text(
-                      'Serviços disponíveis',
-                      style: TextStyle(
-                        fontSize: sectionTitleFontSize,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF1E293B),
-                      ),
-                    ),
-                  ],
-                ),
-
-                SizedBox(height: isSmallScreen ? 20 : 24),
-
-                // Lista de serviços
-                servicesAsync.when(
-                  data: (services) {
-                    if (services.isEmpty) {
-                      return Container(
-                        padding: EdgeInsets.all(isSmallScreen ? 24 : 32),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.08),
-                              blurRadius: 12,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Center(
                           child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Icon(
-                                Icons.medical_services,
-                                size: isSmallScreen ? 48 : 64,
-                                color: const Color(0xFF94A3B8),
-                              ),
-                              SizedBox(height: isSmallScreen ? 16 : 20),
                               Text(
-                                'Nenhum serviço disponível no momento.',
+                                'Meus Agendamentos',
                                 style: TextStyle(
-                                  fontSize: isSmallScreen ? 16 : 18,
-                                  color: const Color(0xFF64748B),
-                                  fontWeight: FontWeight.w500,
+                                  color: Colors.white,
+                                  fontSize: titleFontSize,
+                                  fontWeight: FontWeight.bold,
                                 ),
-                                textAlign: TextAlign.center,
+                              ),
+                              SizedBox(height: isSmallScreen ? 4 : 8),
+                              Text(
+                                'Gerencie seus compromissos',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: subtitleFontSize,
+                                  fontWeight: FontWeight.w300,
+                                ),
                               ),
                             ],
                           ),
                         ),
-                      );
-                    }
-                    return Column(
-                      children: services
-                          .map(
-                            (service) => Padding(
-                              padding: EdgeInsets.only(
-                                bottom: isSmallScreen ? 16 : 20,
-                              ),
-                              child: _ServiceCard(
-                                service: service,
-                                onShowDetails: _showServiceDetails,
-                              ),
-                            ),
-                          )
-                          .toList(),
-                    );
-                  },
-                  loading: () => Container(
-                    padding: EdgeInsets.all(isSmallScreen ? 40 : 60),
-                    child: const Center(
-                      child: CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          Color(0xFF059669),
-                        ),
-                      ),
-                    ),
-                  ),
-                  error: (error, _) => Container(
-                    padding: EdgeInsets.all(isSmallScreen ? 24 : 32),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.08),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
                       ],
                     ),
-                    child: Center(
-                      child: Column(
+                    SizedBox(height: isSmallScreen ? 24 : 32),
+                    Container(
+                      padding: EdgeInsets.all(isSmallScreen ? 20 : 24),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
                         children: [
                           Icon(
-                            Icons.error_outline,
-                            size: isSmallScreen ? 48 : 64,
-                            color: const Color(0xFFEF4444),
+                            Icons.info_outline,
+                            color: Colors.white,
+                            size: isSmallScreen ? 24 : 28,
                           ),
-                          SizedBox(height: isSmallScreen ? 16 : 20),
-                          Text(
-                            'Erro ao carregar serviços',
-                            style: TextStyle(
-                              fontSize: isSmallScreen ? 16 : 18,
-                              color: const Color(0xFFEF4444),
-                              fontWeight: FontWeight.w600,
+                          SizedBox(width: isSmallScreen ? 16 : 20),
+                          Expanded(
+                            child: Text(
+                              'Aqui você pode visualizar seus agendamentos e encontrar novos serviços disponíveis.',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: isSmallScreen ? 14 : 16,
+                                height: 1.4,
+                              ),
                             ),
                           ),
-                          SizedBox(height: isSmallScreen ? 8 : 12),
-                          Text(
-                            error.toString(),
-                            style: TextStyle(
-                              fontSize: isSmallScreen ? 14 : 16,
-                              color: const Color(0xFF64748B),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            _buildNavigationChips(1),
+
+            // Conteúdo dos agendamentos
+            SliverPadding(
+              padding: contentPadding,
+              sliver: SliverList(
+                delegate: SliverChildListDelegate([
+                  SizedBox(height: isSmallScreen ? 32 : 48),
+
+                  // Próximo atendimento
+                  InkWell(
+                    onTap: () {
+                      // Navegar para a tela de agendamentos do usuário
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const UserAppointmentsPage(),
+                        ),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      padding: EdgeInsets.all(isSmallScreen ? 20 : 24),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.08),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+                            decoration: BoxDecoration(
+                              color: const Color(
+                                0xFFF59E0B,
+                              ).withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(16),
                             ),
-                            textAlign: TextAlign.center,
+                            child: Icon(
+                              Icons.pending_actions_outlined,
+                              color: const Color(0xFFF59E0B),
+                              size: isSmallScreen ? 24 : 28,
+                            ),
+                          ),
+                          SizedBox(width: isSmallScreen ? 16 : 20),
+                          Expanded(
+                            child: Text(
+                              'Próximo atendimento',
+                              style: TextStyle(
+                                fontSize: isSmallScreen ? 16 : 18,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF1E293B),
+                              ),
+                            ),
+                          ),
+                          Icon(
+                            Icons.arrow_forward_ios,
+                            color: Colors.grey[400],
+                            size: isSmallScreen ? 16 : 20,
                           ),
                         ],
                       ),
                     ),
                   ),
-                ),
 
-                // Espaço final
-                SizedBox(
-                  height: (isSmallScreen ? 32 : 48) + bottomPadding + 80,
-                ),
-              ]),
+                  SizedBox(height: isSmallScreen ? 32 : 48),
+
+                  // Seção de Serviços Disponíveis
+                  Row(
+                    children: [
+                      Container(
+                        padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF059669).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          Icons.medical_services_outlined,
+                          color: const Color(0xFF059669),
+                          size: isSmallScreen ? 20 : 24,
+                        ),
+                      ),
+                      SizedBox(width: isSmallScreen ? 12 : 16),
+                      Text(
+                        'Serviços disponíveis',
+                        style: TextStyle(
+                          fontSize: sectionTitleFontSize,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF1E293B),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  SizedBox(height: isSmallScreen ? 20 : 24),
+
+                  // Lista de serviços
+                  servicesAsync.when(
+                    data: (services) {
+                      if (services.isEmpty) {
+                        return Container(
+                          padding: EdgeInsets.all(isSmallScreen ? 24 : 32),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.08),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Center(
+                            child: Column(
+                              children: [
+                                Icon(
+                                  Icons.medical_services,
+                                  size: isSmallScreen ? 48 : 64,
+                                  color: const Color(0xFF94A3B8),
+                                ),
+                                SizedBox(height: isSmallScreen ? 16 : 20),
+                                Text(
+                                  'Nenhum serviço disponível no momento.',
+                                  style: TextStyle(
+                                    fontSize: isSmallScreen ? 16 : 18,
+                                    color: const Color(0xFF64748B),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }
+                      return Column(
+                        children: services
+                            .map(
+                              (service) => Padding(
+                                padding: EdgeInsets.only(
+                                  bottom: isSmallScreen ? 16 : 20,
+                                ),
+                                child: _ServiceCard(
+                                  service: service,
+                                  onShowDetails: _showServiceDetails,
+                                ),
+                              ),
+                            )
+                            .toList(),
+                      );
+                    },
+                    loading: () => Container(
+                      padding: EdgeInsets.all(isSmallScreen ? 40 : 60),
+                      child: const Center(
+                        child: CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Color(0xFF059669),
+                          ),
+                        ),
+                      ),
+                    ),
+                    error: (error, _) => Container(
+                      padding: EdgeInsets.all(isSmallScreen ? 24 : 32),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.08),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Center(
+                        child: Column(
+                          children: [
+                            Icon(
+                              Icons.error_outline,
+                              size: isSmallScreen ? 48 : 64,
+                              color: const Color(0xFFEF4444),
+                            ),
+                            SizedBox(height: isSmallScreen ? 16 : 20),
+                            Text(
+                              'Erro ao carregar serviços',
+                              style: TextStyle(
+                                fontSize: isSmallScreen ? 16 : 18,
+                                color: const Color(0xFFEF4444),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            SizedBox(height: isSmallScreen ? 8 : 12),
+                            Text(
+                              error.toString(),
+                              style: TextStyle(
+                                fontSize: isSmallScreen ? 14 : 16,
+                                color: const Color(0xFF64748B),
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Espaço final
+                  SizedBox(
+                    height: (isSmallScreen ? 32 : 48) + bottomPadding + 80,
+                  ),
+                ]),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

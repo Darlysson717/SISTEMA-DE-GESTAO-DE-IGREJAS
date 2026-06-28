@@ -48,140 +48,160 @@ class _MyEventsPageState extends ConsumerState<MyEventsPage> with RouteAware {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Meus Eventos')),
-      body: eventsAsync.when(
-        data: (events) {
-          _currentEvents = events;
-          final filteredEvents = _applyStatusFilter(events);
+      body: RefreshIndicator(
+        onRefresh: () async {
+          _refreshEventFeeds();
+          await Future<void>.delayed(const Duration(milliseconds: 200));
+        },
+        child: eventsAsync.when(
+          data: (events) {
+            _currentEvents = events;
+            final filteredEvents = _applyStatusFilter(events);
 
-          if (events.isEmpty) {
-            return _buildEmptyState(context, bottomPadding);
-          }
+            if (events.isEmpty) {
+              return _buildEmptyState(context, bottomPadding);
+            }
 
-          return Column(
+            return Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _buildFilterChip('todos', 'Todos'),
+                        const SizedBox(width: 8),
+                        _buildFilterChip('publicado', 'Publicados'),
+                        const SizedBox(width: 8),
+                        _buildFilterChip('agendado', 'Agendados'),
+                        const SizedBox(width: 8),
+                        _buildFilterChip('cancelado', 'Cancelados'),
+                      ],
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: filteredEvents.isEmpty
+                      ? const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(24),
+                            child: Text(
+                              'Nenhum evento encontrado para esse filtro.',
+                            ),
+                          ),
+                        )
+                      : ListView.separated(
+                          padding: EdgeInsets.fromLTRB(
+                            16,
+                            16,
+                            16,
+                            bottomPadding + 24,
+                          ),
+                          itemCount: filteredEvents.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 16),
+                          itemBuilder: (context, index) {
+                            final event = filteredEvents[index];
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                EventFeedCard(
+                                  event: event,
+                                  onCardTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            EventDetailsPage(event: event),
+                                      ),
+                                    );
+                                  },
+                                ),
+                                const SizedBox(height: 10),
+                                Row(
+                                  children: [
+                                    Chip(
+                                      avatar: const Icon(Icons.circle, size: 10),
+                                      label: Text(_statusLabel(event.status)),
+                                      visualDensity: VisualDensity.compact,
+                                    ),
+                                    const Spacer(),
+                                    OutlinedButton.icon(
+                                      onPressed: () async {
+                                        await Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => AnnounceEventPage(
+                                              initialEvent: event,
+                                            ),
+                                          ),
+                                        );
+
+                                        if (!mounted) return;
+                                        _refreshEventFeeds();
+                                      },
+                                      icon: const Icon(Icons.edit_outlined),
+                                      label: const Text('Editar'),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    FilledButton.icon(
+                                      onPressed: _deletingEventId == event.id
+                                          ? null
+                                          : () => _onDeleteEvent(event),
+                                      style: FilledButton.styleFrom(
+                                        backgroundColor: const Color(0xFFDC2626),
+                                        foregroundColor: Colors.white,
+                                      ),
+                                      icon: _deletingEventId == event.id
+                                          ? const SizedBox(
+                                              height: 16,
+                                              width: 16,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                              ),
+                                            )
+                                          : const Icon(Icons.delete_outline),
+                                      label: Text(
+                                        _deletingEventId == event.id
+                                            ? 'Excluindo...'
+                                            : 'Excluir',
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                _buildRegistrationsNamesSection(event),
+                              ],
+                            );
+                          },
+                        ),
+                ),
+              ],
+            );
+          },
+          loading: () => ListView(
             children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      _buildFilterChip('todos', 'Todos'),
-                      const SizedBox(width: 8),
-                      _buildFilterChip('publicado', 'Publicados'),
-                      const SizedBox(width: 8),
-                      _buildFilterChip('agendado', 'Agendados'),
-                      const SizedBox(width: 8),
-                      _buildFilterChip('cancelado', 'Cancelados'),
-                    ],
+              SizedBox(
+                height: MediaQuery.of(context).size.height * 0.5,
+                child: const Center(child: CircularProgressIndicator()),
+              ),
+            ],
+          ),
+          error: (error, _) => ListView(
+            children: [
+              SizedBox(
+                height: MediaQuery.of(context).size.height * 0.5,
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text(
+                      'Erro ao carregar eventos: $error',
+                      textAlign: TextAlign.center,
+                    ),
                   ),
                 ),
               ),
-              Expanded(
-                child: filteredEvents.isEmpty
-                    ? const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(24),
-                          child: Text(
-                            'Nenhum evento encontrado para esse filtro.',
-                          ),
-                        ),
-                      )
-                    : ListView.separated(
-                        padding: EdgeInsets.fromLTRB(
-                          16,
-                          16,
-                          16,
-                          bottomPadding + 24,
-                        ),
-                        itemCount: filteredEvents.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 16),
-                        itemBuilder: (context, index) {
-                          final event = filteredEvents[index];
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              EventFeedCard(
-                                event: event,
-                                onCardTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) =>
-                                          EventDetailsPage(event: event),
-                                    ),
-                                  );
-                                },
-                              ),
-                              const SizedBox(height: 10),
-                              Row(
-                                children: [
-                                  Chip(
-                                    avatar: const Icon(Icons.circle, size: 10),
-                                    label: Text(_statusLabel(event.status)),
-                                    visualDensity: VisualDensity.compact,
-                                  ),
-                                  const Spacer(),
-                                  OutlinedButton.icon(
-                                    onPressed: () async {
-                                      await Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (_) => AnnounceEventPage(
-                                            initialEvent: event,
-                                          ),
-                                        ),
-                                      );
-
-                                      if (!mounted) return;
-                                      _refreshEventFeeds();
-                                    },
-                                    icon: const Icon(Icons.edit_outlined),
-                                    label: const Text('Editar'),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  FilledButton.icon(
-                                    onPressed: _deletingEventId == event.id
-                                        ? null
-                                        : () => _onDeleteEvent(event),
-                                    style: FilledButton.styleFrom(
-                                      backgroundColor: const Color(0xFFDC2626),
-                                      foregroundColor: Colors.white,
-                                    ),
-                                    icon: _deletingEventId == event.id
-                                        ? const SizedBox(
-                                            height: 16,
-                                            width: 16,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                            ),
-                                          )
-                                        : const Icon(Icons.delete_outline),
-                                    label: Text(
-                                      _deletingEventId == event.id
-                                          ? 'Excluindo...'
-                                          : 'Excluir',
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              _buildRegistrationsNamesSection(event),
-                            ],
-                          );
-                        },
-                      ),
-              ),
             ],
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Text(
-              'Erro ao carregar eventos: $error',
-              textAlign: TextAlign.center,
-            ),
           ),
         ),
       ),
@@ -201,7 +221,6 @@ class _MyEventsPageState extends ConsumerState<MyEventsPage> with RouteAware {
               'Você ainda não possui eventos cadastrados.',
               textAlign: TextAlign.center,
             ),
-
           ],
         ),
       ),

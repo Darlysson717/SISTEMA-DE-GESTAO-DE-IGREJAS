@@ -17,6 +17,12 @@ class UserAppointmentsPage extends ConsumerStatefulWidget {
 class _UserAppointmentsPageState extends ConsumerState<UserAppointmentsPage> {
   final Set<String> _locallyCancelledIds = <String>{};
 
+  Future<void> _refreshAppointments() async {
+    ref.invalidate(communityAppointmentsProvider);
+    ref.invalidate(cancellationMessagesProvider);
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+  }
+
   @override
   Widget build(BuildContext context) {
     final appointmentsAsync = ref.watch(communityAppointmentsProvider);
@@ -51,34 +57,47 @@ class _UserAppointmentsPageState extends ConsumerState<UserAppointmentsPage> {
 
           if (appointments.isEmpty) {
             if (cancellationMessages.isNotEmpty) {
-              return _buildCancellationNoticesList(
-                context,
-                cancellationMessages,
+              return RefreshIndicator(
+                onRefresh: _refreshAppointments,
+                child: _buildCancellationNoticesList(
+                  context,
+                  cancellationMessages,
+                ),
               );
             }
 
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+            return RefreshIndicator(
+              onRefresh: _refreshAppointments,
+              child: ListView(
                 children: [
-                  Icon(
-                    Icons.calendar_today_outlined,
-                    size: 64,
-                    color: Colors.grey[400],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Você ainda não possui agendamentos',
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: Colors.grey[600],
-                      fontWeight: FontWeight.w500,
+                  SizedBox(
+                    height: MediaQuery.of(context).size.height * 0.3,
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.calendar_today_outlined,
+                            size: 64,
+                            color: Colors.grey[400],
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Você ainda não possui agendamentos',
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: Colors.grey[600],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Agende um serviço para começar',
+                            style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Agende um serviço para começar',
-                    style: TextStyle(fontSize: 14, color: Colors.grey[500]),
                   ),
                 ],
               ),
@@ -140,25 +159,35 @@ class _UserAppointmentsPageState extends ConsumerState<UserAppointmentsPage> {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+        error: (error, stack) => RefreshIndicator(
+          onRefresh: _refreshAppointments,
+          child: ListView(
             children: [
-              Icon(Icons.error_outline, size: 64, color: Colors.red[400]),
-              const SizedBox(height: 16),
-              Text(
-                'Erro ao carregar agendamentos',
-                style: TextStyle(
-                  fontSize: 18,
-                  color: Colors.red[600],
-                  fontWeight: FontWeight.w500,
+              SizedBox(
+                height: MediaQuery.of(context).size.height * 0.5,
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.error_outline, size: 64, color: Colors.red[400]),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Erro ao carregar agendamentos',
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: Colors.red[600],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        error.toString(),
+                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                error.toString(),
-                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                textAlign: TextAlign.center,
               ),
             ],
           ),
@@ -176,50 +205,64 @@ class _UserAppointmentsPageState extends ConsumerState<UserAppointmentsPage> {
   }) {
     if (appointments.isEmpty && notices.isEmpty) {
       if (isScheduled) {
-        return ListView(
-          padding: EdgeInsets.fromLTRB(16, 16, 16, bottomPadding + 24),
-          children: [
-            _buildScheduledReminderCard(),
-            const SizedBox(height: 16),
-            _buildEmptyScheduledState(),
-          ],
+        return RefreshIndicator(
+          onRefresh: _refreshAppointments,
+          child: ListView(
+            padding: EdgeInsets.fromLTRB(16, 16, 16, bottomPadding + 24),
+            children: [
+              _buildScheduledReminderCard(),
+              const SizedBox(height: 16),
+              _buildEmptyScheduledState(),
+            ],
+          ),
         );
       }
 
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+      return RefreshIndicator(
+        onRefresh: _refreshAppointments,
+        child: ListView(
+          padding: EdgeInsets.fromLTRB(16, 16, 16, bottomPadding + 24),
           children: [
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                shape: BoxShape.circle,
+            SizedBox(
+              height: MediaQuery.of(context).size.height * 0.3,
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        isScheduled ? Icons.calendar_today_outlined : Icons.history,
+                        size: 64,
+                        color: Colors.grey[500],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      isScheduled
+                          ? 'Nenhum agendamento futuro'
+                          : 'Nenhum agendamento passado',
+                      style: TextStyle(
+                        fontSize: 20,
+                        color: Colors.grey[700],
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      isScheduled
+                          ? 'Explore nossos serviços e agende seu primeiro atendimento'
+                          : 'Seus agendamentos anteriores aparecerão aqui',
+                      style: TextStyle(fontSize: 16, color: Colors.grey[500]),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
               ),
-              child: Icon(
-                isScheduled ? Icons.calendar_today_outlined : Icons.history,
-                size: 64,
-                color: Colors.grey[500],
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              isScheduled
-                  ? 'Nenhum agendamento futuro'
-                  : 'Nenhum agendamento passado',
-              style: TextStyle(
-                fontSize: 20,
-                color: Colors.grey[700],
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              isScheduled
-                  ? 'Explore nossos serviços e agende seu primeiro atendimento'
-                  : 'Seus agendamentos anteriores aparecerão aqui',
-              style: TextStyle(fontSize: 16, color: Colors.grey[500]),
-              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -227,342 +270,348 @@ class _UserAppointmentsPageState extends ConsumerState<UserAppointmentsPage> {
     }
 
     if (!isScheduled && appointments.isEmpty && notices.isNotEmpty) {
-      return _buildCancellationNoticesList(context, notices);
+      return RefreshIndicator(
+        onRefresh: _refreshAppointments,
+        child: _buildCancellationNoticesList(context, notices),
+      );
     }
 
-    return ListView.builder(
-      padding: EdgeInsets.fromLTRB(16, 16, 16, bottomPadding + 24),
-      itemCount: appointments.length + (isScheduled ? 1 : notices.length),
-      itemBuilder: (context, index) {
-        if (isScheduled && index == 0) {
-          return _buildScheduledReminderCard();
-        }
+    return RefreshIndicator(
+      onRefresh: _refreshAppointments,
+      child: ListView.builder(
+        padding: EdgeInsets.fromLTRB(16, 16, 16, bottomPadding + 24),
+        itemCount: appointments.length + (isScheduled ? 1 : notices.length),
+        itemBuilder: (context, index) {
+          if (isScheduled && index == 0) {
+            return _buildScheduledReminderCard();
+          }
 
-        if (!isScheduled && index < notices.length) {
-          final notice = notices[index];
-          return _buildCancellationNoticeCard(notice);
-        }
+          if (!isScheduled && index < notices.length) {
+            final notice = notices[index];
+            return _buildCancellationNoticeCard(notice);
+          }
 
-        final appointmentIndex = isScheduled
-            ? index - 1
-            : index - notices.length;
-        final appointment = appointments[appointmentIndex];
-        final canCancel =
-            isScheduled &&
-            appointment.status == AppointmentStatus.scheduled &&
-            appointment.startsAt.isAfter(now);
-        final statusColor = _getStatusColor(appointment.status);
-        final scheduledDate = formatDate(appointment.startsAt);
-        final scheduledTime =
-            '${appointment.startsAt.hour.toString().padLeft(2, '0')}:${appointment.startsAt.minute.toString().padLeft(2, '0')}';
-        final serviceTypeLabel = appointment.serviceType == 'online'
-            ? 'Online'
-            : 'Presencial';
-        final hasPhone = (appointment.phone ?? '').trim().isNotEmpty;
-        final locationLabel = appointment.serviceType == 'online'
-            ? 'Atendimento online'
-            : (appointment.location?.isNotEmpty == true
-                  ? appointment.location!
-                  : 'Local não informado');
+          final appointmentIndex = isScheduled
+              ? index - 1
+              : index - notices.length;
+          final appointment = appointments[appointmentIndex];
+          final canCancel =
+              isScheduled &&
+              appointment.status == AppointmentStatus.scheduled &&
+              appointment.startsAt.isAfter(now);
+          final statusColor = _getStatusColor(appointment.status);
+          final scheduledDate = formatDate(appointment.startsAt);
+          final scheduledTime =
+              '${appointment.startsAt.hour.toString().padLeft(2, '0')}:${appointment.startsAt.minute.toString().padLeft(2, '0')}';
+          final serviceTypeLabel = appointment.serviceType == 'online'
+              ? 'Online'
+              : 'Presencial';
+          final hasPhone = (appointment.phone ?? '').trim().isNotEmpty;
+          final locationLabel = appointment.serviceType == 'online'
+              ? 'Atendimento online'
+              : (appointment.location?.isNotEmpty == true
+                    ? appointment.location!
+                    : 'Local não informado');
 
-        return Card(
-          margin: const EdgeInsets.only(bottom: 12),
-          elevation: 4,
-          shadowColor: Colors.black26,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Container(
-            decoration: BoxDecoration(
+          return Card(
+            margin: const EdgeInsets.only(bottom: 12),
+            elevation: 4,
+            shadowColor: Colors.black26,
+            shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
-              gradient: LinearGradient(
-                colors: [Colors.white, Colors.grey[50]!],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
             ),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 16,
-                        backgroundColor: statusColor.withValues(alpha: 0.12),
-                        child: Icon(
-                          _getStatusIcon(appointment.status),
-                          color: statusColor,
-                          size: 18,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          '${appointment.professionalName} • ${appointment.specialty}',
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      Chip(
-                        label: Text(statusLabel(appointment.status)),
-                        backgroundColor: statusColor.withValues(alpha: 0.15),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Divider(color: Colors.grey[300], thickness: 1),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.calendar_today_outlined,
-                        size: 16,
-                        color: Colors.grey,
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          'Data: $scheduledDate',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[800],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.access_time,
-                        size: 16,
-                        color: Colors.grey,
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          'Horário: $scheduledTime',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[800],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.laptop_mac_outlined,
-                        size: 16,
-                        color: Colors.grey,
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          'Tipo: $serviceTypeLabel',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[800],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.place_outlined,
-                        size: 16,
-                        color: Colors.grey,
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          'Local: $locationLabel',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[800],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (appointment.phone != null &&
-                      appointment.phone!.isNotEmpty) ...[
-                    const SizedBox(height: 4),
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                gradient: LinearGradient(
+                  colors: [Colors.white, Colors.grey[50]!],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Row(
                       children: [
-                        Icon(Icons.phone, size: 16, color: Colors.grey[600]),
-                        const SizedBox(width: 4),
-                        Text(
-                          appointment.phone!,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[700],
+                        CircleAvatar(
+                          radius: 16,
+                          backgroundColor: statusColor.withValues(alpha: 0.12),
+                          child: Icon(
+                            _getStatusIcon(appointment.status),
+                            color: statusColor,
+                            size: 18,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            '${appointment.professionalName} • ${appointment.specialty}',
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        Chip(
+                          label: Text(statusLabel(appointment.status)),
+                          backgroundColor: statusColor.withValues(alpha: 0.15),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Divider(color: Colors.grey[300], thickness: 1),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.calendar_today_outlined,
+                          size: 16,
+                          color: Colors.grey,
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'Data: $scheduledDate',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[800],
+                            ),
                           ),
                         ),
                       ],
                     ),
-                  ],
-                  if (appointment.notes != null &&
-                      appointment.notes!.isNotEmpty) ...[
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.blue[50],
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.blue[200]!),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.blue[100]!.withValues(alpha: 0.5),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.access_time,
+                          size: 16,
+                          color: Colors.grey,
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'Horário: $scheduledTime',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[800],
+                            ),
                           ),
-                        ],
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.laptop_mac_outlined,
+                          size: 16,
+                          color: Colors.grey,
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'Tipo: $serviceTypeLabel',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[800],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.place_outlined,
+                          size: 16,
+                          color: Colors.grey,
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'Local: $locationLabel',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[800],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (appointment.phone != null &&
+                        appointment.phone!.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Row(
                         children: [
-                          Icon(Icons.note, size: 20, color: Colors.blue[700]),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Observações',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.blue[700],
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  appointment.notes!,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.blue[800],
-                                  ),
-                                ),
-                              ],
+                          Icon(Icons.phone, size: 16, color: Colors.grey[600]),
+                          const SizedBox(width: 4),
+                          Text(
+                            appointment.phone!,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[700],
                             ),
                           ),
                         ],
                       ),
-                    ),
-                  ],
-                  if (canCancel || hasPhone) ...[
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        if (hasPhone)
-                          Expanded(
-                            child: FilledButton.icon(
-                              onPressed: () =>
-                                  _openWhatsApp(context, appointment.phone!),
-                              style: FilledButton.styleFrom(
-                                backgroundColor: const Color(0xFF25D366),
-                                foregroundColor: Colors.white,
-                              ),
-                              icon: const Icon(Icons.chat_outlined, size: 18),
-                              label: const Text('WhatsApp'),
+                    ],
+                    if (appointment.notes != null &&
+                        appointment.notes!.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.blue[50],
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.blue[200]!),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.blue[100]!.withValues(alpha: 0.5),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
                             ),
-                          ),
-                        if (hasPhone && canCancel) const SizedBox(width: 8),
-                        if (canCancel)
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () async {
-                                final confirmed = await showDialog<bool>(
-                                  context: context,
-                                  builder: (_) => AlertDialog(
-                                    title: const Text('Cancelar agendamento'),
-                                    content: const Text(
-                                      'Deseja realmente cancelar este agendamento?',
+                          ],
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(Icons.note, size: 20, color: Colors.blue[700]),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Observações',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.blue[700],
                                     ),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () =>
-                                            Navigator.pop(context, false),
-                                        child: const Text('Não'),
-                                      ),
-                                      TextButton(
-                                        onPressed: () =>
-                                            Navigator.pop(context, true),
-                                        child: const Text('Sim, cancelar'),
-                                      ),
-                                    ],
                                   ),
-                                );
-
-                                if (confirmed != true) {
-                                  return;
-                                }
-
-                                setState(() {
-                                  _locallyCancelledIds.add(appointment.id);
-                                });
-
-                                try {
-                                  await ref
-                                      .read(schedulingRepositoryProvider)
-                                      .cancelAppointment(appointment.id);
-
-                                  ref.invalidate(communityAppointmentsProvider);
-                                  ref.invalidate(
-                                    professionalAppointmentsProvider,
-                                  );
-                                  ref.invalidate(
-                                    professionalTodayAppointmentsProvider,
-                                  );
-                                  ref.invalidate(allAppointmentsProvider);
-
-                                  if (!context.mounted) return;
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        'Agendamento cancelado com sucesso.',
-                                      ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    appointment.notes!,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.blue[800],
                                     ),
-                                  );
-                                } catch (error) {
-                                  if (!mounted) return;
-                                  setState(() {
-                                    _locallyCancelledIds.remove(appointment.id);
-                                  });
-                                  if (!context.mounted) return;
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        'Erro ao cancelar agendamento: $error',
-                                      ),
-                                    ),
-                                  );
-                                }
-                              },
-                              icon: const Icon(Icons.cancel_outlined, size: 18),
-                              label: const Text('Cancelar agendamento'),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                      ],
-                    ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    if (canCancel || hasPhone) ...[
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          if (hasPhone)
+                            Expanded(
+                              child: FilledButton.icon(
+                                onPressed: () =>
+                                    _openWhatsApp(context, appointment.phone!),
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: const Color(0xFF25D366),
+                                  foregroundColor: Colors.white,
+                                ),
+                                icon: const Icon(Icons.chat_outlined, size: 18),
+                                label: const Text('WhatsApp'),
+                              ),
+                            ),
+                          if (hasPhone && canCancel) const SizedBox(width: 8),
+                          if (canCancel)
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () async {
+                                  final confirmed = await showDialog<bool>(
+                                    context: context,
+                                    builder: (_) => AlertDialog(
+                                      title: const Text('Cancelar agendamento'),
+                                      content: const Text(
+                                        'Deseja realmente cancelar este agendamento?',
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.pop(context, false),
+                                          child: const Text('Não'),
+                                        ),
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.pop(context, true),
+                                          child: const Text('Sim, cancelar'),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+
+                                  if (confirmed != true) {
+                                    return;
+                                  }
+
+                                  setState(() {
+                                    _locallyCancelledIds.add(appointment.id);
+                                  });
+
+                                  try {
+                                    await ref
+                                        .read(schedulingRepositoryProvider)
+                                        .cancelAppointment(appointment.id);
+
+                                    ref.invalidate(communityAppointmentsProvider);
+                                    ref.invalidate(
+                                      professionalAppointmentsProvider,
+                                    );
+                                    ref.invalidate(
+                                      professionalTodayAppointmentsProvider,
+                                    );
+                                    ref.invalidate(allAppointmentsProvider);
+
+                                    if (!context.mounted) return;
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          'Agendamento cancelado com sucesso.',
+                                        ),
+                                      ),
+                                    );
+                                  } catch (error) {
+                                    if (!mounted) return;
+                                    setState(() {
+                                      _locallyCancelledIds.remove(appointment.id);
+                                    });
+                                    if (!context.mounted) return;
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          'Erro ao cancelar agendamento: $error',
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                },
+                                icon: const Icon(Icons.cancel_outlined, size: 18),
+                                label: const Text('Cancelar agendamento'),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 

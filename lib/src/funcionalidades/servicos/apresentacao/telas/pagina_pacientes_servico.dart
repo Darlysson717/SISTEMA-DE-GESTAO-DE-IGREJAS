@@ -18,6 +18,12 @@ class ServicePatientsPage extends ConsumerStatefulWidget {
 class _ServicePatientsPageState extends ConsumerState<ServicePatientsPage> {
   final Set<String> _locallyCancelledIds = <String>{};
 
+  Future<void> _refreshPatients() async {
+    ref.invalidate(professionalAppointmentsProvider);
+    ref.invalidate(communityAppointmentsProvider);
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+  }
+
   @override
   Widget build(BuildContext context) {
     final appointmentsAsync = ref.watch(professionalAppointmentsProvider);
@@ -27,313 +33,333 @@ class _ServicePatientsPageState extends ConsumerState<ServicePatientsPage> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Próximos Pacientes')),
-      body: appointmentsAsync.when(
-        data: (appointments) {
-          final upcoming =
-              appointments
-                  .where(
-                    (a) =>
-                        a.serviceId == widget.service.id &&
-                        a.status == AppointmentStatus.scheduled &&
-                        a.startsAt.isAfter(now) &&
-                        !_locallyCancelledIds.contains(a.id),
-                  )
-                  .toList()
-                ..sort((a, b) => a.startsAt.compareTo(b.startsAt));
+      body: RefreshIndicator(
+        onRefresh: _refreshPatients,
+        child: appointmentsAsync.when(
+          data: (appointments) {
+            final upcoming =
+                appointments
+                    .where(
+                      (a) =>
+                          a.serviceId == widget.service.id &&
+                          a.status == AppointmentStatus.scheduled &&
+                          a.startsAt.isAfter(now) &&
+                          !_locallyCancelledIds.contains(a.id),
+                    )
+                    .toList()
+                  ..sort((a, b) => a.startsAt.compareTo(b.startsAt));
 
-          if (upcoming.isEmpty) {
-            return const Center(
-              child: Padding(
-                padding: EdgeInsets.all(24),
-                child: Text(
-                  'Não há próximos pacientes para este serviço.',
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            );
-          }
-
-          return ListView.builder(
-            padding: EdgeInsets.fromLTRB(16, 16, 16, bottomPadding + 24),
-            itemCount: upcoming.length,
-            itemBuilder: (context, index) {
-              final appointment = upcoming[index];
-              final avatarUrl = appointment.communityUserPhotoUrl?.trim();
-              final hasAvatar = avatarUrl != null && avatarUrl.isNotEmpty;
-              return Card(
-                margin: const EdgeInsets.only(bottom: 12),
-                elevation: 3,
-                shadowColor: Colors.black12,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Padding(
-                  padding: EdgeInsets.zero,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      gradient: const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [Color(0xFF1D4ED8), Color(0xFF2563EB)],
+            if (upcoming.isEmpty) {
+              return ListView(
+                children: [
+                  SizedBox(
+                    height: MediaQuery.of(context).size.height * 0.5,
+                    child: const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(24),
+                        child: Text(
+                          'Não há próximos pacientes para este serviço.',
+                          textAlign: TextAlign.center,
+                        ),
                       ),
                     ),
-                    padding: const EdgeInsets.all(14),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 24,
-                              backgroundColor: Colors.white.withValues(
-                                alpha: 0.22,
-                              ),
-                              backgroundImage: hasAvatar
-                                  ? NetworkImage(avatarUrl)
-                                  : null,
-                              child: hasAvatar
-                                  ? null
-                                  : Text(
-                                      _initialsFromName(
-                                        appointment.communityUserName,
+                  ),
+                ],
+              );
+            }
+
+            return ListView.builder(
+              padding: EdgeInsets.fromLTRB(16, 16, 16, bottomPadding + 24),
+              itemCount: upcoming.length,
+              itemBuilder: (context, index) {
+                final appointment = upcoming[index];
+                final avatarUrl = appointment.communityUserPhotoUrl?.trim();
+                final hasAvatar = avatarUrl != null && avatarUrl.isNotEmpty;
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  elevation: 3,
+                  shadowColor: Colors.black12,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Padding(
+                    padding: EdgeInsets.zero,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [Color(0xFF1D4ED8), Color(0xFF2563EB)],
+                        ),
+                      ),
+                      padding: const EdgeInsets.all(14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 24,
+                                backgroundColor: Colors.white.withValues(
+                                  alpha: 0.22,
+                                ),
+                                backgroundImage: hasAvatar
+                                    ? NetworkImage(avatarUrl)
+                                    : null,
+                                child: hasAvatar
+                                    ? null
+                                    : Text(
+                                        _initialsFromName(
+                                          appointment.communityUserName,
+                                        ),
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          color: Colors.white,
+                                        ),
                                       ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      appointment.communityUserName,
                                       style: const TextStyle(
                                         fontWeight: FontWeight.w700,
+                                        fontSize: 16,
                                         color: Colors.white,
                                       ),
                                     ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    appointment.communityUserName,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 16,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    'Paciente agendado',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: Colors.white.withValues(
-                                        alpha: 0.88,
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Paciente agendado',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: Colors.white.withValues(
+                                          alpha: 0.88,
+                                        ),
+                                        fontWeight: FontWeight.w500,
                                       ),
-                                      fontWeight: FontWeight.w500,
                                     ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.16),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.28),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.event_available_outlined,
-                                size: 18,
-                                color: Colors.white,
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  'Data e horário: ${formatDateTime(appointment.startsAt)}',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.white,
-                                  ),
+                                  ],
                                 ),
                               ),
                             ],
                           ),
-                        ),
-                        const SizedBox(height: 10),
-                        LayoutBuilder(
-                          builder: (context, constraints) {
-                            final isCompact = constraints.maxWidth < 420;
-
-                            final confirmButton = _buildActionButton(
-                              onPressed: () async {
-                                try {
-                                  await ref
-                                      .read(schedulingRepositoryProvider)
-                                      .updateAppointmentStatus(
-                                        appointmentId: appointment.id,
-                                        status: AppointmentStatus.completed,
-                                      );
-
-                                  // Hide locally only after server confirms
-                                  setState(() {
-                                    _locallyCancelledIds.add(appointment.id);
-                                  });
-
-                                  ref.invalidate(communityAppointmentsProvider);
-                                  ref.invalidate(
-                                    professionalAppointmentsProvider,
-                                  );
-                                  ref.invalidate(
-                                    professionalTodayAppointmentsProvider,
-                                  );
-                                  ref.invalidate(allAppointmentsProvider);
-
-                                  if (!context.mounted) return;
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        'Presença confirmada com sucesso.',
-                                      ),
+                          const SizedBox(height: 12),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.16),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.28),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.event_available_outlined,
+                                  size: 18,
+                                  color: Colors.white,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Data e horário: ${formatDateTime(appointment.startsAt)}',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
                                     ),
-                                  );
-                                } catch (error, stack) {
-                                  // debug
-                                  // ignore: avoid_print
-                                  print('Erro ao confirmar presença: $error');
-                                  // ignore: avoid_print
-                                  print(stack);
-                                  if (!context.mounted) return;
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        'Erro ao confirmar presença: ${error.toString()}',
-                                      ),
-                                    ),
-                                  );
-                                }
-                              },
-                              icon: Icons.check_circle_outline,
-                              label: 'Confirmar presença',
-                            );
-
-                            final cancelButton = _buildActionButton(
-                              onPressed: () async {
-                                final confirmed = await showDialog<bool>(
-                                  context: context,
-                                  builder: (_) => AlertDialog(
-                                    title: const Text('Cancelar agendamento'),
-                                    content: const Text(
-                                      'Deseja cancelar este agendamento por imprevisto?',
-                                    ),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () =>
-                                            Navigator.pop(context, false),
-                                        child: const Text('Não'),
-                                      ),
-                                      TextButton(
-                                        onPressed: () =>
-                                            Navigator.pop(context, true),
-                                        child: const Text('Sim, cancelar'),
-                                      ),
-                                    ],
                                   ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          LayoutBuilder(
+                            builder: (context, constraints) {
+                              final isCompact = constraints.maxWidth < 420;
+
+                              final confirmButton = _buildActionButton(
+                                onPressed: () async {
+                                  try {
+                                    await ref
+                                        .read(schedulingRepositoryProvider)
+                                        .updateAppointmentStatus(
+                                          appointmentId: appointment.id,
+                                          status: AppointmentStatus.completed,
+                                        );
+
+                                    setState(() {
+                                      _locallyCancelledIds.add(appointment.id);
+                                    });
+
+                                    ref.invalidate(communityAppointmentsProvider);
+                                    ref.invalidate(
+                                      professionalAppointmentsProvider,
+                                    );
+                                    ref.invalidate(
+                                      professionalTodayAppointmentsProvider,
+                                    );
+                                    ref.invalidate(allAppointmentsProvider);
+
+                                    if (!context.mounted) return;
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          'Presença confirmada com sucesso.',
+                                        ),
+                                      ),
+                                    );
+                                  } catch (error, stack) {
+                                    // ignore: avoid_print
+                                    print('Erro ao confirmar presença: $error');
+                                    // ignore: avoid_print
+                                    print(stack);
+                                    if (!context.mounted) return;
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          'Erro ao confirmar presença: ${error.toString()}',
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                },
+                                icon: Icons.check_circle_outline,
+                                label: 'Confirmar presença',
+                              );
+
+                              final cancelButton = _buildActionButton(
+                                onPressed: () async {
+                                  final confirmed = await showDialog<bool>(
+                                    context: context,
+                                    builder: (_) => AlertDialog(
+                                      title: const Text('Cancelar agendamento'),
+                                      content: const Text(
+                                        'Deseja cancelar este agendamento por imprevisto?',
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.pop(context, false),
+                                          child: const Text('Não'),
+                                        ),
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.pop(context, true),
+                                          child: const Text('Sim, cancelar'),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+
+                                  if (confirmed != true) {
+                                    return;
+                                  }
+
+                                  try {
+                                    await ref
+                                        .read(schedulingRepositoryProvider)
+                                        .cancelAppointment(appointment.id);
+
+                                    setState(() {
+                                      _locallyCancelledIds.add(appointment.id);
+                                    });
+
+                                    ref.invalidate(communityAppointmentsProvider);
+                                    ref.invalidate(
+                                      professionalAppointmentsProvider,
+                                    );
+                                    ref.invalidate(
+                                      professionalTodayAppointmentsProvider,
+                                    );
+                                    ref.invalidate(allAppointmentsProvider);
+
+                                    if (!context.mounted) return;
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          'Agendamento cancelado com sucesso.',
+                                        ),
+                                      ),
+                                    );
+                                  } catch (error, stack) {
+                                    // ignore: avoid_print
+                                    print('Erro ao cancelar agendamento: $error');
+                                    // ignore: avoid_print
+                                    print(stack);
+                                    if (!context.mounted) return;
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          'Erro ao cancelar agendamento: ${error.toString()}',
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                },
+                                icon: Icons.cancel_outlined,
+                                label: 'Cancelar agendamento',
+                              );
+
+                              if (isCompact) {
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: [
+                                    confirmButton,
+                                    const SizedBox(height: 8),
+                                    cancelButton,
+                                  ],
                                 );
+                              }
 
-                                if (confirmed != true) {
-                                  return;
-                                }
-
-                                try {
-                                  await ref
-                                      .read(schedulingRepositoryProvider)
-                                      .cancelAppointment(appointment.id);
-
-                                  // Hide locally only after server confirms
-                                  setState(() {
-                                    _locallyCancelledIds.add(appointment.id);
-                                  });
-
-                                  ref.invalidate(communityAppointmentsProvider);
-                                  ref.invalidate(
-                                    professionalAppointmentsProvider,
-                                  );
-                                  ref.invalidate(
-                                    professionalTodayAppointmentsProvider,
-                                  );
-                                  ref.invalidate(allAppointmentsProvider);
-
-                                  if (!context.mounted) return;
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        'Agendamento cancelado com sucesso.',
-                                      ),
-                                    ),
-                                  );
-                                } catch (error, stack) {
-                                  // debug
-                                  // ignore: avoid_print
-                                  print('Erro ao cancelar agendamento: $error');
-                                  // ignore: avoid_print
-                                  print(stack);
-                                  if (!context.mounted) return;
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        'Erro ao cancelar agendamento: ${error.toString()}',
-                                      ),
-                                    ),
-                                  );
-                                }
-                              },
-                              icon: Icons.cancel_outlined,
-                              label: 'Cancelar agendamento',
-                            );
-
-                            if (isCompact) {
-                              return Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                              return Row(
                                 children: [
-                                  confirmButton,
-                                  const SizedBox(height: 8),
-                                  cancelButton,
+                                  Expanded(child: confirmButton),
+                                  const SizedBox(width: 8),
+                                  Expanded(child: cancelButton),
                                 ],
                               );
-                            }
-
-                            return Row(
-                              children: [
-                                Expanded(child: confirmButton),
-                                const SizedBox(width: 8),
-                                Expanded(child: cancelButton),
-                              ],
-                            );
-                          },
-                        ),
-                      ],
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            );
+          },
+          loading: () => ListView(
+            children: [
+              SizedBox(
+                height: MediaQuery.of(context).size.height * 0.5,
+                child: const Center(child: CircularProgressIndicator()),
+              ),
+            ],
+          ),
+          error: (error, _) => ListView(
+            children: [
+              SizedBox(
+                height: MediaQuery.of(context).size.height * 0.5,
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text(
+                      'Erro ao carregar próximos pacientes: $error',
+                      textAlign: TextAlign.center,
                     ),
                   ),
                 ),
-              );
-            },
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Text(
-              'Erro ao carregar próximos pacientes: $error',
-              textAlign: TextAlign.center,
-            ),
+              ),
+            ],
           ),
         ),
       ),

@@ -27,115 +27,123 @@ class _EventDetailsPageState extends ConsumerState<EventDetailsPage> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Detalhes do Evento')),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.only(bottom: bottomPadding + 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            AdaptiveEventImage(
-              imageUrl: event.imagemCapaUrlVersionada,
-              defaultAspectRatio: 16 / 9,
-            ),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    event.nome,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF1E293B),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      _chip(Icons.category_outlined, event.categoria),
-                      _chip(Icons.schedule_outlined, event.dataTexto),
-                      _chip(
-                        Icons.place_outlined,
-                        _locationLabel(event.tipoLocal),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          ref.invalidate(eventRegistrationsProvider(event.id));
+          ref.invalidate(eventRegistrationStatsProvider(event.id));
+          await Future<void>.delayed(const Duration(milliseconds: 200));
+        },
+        child: SingleChildScrollView(
+          padding: EdgeInsets.only(bottom: bottomPadding + 24),
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AdaptiveEventImage(
+                imageUrl: event.imagemCapaUrlVersionada,
+                defaultAspectRatio: 16 / 9,
+              ),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      event.nome,
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF1E293B),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    event.resumoCurto,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF334155),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    event.descricao,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      height: 1.45,
-                      color: Color(0xFF475569),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  const Text(
-                    'Contato',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(height: 8),
-                  Text('Responsável: ${event.contatoNome}'),
-                  Text('Telefone: ${event.contatoTelefone}'),
-                  if ((event.contatoEmail ?? '').trim().isNotEmpty)
-                    Text('E-mail: ${event.contatoEmail}'),
-                  if ((event.endereco ?? '').trim().isNotEmpty) ...[
-                    const SizedBox(height: 12),
-                    Text('Endereço: ${event.endereco}'),
-                  ],
-                  if ((event.linkTransmissao ?? '').trim().isNotEmpty) ...[
-                    const SizedBox(height: 12),
-                    Text('Transmissão: ${event.linkTransmissao}'),
-                  ],
-                  const SizedBox(height: 24),
-                  _buildRegistrationSection(
-                    registrationsAsync: registrationsAsync,
-                  ),
-                  const SizedBox(height: 24),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      onPressed: _isRegisteringInterest
-                          ? null
-                          : () => _registerInterest(
-                              repository,
-                              EventInterestType.participante,
-                            ),
-                      icon: const Icon(Icons.event_available_outlined),
-                      label: const Text('Participar'),
-                    ),
-                  ),
-                  if (event.permitirVoluntarios) ...[
                     const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _chip(Icons.category_outlined, event.categoria),
+                        _chip(Icons.schedule_outlined, event.dataTexto),
+                        _chip(
+                          Icons.place_outlined,
+                          _locationLabel(event.tipoLocal),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      event.resumoCurto,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF334155),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      event.descricao,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        height: 1.45,
+                        color: Color(0xFF475569),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    const Text(
+                      'Contato',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 8),
+                    Text('Responsável: ${event.contatoNome}'),
+                    Text('Telefone: ${event.contatoTelefone}'),
+                    if ((event.contatoEmail ?? '').trim().isNotEmpty)
+                      Text('E-mail: ${event.contatoEmail}'),
+                    if ((event.endereco ?? '').trim().isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Text('Endereço: ${event.endereco}'),
+                    ],
+                    if ((event.linkTransmissao ?? '').trim().isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Text('Transmissão: ${event.linkTransmissao}'),
+                    ],
+                    const SizedBox(height: 24),
+                    _buildRegistrationSection(
+                      registrationsAsync: registrationsAsync,
+                    ),
+                    const SizedBox(height: 24),
                     SizedBox(
                       width: double.infinity,
-                      child: OutlinedButton.icon(
+                      child: FilledButton.icon(
                         onPressed: _isRegisteringInterest
                             ? null
                             : () => _registerInterest(
                                 repository,
-                                EventInterestType.voluntario,
+                                EventInterestType.participante,
                               ),
-                        icon: const Icon(Icons.volunteer_activism_outlined),
-                        label: const Text('Quero ser voluntário'),
+                        icon: const Icon(Icons.event_available_outlined),
+                        label: const Text('Participar'),
                       ),
                     ),
+                    if (event.permitirVoluntarios) ...[
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: _isRegisteringInterest
+                              ? null
+                              : () => _registerInterest(
+                                  repository,
+                                  EventInterestType.voluntario,
+                                ),
+                          icon: const Icon(Icons.volunteer_activism_outlined),
+                          label: const Text('Quero ser voluntário'),
+                        ),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
