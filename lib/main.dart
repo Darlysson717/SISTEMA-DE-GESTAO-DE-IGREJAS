@@ -6,6 +6,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+/// Ponto de entrada do aplicativo Centro Social da Igreja.
+///
+/// Inicializa os serviços essenciais antes de renderizar o app:
+/// - Configura orientação de tela para retrato
+/// - Inicializa localização para datas em português brasileiro
+/// - Conecta ao Supabase (URL, anon key e fluxo de autenticação PKCE)
+/// - Inicia o sistema de injeção de dependência com Riverpod
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await SystemChrome.setPreferredOrientations([

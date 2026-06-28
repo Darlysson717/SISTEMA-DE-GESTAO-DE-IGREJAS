@@ -1,14 +1,30 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:excel/excel.dart';
 
+/// E-mail do super administrador do sistema.
+///
+/// Este e-mail tem acesso irrestrito a todas as funcionalidades
+/// administrativas, incluindo gerenciamento de admins e permissões.
 const String superAdminEmail = 'darlison.pires.corporativo@gmail.com';
 
+/// Representa um administrador do sistema.
+///
+/// Cada [AdminUser] está vinculado a um perfil de usuário e possui
+/// um status de atividade que controla seu acesso ao painel admin.
 class AdminUser {
+  /// ID do usuário no Supabase Auth.
   final String userId;
+
+  /// E-mail do administrador.
   final String email;
+
+  /// Nome completo do administrador (opcional).
   final String? fullName;
+
+  /// Indica se o administrador está ativo no sistema.
   final bool isActive;
 
+  /// Cria um [AdminUser] com todos os campos obrigatórios.
   const AdminUser({
     required this.userId,
     required this.email,
@@ -17,11 +33,21 @@ class AdminUser {
   });
 }
 
+/// Resultado da operação de limpeza de imagens órfãs no Storage.
+///
+/// Imagens órfãs são aquelas que existem no bucket `servicos_images`
+/// mas não estão vinculadas a nenhum serviço ativo.
 class OrphanCleanupResult {
+  /// Total de arquivos no bucket.
   final int totalFiles;
+
+  /// Quantidade de arquivos órfãos encontrados.
   final int orphanFiles;
+
+  /// Quantidade de arquivos efetivamente excluídos.
   final int deletedFiles;
 
+  /// Cria um [OrphanCleanupResult] com todos os campos.
   const OrphanCleanupResult({
     required this.totalFiles,
     required this.orphanFiles,
@@ -29,8 +55,10 @@ class OrphanCleanupResult {
   });
 }
 
+/// Status de uma solicitação de permissão para publicar serviços/eventos.
 enum PublishRequestStatus { pending, approved, rejected }
 
+/// Converte uma string de status do banco para o enum [PublishRequestStatus].
 PublishRequestStatus parsePublishRequestStatus(String value) {
   switch (value.trim().toLowerCase()) {
     case 'approved':
@@ -42,15 +70,30 @@ PublishRequestStatus parsePublishRequestStatus(String value) {
   }
 }
 
+/// Representa uma solicitação de permissão para publicar serviços.
 class PublishRequest {
+  /// ID único da solicitação.
   final String id;
+
+  /// ID do usuário solicitante.
   final String userId;
+
+  /// Nome do solicitante para exibição.
   final String requesterName;
+
+  /// Nome do serviço que o usuário deseja publicar.
   final String serviceName;
+
+  /// Status atual da solicitação (pending, approved, rejected).
   final PublishRequestStatus status;
+
+  /// Data de criação da solicitação.
   final DateTime createdAt;
+
+  /// E-mail do solicitante (opcional, preenchido via join com profiles).
   final String? requesterEmail;
 
+  /// Cria um [PublishRequest] com todos os campos.
   const PublishRequest({
     required this.id,
     required this.userId,
@@ -62,12 +105,21 @@ class PublishRequest {
   });
 }
 
+/// Estado de acesso do usuário para publicar serviços.
 class PublishAccessState {
+  /// Indica se o usuário pode publicar atualmente.
   final bool canPublish;
+
+  /// Última solicitação enviada (se houver).
   final PublishRequest? latestRequest;
+
+  /// Indica se a permissão foi revogada anteriormente.
   final bool wasRevoked;
+
+  /// Data em que a permissão foi revogada (se aplicável).
   final DateTime? revokedAt;
 
+  /// Cria um [PublishAccessState] com todos os campos.
   const PublishAccessState({
     required this.canPublish,
     required this.latestRequest,
@@ -76,13 +128,24 @@ class PublishAccessState {
   });
 }
 
+/// Representa um usuário autorizado a publicar serviços.
 class AuthorizedPublisher {
+  /// ID do usuário autorizado.
   final String userId;
+
+  /// E-mail do usuário.
   final String email;
+
+  /// Nome completo (opcional).
   final String? fullName;
+
+  /// Indica se a permissão está ativa.
   final bool isActive;
+
+  /// Indica se é o super administrador (tem permissão irrestrita).
   final bool isSuperAdmin;
 
+  /// Cria um [AuthorizedPublisher] com todos os campos.
   const AuthorizedPublisher({
     required this.userId,
     required this.email,
@@ -94,15 +157,30 @@ class AuthorizedPublisher {
 
 // ======== EVENT PUBLISH REQUEST CLASSES ========
 
+/// Representa uma solicitação de permissão para publicar eventos.
 class EventPublishRequest {
+  /// ID único da solicitação de evento.
   final String id;
+
+  /// ID do usuário solicitante.
   final String userId;
+
+  /// Nome do solicitante.
   final String requesterName;
+
+  /// Nome do evento que o usuário deseja publicar.
   final String eventName;
+
+  /// Status da solicitação.
   final PublishRequestStatus status;
+
+  /// Data de criação.
   final DateTime createdAt;
+
+  /// E-mail do solicitante (opcional).
   final String? requesterEmail;
 
+  /// Cria um [EventPublishRequest] com todos os campos.
   const EventPublishRequest({
     required this.id,
     required this.userId,
@@ -114,12 +192,21 @@ class EventPublishRequest {
   });
 }
 
+/// Estado de acesso do usuário para publicar eventos.
 class EventPublishAccessState {
+  /// Indica se o usuário pode publicar eventos.
   final bool canPublish;
+
+  /// Última solicitação de evento (se houver).
   final EventPublishRequest? latestRequest;
+
+  /// Indica se a permissão foi revogada.
   final bool wasRevoked;
+
+  /// Data da revogação (se aplicável).
   final DateTime? revokedAt;
 
+  /// Cria um [EventPublishAccessState].
   const EventPublishAccessState({
     required this.canPublish,
     required this.latestRequest,
@@ -128,13 +215,24 @@ class EventPublishAccessState {
   });
 }
 
+/// Representa um usuário autorizado a publicar eventos.
 class EventAuthorizedPublisher {
+  /// ID do usuário.
   final String userId;
+
+  /// E-mail do usuário.
   final String email;
+
+  /// Nome completo (opcional).
   final String? fullName;
+
+  /// Indica se a permissão está ativa.
   final bool isActive;
+
+  /// Indica se é o super administrador.
   final bool isSuperAdmin;
 
+  /// Cria um [EventAuthorizedPublisher].
   const EventAuthorizedPublisher({
     required this.userId,
     required this.email,
@@ -144,6 +242,17 @@ class EventAuthorizedPublisher {
   });
 }
 
+/// Repositório de administração implementado com Supabase.
+///
+/// Responsável por:
+/// - Gerenciamento de administradores
+/// - Controle de permissões de publicação (serviços e eventos)
+/// - Aprovação/rejeição de solicitações de publicação
+/// - Limpeza de imagens órfãs no Storage
+/// - Exportação de relatórios de agendamentos
+///
+/// O super administrador ([superAdminEmail]) tem poderes totais
+/// e não pode ser removido.
 class AdminRepository {
   final SupabaseClient _client;
 

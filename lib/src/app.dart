@@ -3,6 +3,16 @@ import 'package:centro_social_app/src/funcionalidades/autenticacao/apresentacao/
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
+/// Widget raiz do aplicativo Centro Social da Igreja.
+///
+/// Configura o tema Material 3 com cores personalizadas, localização
+/// em português brasileiro e o observador de rotas para navegação.
+///
+/// O tema utiliza:
+/// - Esquema de cores baseado em indigo
+/// - Cards com bordas arredondadas e sem elevação
+/// - Inputs com fundo branco e bordas estilizadas
+/// - AppBar com título alinhado à esquerda
 class CentroSocialApp extends StatelessWidget {
   const CentroSocialApp({super.key});
 
