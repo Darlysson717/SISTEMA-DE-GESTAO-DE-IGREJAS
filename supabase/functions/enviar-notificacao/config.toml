@@ -1,0 +1,13 @@
+# Configuração da Edge Function
+name = "enviar-notificacao"
+version = "1.0.0"
+description = "Envia notificações push via Firebase Cloud Messaging"
+
+# Secrets (armazenados de forma segura no Supabase)
+# Para configurar:
+# supabase secrets set SERVICE_ROLE_KEY=seu_service_role_key_aqui
+# supabase secrets set FIREBASE_API_KEY=sua_api_key_aqui
+
+[vars]
+# Variáveis públicas (não sensíveis)
+PROJECT_ID = "app-iadet"

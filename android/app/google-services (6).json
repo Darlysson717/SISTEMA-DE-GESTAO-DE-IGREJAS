@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "46968246148",
+    "project_id": "app-iadet",
+    "storage_bucket": "app-iadet.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:46968246148:android:968641747e8755926397d1",
+        "android_client_info": {
+          "package_name": "com.desiadet.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCeHQKj_SjVwQr92S_GVXuskcTVPMZ2YBA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

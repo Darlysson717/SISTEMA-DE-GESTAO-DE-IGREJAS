@@ -1,4 +1,4 @@
-package com.igreja.centro_social_app
+package com.desiadet.app
 
 import android.app.Activity
 import android.content.Intent

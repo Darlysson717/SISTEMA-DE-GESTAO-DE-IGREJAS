@@ -458,6 +458,14 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
         'scheduled_time': timeValue,
         'status': 'agendado',
       });
+
+      // Enviar notificação push para o profissional
+      await _enviarNotificacaoNovoAgendamento(
+        serviceId: serviceId,
+        communityUserId: uid,
+        scheduledDate: dateValue,
+        scheduledTime: timeValue,
+      );
     } catch (error) {
       final errorMessage = error.toString();
       if (errorMessage.contains('appointments_unique_active_slot') ||
@@ -470,6 +478,65 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
         );
       }
       rethrow;
+    }
+  }
+
+  Future<void> _enviarNotificacaoNovoAgendamento({
+    required String serviceId,
+    required String communityUserId,
+    required String scheduledDate,
+    required String scheduledTime,
+  }) async {
+    try {
+      // Buscar informações do serviço e profissional
+      final service = await _client
+          .from('servicos')
+          .select('user_id, nome_profissional, categoria')
+          .eq('id', serviceId)
+          .maybeSingle();
+
+      if (service == null) return;
+
+      final professionalId = service['user_id'] as String?;
+      if (professionalId == null) return;
+
+      // Buscar token FCM do profissional
+      final professionalProfile = await _client
+          .from('professional_profiles')
+          .select('fcm_token')
+          .eq('user_id', professionalId)
+          .maybeSingle();
+
+      final tokenFcm = professionalProfile?['fcm_token'] as String?;
+      if (tokenFcm == null || tokenFcm.isEmpty) return;
+
+      // Buscar nome do usuário que está agendando
+      final communityProfile = await _client
+          .from('profiles')
+          .select('full_name')
+          .eq('id', communityUserId)
+          .maybeSingle();
+
+      final userName = communityProfile?['full_name'] as String? ?? 'Um usuário';
+
+      // Chamar Edge Function para enviar notificação
+      await _client.functions.invoke(
+        'enviar-notificacao',
+        body: {
+          'tokenFcm': tokenFcm,
+          'titulo': 'Novo Agendamento',
+          'corpo': '$userName agendou um serviço de ${service['categoria']}',
+          'dados': {
+            'tipo': 'novo_agendamento',
+            'service_id': serviceId,
+            'scheduled_date': scheduledDate,
+            'scheduled_time': scheduledTime,
+          },
+        },
+      );
+    } catch (e) {
+      // Não lançar erro - notificação é secundária
+      print('Erro ao enviar notificação: $e');
     }
   }
 
@@ -603,6 +670,74 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
       throw Exception(
         'Não foi possível cancelar este agendamento. Verifique as permissões e tente novamente.',
       );
+    }
+
+    // Enviar notificação push para o profissional
+    if (serviceId != null) {
+      await _enviarNotificacaoCancelamento(
+        serviceId: serviceId,
+        appointmentId: appointmentId,
+        communityUserId: communityUserId,
+      );
+    }
+  }
+
+  Future<void> _enviarNotificacaoCancelamento({
+    required String serviceId,
+    required String appointmentId,
+    required String? communityUserId,
+  }) async {
+    try {
+      // Buscar informações do serviço e profissional
+      final service = await _client
+          .from('servicos')
+          .select('user_id, nome_profissional, categoria')
+          .eq('id', serviceId)
+          .maybeSingle();
+
+      if (service == null) return;
+
+      final professionalId = service['user_id'] as String?;
+      if (professionalId == null) return;
+
+      // Buscar token FCM do profissional
+      final professionalProfile = await _client
+          .from('professional_profiles')
+          .select('fcm_token')
+          .eq('user_id', professionalId)
+          .maybeSingle();
+
+      final tokenFcm = professionalProfile?['fcm_token'] as String?;
+      if (tokenFcm == null || tokenFcm.isEmpty) return;
+
+      // Buscar nome do usuário que cancelou
+      String userName = 'Um usuário';
+      if (communityUserId != null) {
+        final communityProfile = await _client
+            .from('profiles')
+            .select('full_name')
+            .eq('id', communityUserId)
+            .maybeSingle();
+        userName = communityProfile?['full_name'] as String? ?? userName;
+      }
+
+      // Chamar Edge Function para enviar notificação
+      await _client.functions.invoke(
+        'enviar-notificacao',
+        body: {
+          'tokenFcm': tokenFcm,
+          'titulo': 'Agendamento Cancelado',
+          'corpo': '$userName cancelou um agendamento de ${service['categoria']}',
+          'dados': {
+            'tipo': 'cancelamento_agendamento',
+            'appointment_id': appointmentId,
+            'service_id': serviceId,
+          },
+        },
+      );
+    } catch (e) {
+      // Não lançar erro - notificação é secundária
+      print('Erro ao enviar notificação de cancelamento: $e');
     }
   }
 

@@ -1,5 +1,9 @@
 import 'package:centro_social_app/src/app.dart';
 import 'package:centro_social_app/src/nucleo/configuracao/configuracao_app.dart';
+import 'package:centro_social_app/src/nucleo/notificacoes/servico_notificacoes.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -21,6 +25,18 @@ Future<void> main() async {
   ]);
   await initializeDateFormatting('pt_BR', null);
 
+  // Inicializa Firebase (Core + Messaging + Analytics)
+  await Firebase.initializeApp();
+  
+  // Inicializa Firebase Analytics
+  FirebaseAnalytics analytics = FirebaseAnalytics.instance;
+  await analytics.setAnalyticsCollectionEnabled(true);
+  
+  if (kDebugMode) {
+    print('✅ Firebase Analytics inicializado');
+  }
+
+  // Inicializa Supabase
   await Supabase.initialize(
     url: AppConfig.supabaseUrl,
     anonKey: AppConfig.supabaseAnonKey,
@@ -28,6 +44,9 @@ Future<void> main() async {
       authFlowType: AuthFlowType.pkce,
     ),
   );
+
+  // Inicializa serviço de notificações
+  await ServicoNotificacoes().inicializar();
 
   runApp(const ProviderScope(child: CentroSocialApp()));
 }

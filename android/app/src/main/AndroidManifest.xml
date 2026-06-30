@@ -5,6 +5,8 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <!-- Permissão para notificações push (Android 13+) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <application
         android:label="DESIADET"
         android:name="${applicationName}"
@@ -35,14 +37,14 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="com.igreja.centro_social_app" android:host="login-callback" />
+                <data android:scheme="com.desiadet.app" android:host="login-callback" />
             </intent-filter>
 
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="com.igreja.centro_social_app" />
+                <data android:scheme="com.desiadet.app" />
             </intent-filter>
 
             <intent-filter>
