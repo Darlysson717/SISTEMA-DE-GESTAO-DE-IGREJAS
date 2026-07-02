@@ -1,0 +1,35 @@
+[33m24ef2dc[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32magents/add-comment-to-pubspec-yaml[m[33m)[m HEAD@{0}: reset: moving to HEAD~1
+[33mb6ca24e[m HEAD@{1}: commit: feat: Adiciona fluxo de permissao para publicacao de eventos
+[33m24ef2dc[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32magents/add-comment-to-pubspec-yaml[m[33m)[m HEAD@{2}: reset: moving to HEAD
+[33m24ef2dc[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32magents/add-comment-to-pubspec-yaml[m[33m)[m HEAD@{3}: commit: feat: improve scheduling screen responsiveness
+[33mdd62603[m HEAD@{4}: pull --rebase --autostash (finish): returning to refs/heads/main
+[33mdd62603[m HEAD@{5}: pull --rebase --autostash (pick): feat: add GitHub update card on home
+[33m9d6fe45[m HEAD@{6}: pull --rebase --autostash (start): checkout 9d6fe45f6ab34342112856ca21c69fefd375ce7e
+[33m13eedee[m HEAD@{7}: commit: feat: add GitHub update card on home
+[33ma2ec259[m HEAD@{8}: commit: Corrige workflow mensal de limpeza:agora vai
+[33mfae35e0[m HEAD@{9}: commit: Corrige workflow mensal de limpeza
+[33m32057f9[m HEAD@{10}: commit: Ajusta tela de login e registra imagens do app
+[33mc48f4b9[m HEAD@{11}: commit: Adiciona limpeza mensal de eventos e agendamentos
+[33m64b1504[m HEAD@{12}: pull: Fast-forward
+[33m99ec04a[m HEAD@{13}: commit: Ajusta títulos, agendamentos e painel admin
+[33mc44743c[m HEAD@{14}: commit: Ajusta insets das telas para a barra de navegação
+[33med0f81f[m HEAD@{15}: merge save/export-events-20260523: Merge made by the 'ort' strategy.
+[33md1d14dd[m HEAD@{16}: pull --rebase origin main: Fast-forward
+[33mb973aab[m HEAD@{17}: checkout: moving from save/export-events-20260523 to main
+[33m2a98b15[m HEAD@{18}: commit: chore(admin): salvar estado com XLSX resumo + aba Eventos
+[33mcbf311c[m HEAD@{19}: checkout: moving from backup/export-events-20260523 to save/export-events-20260523
+[33mcbf311c[m HEAD@{20}: commit: chore(admin): backup current state before further XLSX work - restore CSV export
+[33mb973aab[m HEAD@{21}: checkout: moving from main to backup/export-events-20260523
+[33mb973aab[m HEAD@{22}: pull origin main: Merge made by the 'ort' strategy.
+[33mf3780dd[m HEAD@{23}: commit: Add Diagramas folder
+[33mfb2249c[m HEAD@{24}: commit: Update README.md
+[33m10d2e3b[m HEAD@{25}: checkout: moving from dev/colega-3 to main
+[33m10d2e3b[m HEAD@{26}: checkout: moving from main to dev/colega-3
+[33m10d2e3b[m HEAD@{27}: checkout: moving from dev/colega-2 to main
+[33m10d2e3b[m HEAD@{28}: checkout: moving from main to dev/colega-2
+[33m10d2e3b[m HEAD@{29}: checkout: moving from dev/colega-1 to main
+[33m10d2e3b[m HEAD@{30}: checkout: moving from main to dev/colega-1
+[33m10d2e3b[m HEAD@{31}: pull --ff-only: Fast-forward
+[33m13f6e6a[m HEAD@{32}: checkout: moving from main to main
+[33m13f6e6a[m HEAD@{33}: Branch: renamed refs/heads/master to refs/heads/main
+[33m13f6e6a[m HEAD@{35}: commit (initial): chore: initial project import
