@@ -1,0 +1,35 @@
+24ef2dc (HEAD -> main, origin/main, origin/HEAD, agents/add-comment-to-pubspec-yaml) HEAD@{0}: reset: moving to HEAD~1
+b6ca24e HEAD@{1}: commit: feat: Adiciona fluxo de permissao para publicacao de eventos
+24ef2dc (HEAD -> main, origin/main, origin/HEAD, agents/add-comment-to-pubspec-yaml) HEAD@{2}: reset: moving to HEAD
+24ef2dc (HEAD -> main, origin/main, origin/HEAD, agents/add-comment-to-pubspec-yaml) HEAD@{3}: commit: feat: improve scheduling screen responsiveness
+dd62603 HEAD@{4}: pull --rebase --autostash (finish): returning to refs/heads/main
+dd62603 HEAD@{5}: pull --rebase --autostash (pick): feat: add GitHub update card on home
+9d6fe45 HEAD@{6}: pull --rebase --autostash (start): checkout 9d6fe45f6ab34342112856ca21c69fefd375ce
+a13eedee HEAD@{7}: commit: feat: add GitHub update card on home
+a2ec259 HEAD@{8}: commit: Corrige workflow mensal de limpeza:agora vai
+fae35e0 HEAD@{9}: commit: Corrige workflow mensal de limpeza
+32057f9 HEAD@{10}: commit: Ajusta tela de login e registra imagens do app
+c48f4b9 HEAD@{11}: commit: Adiciona limpeza mensal de eventos e agendamentos
+64b1504 HEAD@{12}: pull: Fast-forward
+99ec04a HEAD@{13}: commit: Ajusta títulos, agendamentos e painel admin
+c44743c HEAD@{14}: commit: Ajusta insets das telas para a barra de navegação
+ed0f81f HEAD@{15}: merge save/export-events-20260523: Merge made by the 'ort' strategy.
+d1d14dd HEAD@{16}: pull --rebase origin main: Fast-forward
+b973aab HEAD@{17}: checkout: moving from save/export-events-20260523 to main
+2a98b15 HEAD@{18}: commit: chore(admin): salvar estado com XLSX resumo + aba Eventos
+cbf311c HEAD@{19}: checkout: moving from backup/export-events-20260523 to save/export-events-20260523
+cbf311c HEAD@{20}: commit: chore(admin): backup current state before further XLSX work - restore CSV export
+b973aab HEAD@{21}: checkout: moving from main to backup/export-events-20260523
+b973aab HEAD@{22}: pull origin main: Merge made by the 'ort' strategy.
+f3780dd HEAD@{23}: commit: Add Diagramas folder
+fb2249c HEAD@{24}: commit: Update README.md
+10d2e3b HEAD@{25}: checkout: moving from dev/colega-3 to main
+10d2e3b HEAD@{26}: checkout: moving from main to dev/colega-3
+10d2e3b HEAD@{27}: checkout: moving from dev/colega-2 to main
+10d2e3b HEAD@{28}: checkout: moving from main to dev/colega-2
+10d2e3b HEAD@{29}: checkout: moving from dev/colega-1 to main
+10d2e3b HEAD@{30}: checkout: moving from main to dev/colega-1
+10d2e3b HEAD@{31}: pull --ff-only: Fast-forward
+13f6e6a HEAD@{32}: checkout: moving from main to main
+13f6e6a HEAD@{33}: Branch: renamed refs/heads/master to refs/heads/main
+13f6e6a HEAD@{35}: commit (initial): chore: initial project import
