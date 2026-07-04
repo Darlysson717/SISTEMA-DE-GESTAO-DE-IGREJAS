@@ -1,7 +1,5 @@
-import 'dart:io';
-
 import 'package:centro_social_app/src/funcionalidades/eventos/dominio/entidades/evento_app.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:centro_social_app/src/nucleo/utilitarios/imagem_selecionada.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 enum EventPersistenceMode { publish }
@@ -64,9 +62,9 @@ class EventUpsertInput {
   final String? contatoEmail;
   final bool agendarPublicacao;
   final DateTime? dataPublicacao;
-  final XFile? imagemCapa;
+  final ImagemSelecionada? imagemCapa;
   final List<String> galeriaImagensExistentes;
-  final List<XFile> galeriaImagens;
+  final List<ImagemSelecionada> galeriaImagens;
 
   const EventUpsertInput({
     required this.nome,
@@ -278,12 +276,16 @@ class EventsRepository {
 
     try {
       if (input.imagemCapa != null) {
-        final ext = _safeExtension(input.imagemCapa!.path);
+        final imagem = input.imagemCapa!;
         final path =
-            '$storagePrefix/cover_${DateTime.now().microsecondsSinceEpoch}.$ext';
+            '$storagePrefix/cover_${DateTime.now().microsecondsSinceEpoch}.${imagem.extensao}';
         await _client.storage
             .from('eventos_images')
-            .upload(path, File(input.imagemCapa!.path));
+            .uploadBinary(
+              path,
+              imagem.bytes,
+              fileOptions: FileOptions(contentType: imagem.contentType),
+            );
         uploadedPaths.add(path);
 
         final newCoverUrl = _client.storage
@@ -296,12 +298,15 @@ class EventsRepository {
       }
 
       for (final image in input.galeriaImagens) {
-        final ext = _safeExtension(image.path);
         final path =
-            '$storagePrefix/gallery_${DateTime.now().microsecondsSinceEpoch}.$ext';
+            '$storagePrefix/gallery_${DateTime.now().microsecondsSinceEpoch}.${image.extensao}';
         await _client.storage
             .from('eventos_images')
-            .upload(path, File(image.path));
+            .uploadBinary(
+              path,
+              image.bytes,
+              fileOptions: FileOptions(contentType: image.contentType),
+            );
         uploadedPaths.add(path);
         galleryUrls.add(
           _client.storage.from('eventos_images').getPublicUrl(path),
@@ -460,14 +465,6 @@ class EventsRepository {
   String? _nullable(String? value) {
     final trimmed = value?.trim() ?? '';
     return trimmed.isEmpty ? null : trimmed;
-  }
-
-  String _safeExtension(String path) {
-    final lastDot = path.lastIndexOf('.');
-    if (lastDot == -1 || lastDot == path.length - 1) {
-      return 'jpg';
-    }
-    return path.substring(lastDot + 1).toLowerCase();
   }
 
   String? _extractStoragePathFromPublicUrl(String? url) {

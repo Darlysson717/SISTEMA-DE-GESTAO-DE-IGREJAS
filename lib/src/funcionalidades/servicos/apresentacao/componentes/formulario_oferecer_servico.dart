@@ -1,6 +1,6 @@
 // ignore_for_file: avoid_print, use_build_context_synchronously
 
-import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -8,6 +8,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:centro_social_app/src/funcionalidades/agendamentos/dominio/entidades/servico.dart';
 import 'package:centro_social_app/src/funcionalidades/agendamentos/apresentacao/provedores/provedores_agendamentos.dart';
+import 'package:centro_social_app/src/nucleo/utilitarios/imagem_selecionada.dart';
 
 class OfferServiceForm extends ConsumerStatefulWidget {
   final Service? initialService;
@@ -44,7 +45,7 @@ class _OfferServiceFormState extends ConsumerState<OfferServiceForm> {
   final List<int> _duracoesPossiveis = [15, 30, 45, 60, 90, 120]; // em minutos
   final List<bool> _diasSelecionados = List.filled(7, false);
 
-  File? _selectedImage;
+  ImagemSelecionada? _selectedImage;
   final ImagePicker _picker = ImagePicker();
 
   String? _tipoAtendimento; // 'presencial' ou 'online'
@@ -153,26 +154,29 @@ class _OfferServiceFormState extends ConsumerState<OfferServiceForm> {
 
   Future<void> _pickImage(ImageSource source) async {
     try {
-      Permission permission;
-      if (source == ImageSource.camera) {
-        permission = Permission.camera;
-      } else {
-        permission = Permission.photos;
-      }
-
-      final hasPermission = await _requestPermission(permission);
-      if (!hasPermission) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'Permissão necessária para acessar a imagem. Vá para configurações e conceda a permissão.',
-              ),
-              duration: Duration(seconds: 5),
-            ),
-          );
+      // Na web o seletor de arquivos do navegador não exige permissão.
+      if (!kIsWeb) {
+        Permission permission;
+        if (source == ImageSource.camera) {
+          permission = Permission.camera;
+        } else {
+          permission = Permission.photos;
         }
-        return;
+
+        final hasPermission = await _requestPermission(permission);
+        if (!hasPermission) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Permissão necessária para acessar a imagem. Vá para configurações e conceda a permissão.',
+                ),
+                duration: Duration(seconds: 5),
+              ),
+            );
+          }
+          return;
+        }
       }
 
       final XFile? image = await _picker.pickImage(
@@ -182,10 +186,12 @@ class _OfferServiceFormState extends ConsumerState<OfferServiceForm> {
         maxHeight: 1600,
       );
       if (image != null) {
+        final selecionada = await ImagemSelecionada.deXFile(image);
+        if (!mounted) return;
         setState(() {
-          _selectedImage = File(image.path);
+          _selectedImage = selecionada;
         });
-        print('DEBUG: Imagem selecionada: ${image.path}');
+        print('DEBUG: Imagem selecionada: ${image.name}');
       }
     } catch (e) {
       if (mounted) {
@@ -364,11 +370,17 @@ class _OfferServiceFormState extends ConsumerState<OfferServiceForm> {
       if (_selectedImage != null) {
         try {
           final timestamp = DateTime.now().millisecondsSinceEpoch;
-          final fileName = '$userId/$timestamp.jpg';
+          final fileName = '$userId/$timestamp.${_selectedImage!.extensao}';
           uploadedImagePath = fileName;
           await Supabase.instance.client.storage
               .from('servicos_images')
-              .upload(fileName, _selectedImage!);
+              .uploadBinary(
+                fileName,
+                _selectedImage!.bytes,
+                fileOptions: FileOptions(
+                  contentType: _selectedImage!.contentType,
+                ),
+              );
 
           imageUrl = Supabase.instance.client.storage
               .from('servicos_images')
@@ -539,8 +551,8 @@ class _OfferServiceFormState extends ConsumerState<OfferServiceForm> {
               child: _selectedImage != null
                   ? ClipRRect(
                       borderRadius: BorderRadius.circular(8),
-                      child: Image.file(
-                        _selectedImage!,
+                      child: Image.memory(
+                        _selectedImage!.bytes,
                         fit: BoxFit.cover,
                         width: double.infinity,
                         height: double.infinity,

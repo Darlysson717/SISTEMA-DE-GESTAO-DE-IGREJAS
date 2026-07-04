@@ -36,9 +36,23 @@ class AppConfig {
   ///
   /// Deve corresponder ao esquema configurado no Supabase Dashboard
   /// em Authentication > URL Configuration > Redirect URLs.
+  ///
+  /// No build web o CI sobrescreve com a URL do site (GitHub Pages).
   static const String oauthRedirectUrl = String.fromEnvironment(
     'SUPABASE_REDIRECT_URL',
     defaultValue: 'io.supabase.flutter://login-callback',
+  );
+
+  /// Chave pública VAPID (Web Push certificates) do Firebase Cloud Messaging.
+  ///
+  /// Usada apenas na web para obter o token FCM. É informação pública,
+  /// como a chave anônima do Supabase. Gere/copie em:
+  /// Firebase Console > Project settings > Cloud Messaging >
+  /// Web Push certificates > Generate key pair.
+  static const String fcmVapidKey = String.fromEnvironment(
+    'FCM_VAPID_KEY',
+    defaultValue:
+        'BKt86SBAX7N7cgfybQi_Ro1tYOOaTDa7pZ_sHqLq_bifBok32FtTlgplQ3NfqlcdaJYoHkg_UxK8PB0XKZxb5cE',
   );
 
   /// Verifica se a configuração do Supabase é válida.

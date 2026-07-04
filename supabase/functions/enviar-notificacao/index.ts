@@ -5,7 +5,31 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Função para gerar JWT a partir da Service Account
+// Converte uma chave privada PEM (PKCS#8) para DER (bytes)
+function pemToDer(pem: string): ArrayBuffer {
+  const base64 = pem
+    .replace('-----BEGIN PRIVATE KEY-----', '')
+    .replace('-----END PRIVATE KEY-----', '')
+    .replace(/\s+/g, '')
+  const binary = atob(base64)
+  const bytes = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i)
+  }
+  return bytes.buffer
+}
+
+function base64UrlEncode(bytes: Uint8Array): string {
+  let binary = ''
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i])
+  }
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+}
+
+// Função para gerar JWT a partir da Service Account.
+// Usa WebCrypto (crypto.subtle), a API disponível no runtime Deno das
+// Edge Functions — `crypto.createSign` é API do Node e não existe aqui.
 async function generateJWT(clientEmail: string, privateKey: string): Promise<string> {
   const header = {
     alg: 'RS256',
@@ -27,12 +51,22 @@ async function generateJWT(clientEmail: string, privateKey: string): Promise<str
 
   const unsignedToken = `${encodedHeader}.${encodedPayload}`
 
-  // Assinar com a private key (RSA-SHA256)
-  const crypto = globalThis.crypto || require('crypto')
-  const sign = crypto.createSign('RSA-SHA256')
-  sign.update(unsignedToken)
-  const signature = sign.sign(privateKey, 'base64')
-  const encodedSignature = signature.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+  // Secrets costumam armazenar a chave com '\n' literais no lugar de quebras
+  const pem = privateKey.replace(/\\n/g, '\n')
+  const key = await crypto.subtle.importKey(
+    'pkcs8',
+    pemToDer(pem),
+    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+    false,
+    ['sign']
+  )
+
+  const signature = await crypto.subtle.sign(
+    'RSASSA-PKCS1-v1_5',
+    key,
+    new TextEncoder().encode(unsignedToken)
+  )
+  const encodedSignature = base64UrlEncode(new Uint8Array(signature))
 
   return `${unsignedToken}.${encodedSignature}`
 }
@@ -143,6 +177,12 @@ serve(async (req) => {
               sound: 'default',
               badge: 1,
             },
+          },
+        },
+        webpush: {
+          // Clique na notificação web abre o PWA (Android/iOS ignoram)
+          fcm_options: {
+            link: 'https://darlysson717.github.io/SISTEMA-DE-GESTAO-DE-IGREJAS/',
           },
         },
       },

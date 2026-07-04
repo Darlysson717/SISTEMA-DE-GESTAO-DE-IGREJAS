@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:centro_social_app/src/nucleo/configuracao/configuracao_app.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -33,8 +33,10 @@ class ServicoNotificacoes {
   /// Deve ser chamado após a inicialização do Firebase e Supabase.
   Future<void> inicializar() async {
     try {
-      // Inicializa notificações locais
-      await _inicializarNotificacoesLocais();
+      // Inicializa notificações locais (na web o plugin é no-op)
+      if (!kIsWeb) {
+        await _inicializarNotificacoesLocais();
+      }
 
       // Configura handler para mensagens em foreground
       FirebaseMessaging.onMessage.listen(_manipularMensagemForeground);
@@ -48,14 +50,39 @@ class ServicoNotificacoes {
         _manipularAberturaNotificacao(mensagemInicial);
       }
 
-      // Solicita permissão
-      await _solicitarPermissao();
+      if (kIsWeb) {
+        // Navegadores só aceitam pedir permissão em contexto de interação
+        // do usuário: no arranque apenas renova o token se a permissão já
+        // foi concedida em uma visita anterior.
+        final usuario = Supabase.instance.client.auth.currentUser;
+        if (usuario != null) {
+          final configuracoes = await _messaging.getNotificationSettings();
+          if (configuracoes.authorizationStatus ==
+              AuthorizationStatus.authorized) {
+            await _obterESalvarTokenFCM();
+          }
+        }
+      } else {
+        // Solicita permissão
+        await _solicitarPermissao();
 
-      // Se já estiver logado, registra o token
-      final usuario = Supabase.instance.client.auth.currentUser;
-      if (usuario != null) {
-        await _obterESalvarTokenFCM();
+        // Se já estiver logado, registra o token
+        final usuario = Supabase.instance.client.auth.currentUser;
+        if (usuario != null) {
+          await _obterESalvarTokenFCM();
+        }
       }
+
+      // Registra o token no momento em que um login é concluído. Na web o
+      // signInWithOAuth navega para fora da página, então este listener é o
+      // gancho confiável após o retorno do redirect; no mobile a sessão só
+      // existe depois do deep link, ou seja, depois do registrarToken()
+      // chamado pelo AuthController.
+      Supabase.instance.client.auth.onAuthStateChange.listen((estado) {
+        if (estado.event == AuthChangeEvent.signedIn) {
+          registrarToken();
+        }
+      });
 
       if (kDebugMode) {
         print('✅ Serviço de notificações inicializado com sucesso');
@@ -77,6 +104,27 @@ class ServicoNotificacoes {
           print('⚠️ Usuário não logado, token não registrado');
         }
         return;
+      }
+
+      if (kIsWeb) {
+        // Ex.: Safari sem o PWA instalado não suporta web push.
+        if (!await _messaging.isSupported()) {
+          if (kDebugMode) {
+            print('⚠️ Web push não suportado neste navegador');
+          }
+          return;
+        }
+
+        // Na web a permissão é pedida aqui (pós-login), não no arranque.
+        await _solicitarPermissao();
+        final configuracoes = await _messaging.getNotificationSettings();
+        if (configuracoes.authorizationStatus !=
+            AuthorizationStatus.authorized) {
+          if (kDebugMode) {
+            print('⚠️ Permissão de notificações não concedida no navegador');
+          }
+          return;
+        }
       }
 
       await _obterESalvarTokenFCM();
@@ -112,7 +160,7 @@ class ServicoNotificacoes {
       await _localNotifications.initialize(initializationSettings);
 
       // Cria o canal de notificações para Android
-      if (Platform.isAndroid) {
+      if (defaultTargetPlatform == TargetPlatform.android) {
         await _localNotifications
             .resolvePlatformSpecificImplementation<
                 AndroidFlutterLocalNotificationsPlugin>()
@@ -153,8 +201,10 @@ class ServicoNotificacoes {
   /// Obtém o token FCM e salva no Supabase.
   Future<void> _obterESalvarTokenFCM() async {
     try {
-      // Obtém token FCM
-      String? token = await _messaging.getToken();
+      // Obtém token FCM (na web exige a chave pública VAPID)
+      String? token = await _messaging.getToken(
+        vapidKey: kIsWeb ? AppConfig.fcmVapidKey : null,
+      );
 
       if (token == null) {
         if (kDebugMode) {
@@ -220,6 +270,10 @@ class ServicoNotificacoes {
       print('   Dados: ${mensagem.data}');
     }
 
+    // Na web o navegador não exibe notificações com a aba em foco e o
+    // plugin de notificações locais é no-op — apenas registra no log.
+    if (kIsWeb) return;
+
     // Exibe notificação local mesmo em foreground
     await _exibirNotificacaoLocal(
       titulo: mensagem.notification?.title ?? 'Nova notificação',
@@ -234,6 +288,8 @@ class ServicoNotificacoes {
     required String corpo,
     Map<String, dynamic>? dados,
   }) async {
+    if (kIsWeb) return;
+
     try {
       const AndroidNotificationDetails androidPlatformChannelSpecifics =
           AndroidNotificationDetails(
@@ -286,6 +342,7 @@ class ServicoNotificacoes {
 
   /// Manipula mensagens recebidas quando o app está em background/terminated
   /// Esta função é chamada automaticamente pelo Firebase
+  @pragma('vm:entry-point')
   static Future<void> manipularMensagemBackground(RemoteMessage mensagem) async {
     if (kDebugMode) {
       print('📨 Notificação recebida (background/terminated):');

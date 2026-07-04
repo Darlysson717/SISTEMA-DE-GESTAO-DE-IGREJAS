@@ -1,13 +1,14 @@
 {
-    "name": "centro_social_app",
-    "short_name": "centro_social_app",
+    "name": "Centro Social da Igreja",
+    "short_name": "Centro Social",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#F8FAFC",
+    "theme_color": "#4F46E5",
+    "description": "Aplicativo do Centro Social da Igreja: eventos, serviços comunitários gratuitos e agendamentos.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
+    "lang": "pt-BR",
     "icons": [
         {
             "src": "icons/Icon-192.png",

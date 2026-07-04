@@ -1,9 +1,8 @@
-import 'dart:io';
-
 import 'package:centro_social_app/src/funcionalidades/eventos/dados/repositorio_eventos.dart';
 import 'package:centro_social_app/src/funcionalidades/eventos/dominio/entidades/evento_app.dart';
 import 'package:centro_social_app/src/funcionalidades/eventos/apresentacao/provedores/provedores_eventos.dart';
 import 'package:centro_social_app/src/funcionalidades/eventos/apresentacao/componentes/card_feed_evento.dart';
+import 'package:centro_social_app/src/nucleo/utilitarios/imagem_selecionada.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -79,8 +78,8 @@ class _AnnounceEventPageState extends ConsumerState<AnnounceEventPage> {
   DateTime? _publicationDate;
   TimeOfDay? _publicationTime;
 
-  XFile? _coverImage;
-  final List<XFile> _galleryImages = [];
+  ImagemSelecionada? _coverImage;
+  final List<ImagemSelecionada> _galleryImages = [];
   String? _existingCoverImageUrl;
   List<String> _existingGalleryImagesUrls = [];
   bool _isSubmitting = false;
@@ -510,8 +509,8 @@ class _AnnounceEventPageState extends ConsumerState<AnnounceEventPage> {
             const SizedBox(height: 8),
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
-              child: Image.file(
-                File(_coverImage!.path),
+              child: Image.memory(
+                _coverImage!.bytes,
                 height: 140,
                 width: double.infinity,
                 fit: BoxFit.cover,
@@ -586,8 +585,8 @@ class _AnnounceEventPageState extends ConsumerState<AnnounceEventPage> {
                   children: [
                     ClipRRect(
                       borderRadius: BorderRadius.circular(8),
-                      child: Image.file(
-                        File(image.path),
+                      child: Image.memory(
+                        image.bytes,
                         width: 72,
                         height: 72,
                         fit: BoxFit.cover,
@@ -921,11 +920,14 @@ class _AnnounceEventPageState extends ConsumerState<AnnounceEventPage> {
       final image = await _imagePicker.pickImage(source: ImageSource.gallery);
       if (image == null) return;
 
+      final selecionada = await ImagemSelecionada.deXFile(image);
+      if (!mounted) return;
+
       setState(() {
         if (isCover) {
-          _coverImage = image;
+          _coverImage = selecionada;
         } else if (_galleryImages.length < 8) {
-          _galleryImages.add(image);
+          _galleryImages.add(selecionada);
         }
       });
     } catch (_) {
@@ -1150,7 +1152,7 @@ class _AnnounceEventPageState extends ConsumerState<AnnounceEventPage> {
       dataPublicacao: _combinePublicationDateTime(),
       imagemCapa: _coverImage,
       galeriaImagensExistentes: _existingGalleryImagesUrls,
-      galeriaImagens: List<XFile>.from(_galleryImages),
+      galeriaImagens: List<ImagemSelecionada>.from(_galleryImages),
     );
   }
 
