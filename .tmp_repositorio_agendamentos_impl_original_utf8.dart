@@ -1,17 +1,15 @@
-// ignore_for_file: avoid_print
+﻿// ignore_for_file: avoid_print
 
 import 'package:centro_social_app/src/funcionalidades/agendamentos/dominio/entidades/agendamento.dart';
 import 'package:centro_social_app/src/funcionalidades/agendamentos/dominio/entidades/profissional.dart';
 import 'package:centro_social_app/src/funcionalidades/agendamentos/dominio/entidades/servico.dart';
 import 'package:centro_social_app/src/funcionalidades/agendamentos/dominio/repositorios/repositorio_agendamentos.dart';
-import 'package:centro_social_app/src/nucleo/notificacoes/servico_notificacoes.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SchedulingRepositoryImpl implements SchedulingRepository {
   final SupabaseClient _client;
-  final ServicoNotificacoes _notificacoes = ServicoNotificacoes();
 
-  SchedulingRepositoryImpl(this._client);
+  const SchedulingRepositoryImpl(this._client);
 
   @override
   Future<List<Professional>> listProfessionals({String? specialty}) async {
@@ -99,9 +97,6 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
     final imageUrl = serviceRow['imagem_profissional'] as String?;
     final imagePath = _extractStoragePathFromPublicUrl(imageUrl);
 
-    // 🔴 CONSULTAR USUÁRIOS ANTES de deletar os appointments
-    final affectedUserIds = await _obterUsuariosAfetados(serviceId: serviceId);
-
     await _client.from('appointments').delete().eq('service_id', serviceId);
 
     await _client
@@ -112,41 +107,6 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
 
     if (imagePath != null) {
       await _client.storage.from('servicos_images').remove([imagePath]);
-    }
-
-    // Notificar usuários afetados (dados já foram consultados antes do delete)
-    if (affectedUserIds.isNotEmpty) {
-      await _notificacoes.enviarParaUsuarios(
-        userIds: affectedUserIds,
-        titulo: 'Serviço Cancelado',
-        corpo: 'O serviço que você agendou foi removido. Seu agendamento foi cancelado.',
-        dados: {
-          'tipo': 'cancelamento_servico',
-          'service_id': serviceId,
-        },
-      );
-    }
-  }
-
-  /// Consulta os IDs dos usuários com agendamentos ativos no serviço
-  /// ANTES de deletar os registros
-  Future<List<String>> _obterUsuariosAfetados({
-    required String serviceId,
-  }) async {
-    try {
-      final appointments = await _client
-          .from('appointments')
-          .select('user_id')
-          .eq('service_id', serviceId)
-          .inFilter('status', ['agendado']);
-
-      return (appointments as List<dynamic>)
-          .map((row) => (row as Map<String, dynamic>)['user_id'] as String?)
-          .whereType<String>()
-          .toList();
-    } catch (e) {
-      print('Erro ao consultar usuários afetados: $e');
-      return [];
     }
   }
 
@@ -166,7 +126,8 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
       return null;
     }
 
-    return segments[bucketIndex + 1];
+    final encodedPath = segments.sublist(bucketIndex + 1).join('/');
+    return Uri.decodeComponent(encodedPath);
   }
 
   @override
@@ -178,16 +139,19 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
     final profile = await _client
         .from('profiles')
         .select('id')
-        .eq('email', email.trim().toLowerCase())
+        .eq('email', email.trim())
         .maybeSingle();
 
     if (profile == null) {
-      throw Exception('Perfil não encontrado para o e-mail informado.');
+      throw Exception('Usu├írio com esse e-mail n├úo encontrado em profiles.');
     }
 
     final profileId = profile['id'] as String;
 
-    await _client.from('profiles').update({'role': 'volunteer'}).eq('id', profileId);
+    await _client
+        .from('profiles')
+        .update({'role': 'volunteer'})
+        .eq('id', profileId);
 
     await _client.from('professional_profiles').upsert({
       'user_id': profileId,
@@ -314,25 +278,27 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
   @override
   Stream<List<Appointment>> watchTodayProfessionalAppointments() {
     final uid = _client.auth.currentUser!.id;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final dateValue = today.toIso8601String().split('T').first;
+
     return _client
         .from('appointments')
         .stream(primaryKey: ['id'])
-        .eq('servicos.user_id', uid)
-        .order('scheduled_date')
+        .eq('scheduled_date', dateValue)
         .order('scheduled_time')
         .asyncMap((rows) async {
-          final appointments = await _mapAppointmentsWithServiceInfoFromRows(rows);
-          final now = DateTime.now();
-          final today = DateTime(now.year, now.month, now.day);
-          
-          return appointments.where((item) {
-            final itemDate = DateTime(
-              item.startsAt.year,
-              item.startsAt.month,
-              item.startsAt.day,
-            );
-            return itemDate == today && item.professionalId == uid;
+          final filtered = rows.where((row) {
+            final serviceId = row['service_id'] as String?;
+            return serviceId != null;
           }).toList();
+
+          final appointments = await _mapAppointmentsWithServiceInfoFromRows(
+            filtered,
+          );
+          return appointments
+              .where((item) => item.professionalId == uid)
+              .toList();
         });
   }
 
@@ -378,8 +344,12 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
         .order('scheduled_date')
         .order('scheduled_time')
         .asyncMap((rows) async {
-          final appointments = await _mapAppointmentsWithServiceInfoFromRows(rows);
-          return appointments.where((item) => item.professionalId == uid).toList();
+          final appointments = await _mapAppointmentsWithServiceInfoFromRows(
+            rows,
+          );
+          return appointments
+              .where((item) => item.professionalId == uid)
+              .toList();
         });
   }
 
@@ -431,6 +401,7 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
   }) async {
     final uid = _client.auth.currentUser!.id;
 
+    // Verificar se o usu├írio j├í tem agendamento no mesmo dia
     final appointmentDate = DateTime(
       startsAt.year,
       startsAt.month,
@@ -452,7 +423,7 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
     );
     if (hasSameService) {
       throw Exception(
-        'Você já possui um agendamento para este serviço neste dia.',
+        'Voc├¬ j├í possui um agendamento para este servi├ºo neste dia.',
       );
     }
 
@@ -460,7 +431,7 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
       (row) => (row as Map<String, dynamic>)['scheduled_time'] == timeValue,
     );
     if (hasTimeConflict) {
-      throw Exception('Você já possui um agendamento neste mesmo horário.');
+      throw Exception('Voc├¬ j├í possui um agendamento neste mesmo hor├írio.');
     }
 
     final occupiedByOtherUser = await _client
@@ -475,7 +446,7 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
 
     if (occupiedByOtherUser != null) {
       throw Exception(
-        'Este horário já está indisponível, pois foi agendado por outra pessoa.',
+        'Este hor├írio j├í est├í indispon├¡vel, pois foi agendado por outra pessoa.',
       );
     }
 
@@ -488,6 +459,7 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
         'status': 'agendado',
       });
 
+      // Enviar notifica├º├úo push para o profissional
       await _enviarNotificacaoNovoAgendamento(
         serviceId: serviceId,
         communityUserId: uid,
@@ -502,7 +474,7 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
           ) ||
           errorMessage.contains('23505')) {
         throw Exception(
-          'Este horário já está indisponível, pois foi agendado por outra pessoa.',
+          'Este hor├írio j├í est├í indispon├¡vel, pois foi agendado por outra pessoa.',
         );
       }
       rethrow;
@@ -516,9 +488,10 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
     required String scheduledTime,
   }) async {
     try {
+      // Buscar informa├º├Áes do servi├ºo e profissional
       final service = await _client
           .from('servicos')
-          .select('user_id, nome_profissional, categoria, local, tipo_atendimento')
+          .select('user_id, nome_profissional, categoria')
           .eq('id', serviceId)
           .maybeSingle();
 
@@ -527,56 +500,43 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
       final professionalId = service['user_id'] as String?;
       if (professionalId == null) return;
 
+      // Buscar token FCM do profissional
+      final professionalProfile = await _client
+          .from('professional_profiles')
+          .select('fcm_token')
+          .eq('user_id', professionalId)
+          .maybeSingle();
+
+      final tokenFcm = professionalProfile?['fcm_token'] as String?;
+      if (tokenFcm == null || tokenFcm.isEmpty) return;
+
+      // Buscar nome do usu├írio que est├í agendando
       final communityProfile = await _client
           .from('profiles')
           .select('full_name')
           .eq('id', communityUserId)
           .maybeSingle();
 
-      final userName = communityProfile?['full_name'] as String? ?? 'Um usuário';
-      final categoria = service['categoria'] as String? ?? '';
-      final nomeProfissional = service['nome_profissional'] as String? ?? 'Profissional';
-      final local = service['local'] as String?;
-      final tipoAtendimento = service['tipo_atendimento'] as String?;
+      final userName = communityProfile?['full_name'] as String? ?? 'Um usu├írio';
 
-      // Formata data para exibição
-      final dateParts = scheduledDate.split('-');
-      final dataFormatada = dateParts.length == 3
-          ? '${dateParts[2]}/${dateParts[1]}/${dateParts[0]}'
-          : scheduledDate;
-      final horaFormatada = scheduledTime.length >= 5
-          ? scheduledTime.substring(0, 5)
-          : scheduledTime;
-
-      // 🔒 NOTIFICAÇÃO PRIVADA 1: Profissional ← Novo agendamento
-      await _notificacoes.enviarParaUsuario(
-        userId: professionalId,
-        titulo: 'Novo Agendamento',
-        corpo: '$userName agendou $categoria para $dataFormatada às $horaFormatada',
-        dados: {
-          'tipo': 'novo_agendamento',
-          'service_id': serviceId,
-          'scheduled_date': scheduledDate,
-          'scheduled_time': scheduledTime,
-        },
-      );
-
-      // 🔒 NOTIFICAÇÃO PRIVADA 2: Usuário ← Confirmação do agendamento
-      await _notificacoes.enviarParaUsuario(
-        userId: communityUserId,
-        titulo: 'Agendamento Confirmado',
-        corpo: 'Seu agendamento de $categoria com $nomeProfissional foi confirmado para $dataFormatada às $horaFormatada.',
-        dados: {
-          'tipo': 'confirmacao_agendamento',
-          'service_id': serviceId,
-          'scheduled_date': scheduledDate,
-          'scheduled_time': scheduledTime,
-          'local': local,
-          'tipo_atendimento': tipoAtendimento,
+      // Chamar Edge Function para enviar notifica├º├úo
+      await _client.functions.invoke(
+        'enviar-notificacao',
+        body: {
+          'tokenFcm': tokenFcm,
+          'titulo': 'Novo Agendamento',
+          'corpo': '$userName agendou um servi├ºo de ${service['categoria']}',
+          'dados': {
+            'tipo': 'novo_agendamento',
+            'service_id': serviceId,
+            'scheduled_date': scheduledDate,
+            'scheduled_time': scheduledTime,
+          },
         },
       );
     } catch (e) {
-      print('Erro ao enviar notificação de novo agendamento: $e');
+      // N├úo lan├ºar erro - notifica├º├úo ├® secund├íria
+      print('Erro ao enviar notifica├º├úo: $e');
     }
   }
 
@@ -593,15 +553,15 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
 
     List<dynamic> rows;
     try {
-      final result = await _client
-          .rpc(
-            'get_service_booked_times',
-            params: {
-              'p_service_id': serviceId,
-              'p_scheduled_date': dateValue,
-            },
-          );
-      rows = result as List<dynamic>;
+      rows =
+          await _client.rpc(
+                'get_service_booked_times',
+                params: {
+                  'p_service_id': serviceId,
+                  'p_scheduled_date': dateValue,
+                },
+              )
+              as List<dynamic>;
     } catch (_) {
       rows = await _client
           .from('appointments')
@@ -634,7 +594,7 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
   Future<void> cancelAppointment(String appointmentId) async {
     final currentUid = _client.auth.currentUser?.id;
     if (currentUid == null) {
-      throw Exception('Usuário não autenticado.');
+      throw Exception('Usu├írio n├úo autenticado.');
     }
 
     final appointment = await _client
@@ -644,16 +604,13 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
         .maybeSingle();
 
     if (appointment == null) {
-      throw Exception('Agendamento não encontrado.');
+      throw Exception('Agendamento n├úo encontrado.');
     }
 
     final communityUserId = appointment['user_id'] as String?;
     final serviceId = appointment['service_id'] as String?;
 
     var cancelledByProfessional = false;
-    String? nomeProfissional;
-    String? categoria;
-    String? local;
     if (serviceId != null) {
       final service = await _client
           .from('servicos')
@@ -661,14 +618,41 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
           .eq('id', serviceId)
           .maybeSingle();
       final serviceOwnerId = service?['user_id'] as String?;
-      nomeProfissional = service?['nome_profissional'] as String?;
-      categoria = service?['categoria'] as String?;
-      local = service?['local'] as String?;
       cancelledByProfessional =
           serviceOwnerId != null &&
           serviceOwnerId == currentUid &&
           communityUserId != null &&
           communityUserId != currentUid;
+
+      if (cancelledByProfessional) {
+        try {
+          final scheduledDate = appointment['scheduled_date'] as String?;
+          final scheduledTime = appointment['scheduled_time'] as String?;
+          DateTime? scheduledAt;
+          if ((scheduledDate ?? '').isNotEmpty &&
+              (scheduledTime ?? '').isNotEmpty) {
+            final dateParts = scheduledDate!.split('-');
+            final timeParts = scheduledTime!.split(':');
+            if (dateParts.length == 3 && timeParts.length >= 2) {
+              final year = int.tryParse(dateParts[0]) ?? 1970;
+              final month = int.tryParse(dateParts[1]) ?? 1;
+              final day = int.tryParse(dateParts[2]) ?? 1;
+              final hour = int.tryParse(timeParts[0]) ?? 0;
+              final minute = int.tryParse(timeParts[1]) ?? 0;
+              scheduledAt = DateTime(year, month, day, hour, minute);
+            }
+          }
+
+          await _client.from('appointment_cancellation_messages').insert({
+            'recipient_user_id': communityUserId,
+            'message': 'Profissional cancelou o agendamento.',
+            'scheduled_at': scheduledAt?.toIso8601String(),
+            'professional_name': service?['nome_profissional'] as String?,
+            'specialty': service?['categoria'] as String?,
+            'location': service?['local'] as String?,
+          });
+        } catch (_) {}
+      }
     }
 
     final updatedRows = await _client
@@ -684,19 +668,16 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
     final rows = (updatedRows as List<dynamic>);
     if (rows.isEmpty) {
       throw Exception(
-        'Não foi possível cancelar este agendamento. Verifique as permissões e tente novamente.',
+        'N├úo foi poss├¡vel cancelar este agendamento. Verifique as permiss├Áes e tente novamente.',
       );
     }
 
+    // Enviar notifica├º├úo push para o profissional
     if (serviceId != null) {
       await _enviarNotificacaoCancelamento(
         serviceId: serviceId,
         appointmentId: appointmentId,
         communityUserId: communityUserId,
-        cancelledByProfessional: cancelledByProfessional,
-        nomeProfissional: nomeProfissional,
-        categoria: categoria,
-        local: local,
       );
     }
   }
@@ -705,12 +686,9 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
     required String serviceId,
     required String appointmentId,
     required String? communityUserId,
-    required bool cancelledByProfessional,
-    String? nomeProfissional,
-    String? categoria,
-    String? local,
   }) async {
     try {
+      // Buscar informa├º├Áes do servi├ºo e profissional
       final service = await _client
           .from('servicos')
           .select('user_id, nome_profissional, categoria')
@@ -722,98 +700,44 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
       final professionalId = service['user_id'] as String?;
       if (professionalId == null) return;
 
-      final cat = categoria ?? service['categoria'] as String? ?? '';
-      final nomeProf = nomeProfissional ?? service['nome_profissional'] as String? ?? 'Profissional';
+      // Buscar token FCM do profissional
+      final professionalProfile = await _client
+          .from('professional_profiles')
+          .select('fcm_token')
+          .eq('user_id', professionalId)
+          .maybeSingle();
 
-      // 🔒 NOTIFICAÇÃO PRIVADA 3: Profissional ← Usuário cancelou
-      if (!cancelledByProfessional && communityUserId != null) {
+      final tokenFcm = professionalProfile?['fcm_token'] as String?;
+      if (tokenFcm == null || tokenFcm.isEmpty) return;
+
+      // Buscar nome do usu├írio que cancelou
+      String userName = 'Um usu├írio';
+      if (communityUserId != null) {
         final communityProfile = await _client
             .from('profiles')
             .select('full_name')
             .eq('id', communityUserId)
             .maybeSingle();
-        final userName = communityProfile?['full_name'] as String? ?? 'Um usuário';
+        userName = communityProfile?['full_name'] as String? ?? userName;
+      }
 
-        await _notificacoes.enviarParaUsuario(
-          userId: professionalId,
-          titulo: 'Agendamento Cancelado',
-          corpo: '$userName cancelou o agendamento de $cat.',
-          dados: {
+      // Chamar Edge Function para enviar notifica├º├úo
+      await _client.functions.invoke(
+        'enviar-notificacao',
+        body: {
+          'tokenFcm': tokenFcm,
+          'titulo': 'Agendamento Cancelado',
+          'corpo': '$userName cancelou um agendamento de ${service['categoria']}',
+          'dados': {
             'tipo': 'cancelamento_agendamento',
             'appointment_id': appointmentId,
             'service_id': serviceId,
           },
-        );
-      }
-
-      // 🔒 NOTIFICAÇÃO PRIVADA 4: Usuário ← Profissional cancelou
-      if (cancelledByProfessional && communityUserId != null) {
-        await _notificacoes.enviarParaUsuario(
-          userId: communityUserId,
-          titulo: 'Agendamento Cancelado',
-          corpo: 'O profissional $nomeProf cancelou seu agendamento de $cat.',
-          dados: {
-            'tipo': 'cancelado_pelo_profissional',
-            'appointment_id': appointmentId,
-            'service_id': serviceId,
-          },
-        );
-      }
+        },
+      );
     } catch (e) {
-      print('Erro ao enviar notificação de cancelamento: $e');
-    }
-  }
-
-  @override
-  Future<void> completeAppointment(String appointmentId) async {
-    final currentUid = _client.auth.currentUser?.id;
-    if (currentUid == null) {
-      throw Exception('Usuário não autenticado.');
-    }
-
-    final appointment = await _client
-        .from('appointments')
-        .select('id, user_id, service_id')
-        .eq('id', appointmentId)
-        .maybeSingle();
-
-    if (appointment == null) {
-      throw Exception('Agendamento não encontrado.');
-    }
-
-    final communityUserId = appointment['user_id'] as String?;
-    final serviceId = appointment['service_id'] as String?;
-
-    await _client
-        .from('appointments')
-        .update({'status': 'concluido'})
-        .eq('id', appointmentId);
-
-    // 🔒 NOTIFICAÇÃO PRIVADA 5: Usuário ← Atendimento concluído
-    if (serviceId != null && communityUserId != null) {
-      try {
-        final service = await _client
-            .from('servicos')
-            .select('nome_profissional, categoria')
-            .eq('id', serviceId)
-            .maybeSingle();
-
-        final nomeProf = service?['nome_profissional'] as String? ?? 'Profissional';
-        final cat = service?['categoria'] as String? ?? '';
-
-        await _notificacoes.enviarParaUsuario(
-          userId: communityUserId,
-          titulo: 'Atendimento Concluído',
-          corpo: 'Seu atendimento de $cat com $nomeProf foi concluído com sucesso.',
-          dados: {
-            'tipo': 'atendimento_concluido',
-            'appointment_id': appointmentId,
-            'service_id': serviceId,
-          },
-        );
-      } catch (e) {
-        print('Erro ao notificar conclusão: $e');
-      }
+      // N├úo lan├ºar erro - notifica├º├úo ├® secund├íria
+      print('Erro ao enviar notifica├º├úo de cancelamento: $e');
     }
   }
 
@@ -896,73 +820,6 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
           'status': 'agendado',
         })
         .eq('id', appointmentId);
-
-    // 🔒 NOTIFICAÇÃO PRIVADA: Notificar reagendamento
-    try {
-      final appointment = await _client
-          .from('appointments')
-          .select('user_id, service_id')
-          .eq('id', appointmentId)
-          .maybeSingle();
-
-      final communityUserId = appointment?['user_id'] as String?;
-      if (serviceId.isNotEmpty && communityUserId != null) {
-        final service = await _client
-            .from('servicos')
-            .select('user_id, nome_profissional, categoria')
-            .eq('id', serviceId)
-            .maybeSingle();
-
-        final professionalId = service?['user_id'] as String?;
-        final nomeProf = service?['nome_profissional'] as String? ?? 'Profissional';
-        final cat = service?['categoria'] as String? ?? '';
-
-        final dateParts = dateValue.split('-');
-        final dataFormatada = dateParts.length == 3
-            ? '${dateParts[2]}/${dateParts[1]}/${dateParts[0]}'
-            : dateValue;
-        final horaFormatada = timeValue.length >= 5
-            ? timeValue.substring(0, 5)
-            : timeValue;
-
-        // Notificar usuário sobre reagendamento
-        await _notificacoes.enviarParaUsuario(
-          userId: communityUserId,
-          titulo: 'Agendamento Reagendado',
-          corpo: 'Seu agendamento de $cat com $nomeProf foi alterado para $dataFormatada às $horaFormatada.',
-          dados: {
-            'tipo': 'reagendamento',
-            'appointment_id': appointmentId,
-            'scheduled_date': dateValue,
-            'scheduled_time': timeValue,
-          },
-        );
-
-        // Notificar profissional sobre reagendamento
-        if (professionalId != null && professionalId != communityUserId) {
-          final communityProfile = await _client
-              .from('profiles')
-              .select('full_name')
-              .eq('id', communityUserId)
-              .maybeSingle();
-          final userName = communityProfile?['full_name'] as String? ?? 'Um usuário';
-
-          await _notificacoes.enviarParaUsuario(
-            userId: professionalId,
-            titulo: 'Agendamento Reagendado',
-            corpo: '$userName reagendou $cat para $dataFormatada às $horaFormatada.',
-            dados: {
-              'tipo': 'reagendamento',
-              'appointment_id': appointmentId,
-              'scheduled_date': dateValue,
-              'scheduled_time': timeValue,
-            },
-          );
-        }
-      }
-    } catch (e) {
-      print('Erro ao notificar reagendamento: $e');
-    }
   }
 
   @override
@@ -974,10 +831,6 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
         .from('appointments')
         .update({'status': status.value})
         .eq('id', appointmentId);
-
-    if (status == AppointmentStatus.completed) {
-      await completeAppointment(appointmentId);
-    }
   }
 
   Professional _mapProfessional(dynamic row) {
@@ -1070,7 +923,7 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
     for (final row in rows) {
       final map = row as Map<String, dynamic>;
       final id = map['id'] as String;
-      final name = (map['full_name'] as String?) ?? 'Usuário';
+      final name = (map['full_name'] as String?) ?? 'Usu├írio';
       final avatarUrl = (map['avatar_url'] as String?)?.trim();
       result[id] = _ProfileDisplay(
         name: name,
@@ -1179,7 +1032,7 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
       communityUserId: userId,
       communityUserName: communityProfile?.name ?? 'Comunidade',
       communityUserPhotoUrl: communityProfile?.avatarUrl,
-      specialty: (service?['categoria'] as String?) ?? 'Serviço',
+      specialty: (service?['categoria'] as String?) ?? 'Servi├ºo',
       startsAt: startsAt,
       endsAt: endsAt,
       status: parseAppointmentStatus(

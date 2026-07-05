@@ -8,6 +8,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:centro_social_app/src/funcionalidades/agendamentos/dominio/entidades/servico.dart';
 import 'package:centro_social_app/src/funcionalidades/agendamentos/apresentacao/provedores/provedores_agendamentos.dart';
+import 'package:centro_social_app/src/nucleo/notificacoes/servico_notificacoes.dart';
 
 class OfferServiceForm extends ConsumerStatefulWidget {
   final Service? initialService;
@@ -19,6 +20,7 @@ class OfferServiceForm extends ConsumerStatefulWidget {
 }
 
 class _OfferServiceFormState extends ConsumerState<OfferServiceForm> {
+  final ServicoNotificacoes _notificacoes = ServicoNotificacoes();
   final _formKey = GlobalKey<FormState>();
   final _nomeController = TextEditingController();
   final _categoriaController = TextEditingController();
@@ -462,6 +464,15 @@ class _OfferServiceFormState extends ConsumerState<OfferServiceForm> {
           'status': 'ativo',
         });
         servicePersisted = true;
+
+        await _notificacoes.enviarParaTodos(
+          titulo: 'Novo serviço disponível',
+          corpo: '${_nomeController.text.trim()} agora está disponível.',
+          dados: {
+            'tipo': 'service_published',
+            'service_name': _nomeController.text.trim(),
+          },
+        );
 
         ref.invalidate(myServicesProvider);
         ref.invalidate(publishedServicesProvider);

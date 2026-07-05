@@ -1,3 +1,5 @@
+import 'package:centro_social_app/src/nucleo/notificacoes/servico_notificacoes.dart';
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:excel/excel.dart';
 
@@ -255,8 +257,9 @@ class EventAuthorizedPublisher {
 /// e não pode ser removido.
 class AdminRepository {
   final SupabaseClient _client;
+  final ServicoNotificacoes _notificacoes = ServicoNotificacoes();
 
-  const AdminRepository(this._client);
+  AdminRepository(this._client);
 
   bool get isCurrentUserSuperAdmin {
     final email = _client.auth.currentUser?.email?.trim().toLowerCase();
@@ -530,6 +533,13 @@ class AdminRepository {
         'Não foi possível enviar a solicitação. Execute o script SQL SETUP_EVENT_PUBLISH_PERMISSION.sql no Supabase primeiro. Erro: $e',
       );
     }
+
+    // 🔒 NOTIFICAÇÃO PRIVADA: Admins ← Nova solicitação de evento
+    await _notificarAdminsNovaSolicitacao(
+      tipo: 'evento',
+      nome: cleanEvent,
+      solicitante: cleanName,
+    );
   }
 
   Future<List<EventPublishRequest>> listPendingEventPublishRequests() async {
@@ -635,6 +645,16 @@ class AdminRepository {
         'Não foi possível revogar. Execute o script SQL SETUP_EVENT_PUBLISH_PERMISSION.sql no Supabase primeiro. Erro: $e',
       );
     }
+
+    // 🔒 NOTIFICAÇÃO PRIVADA: Usuário ← Permissão de evento revogada
+    await _notificacoes.enviarParaUsuario(
+      userId: userId,
+      titulo: 'Permissão Revogada',
+      corpo: 'Sua permissão para publicar eventos foi revogada.',
+      dados: {
+        'tipo': 'event_publish_revoked',
+      },
+    );
   }
 
   Future<void> reviewEventPublishRequest({
@@ -681,6 +701,18 @@ class AdminRepository {
           'revoked_at': null,
         }, onConflict: 'user_id');
       }
+
+      await _notificacoes.enviarParaUsuario(
+        userId: requestUserId,
+        titulo: approved ? 'Evento aprovado' : 'Evento recusado',
+        corpo: approved
+            ? 'Sua solicitação para publicar evento foi aprovada.'
+            : 'Sua solicitação para publicar evento foi recusada.',
+        dados: {
+          'tipo': approved ? 'event_publish_approved' : 'event_publish_rejected',
+          'request_id': requestId,
+        },
+      );
     } catch (e) {
       throw Exception(
         'Não foi possível revisar a solicitação. Execute o script SQL SETUP_EVENT_PUBLISH_PERMISSION.sql no Supabase primeiro. Erro: $e',
@@ -808,6 +840,66 @@ class AdminRepository {
       'service_name': cleanService,
       'status': 'pending',
     });
+
+    // 🔒 NOTIFICAÇÃO PRIVADA 8: Admins ← Nova solicitação de serviço
+    await _notificarAdminsNovaSolicitacao(
+      tipo: 'serviço',
+      nome: cleanService,
+      solicitante: cleanName,
+    );
+  }
+
+  /// Notifica todos os administradores sobre uma nova solicitação de publicação
+  Future<void> _notificarAdminsNovaSolicitacao({
+    required String tipo,
+    required String nome,
+    required String solicitante,
+  }) async {
+    try {
+      final adminIds = <String>{};
+
+      // Inclui o super admin (definido por email, não está na tabela app_admins)
+      final superAdminProfile = await _client
+          .from('profiles')
+          .select('id')
+          .eq('email', superAdminEmail)
+          .maybeSingle();
+      if (superAdminProfile != null) {
+        adminIds.add(superAdminProfile['id'] as String);
+      }
+
+      // Inclui admins da tabela app_admins
+      try {
+        final adminRows = await _client
+            .from('app_admins')
+            .select('user_id')
+            .eq('is_active', true);
+
+        for (final row in (adminRows as List<dynamic>)) {
+          final uid = (row as Map<String, dynamic>)['user_id'] as String?;
+          if (uid != null) {
+            adminIds.add(uid);
+          }
+        }
+      } catch (_) {
+        // Tabela app_admins pode não existir
+      }
+
+      if (adminIds.isEmpty) return;
+
+      await _notificacoes.enviarParaUsuarios(
+        userIds: adminIds,
+        titulo: 'Nova Solicitação de $tipo',
+        corpo: '$solicitante solicitou permissão para publicar "$nome".',
+        dados: {
+          'tipo': 'nova_solicitacao_${tipo}',
+        },
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        print('Erro ao notificar admins: $e');
+      }
+    }
   }
 
   Future<List<PublishRequest>> listPendingPublishRequests() async {
@@ -899,6 +991,16 @@ class AdminRepository {
         })
         .eq('user_id', userId)
         .eq('is_active', true);
+
+    // 🔒 NOTIFICAÇÃO PRIVADA: Usuário ← Permissão de serviço revogada
+    await _notificacoes.enviarParaUsuario(
+      userId: userId,
+      titulo: 'Permissão Revogada',
+      corpo: 'Sua permissão para publicar serviços foi revogada.',
+      dados: {
+        'tipo': 'service_publish_revoked',
+      },
+    );
   }
 
   Future<void> reviewPublishRequest({
@@ -944,6 +1046,18 @@ class AdminRepository {
         'revoked_at': null,
       }, onConflict: 'user_id');
     }
+
+    await _notificacoes.enviarParaUsuario(
+      userId: requestUserId,
+      titulo: approved ? 'Serviço aprovado' : 'Serviço recusado',
+      corpo: approved
+          ? 'Sua solicitação para publicar serviço foi aprovada.'
+          : 'Sua solicitação para publicar serviço foi recusada.',
+      dados: {
+        'tipo': approved ? 'service_publish_approved' : 'service_publish_rejected',
+        'request_id': requestId,
+      },
+    );
   }
 
   Future<OrphanCleanupResult> cleanupOrphanServiceImages() async {

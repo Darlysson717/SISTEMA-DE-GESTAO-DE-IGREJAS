@@ -1,15 +1,50 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+declare const Deno: {
+  env: {
+    get(key: string): string | undefined
+  }
+  serve(handler: (req: Request) => Response | Promise<Response>): void
+}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+interface NotificationPayload {
+  tokenFcm: string
+  titulo: string
+  corpo: string
+  dados?: Record<string, string>
+}
+
+function base64UrlEncode(bytes: Uint8Array): string {
+  let binary = ''
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte)
+  }
+
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+}
+
+function normalizePrivateKey(privateKey: string): string {
+  return privateKey.replace(/\\n/g, '\n').trim()
+}
+
+function pemToArrayBuffer(pem: string): ArrayBuffer {
+  const base64 = pem
+    .replace(/-----BEGIN PRIVATE KEY-----/g, '')
+    .replace(/-----END PRIVATE KEY-----/g, '')
+    .replace(/\s+/g, '')
+
+  const binary = Uint8Array.from(atob(base64), (character) => character.charCodeAt(0))
+  return binary.buffer
+}
+
 // Função para gerar JWT a partir da Service Account
 async function generateJWT(clientEmail: string, privateKey: string): Promise<string> {
   const header = {
     alg: 'RS256',
-    typ: 'JWT'
+    typ: 'JWT',
   }
 
   const now = Math.floor(Date.now() / 1000)
@@ -18,22 +53,31 @@ async function generateJWT(clientEmail: string, privateKey: string): Promise<str
     scope: 'https://www.googleapis.com/auth/firebase.messaging',
     aud: 'https://oauth2.googleapis.com/token',
     iat: now,
-    exp: now + 3600 // 1 hora
+    exp: now + 3600,
   }
 
-  // Codificar header e payload em base64
-  const encodedHeader = btoa(JSON.stringify(header)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
-  const encodedPayload = btoa(JSON.stringify(payload)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
-
+  const encodedHeader = base64UrlEncode(new TextEncoder().encode(JSON.stringify(header)))
+  const encodedPayload = base64UrlEncode(new TextEncoder().encode(JSON.stringify(payload)))
   const unsignedToken = `${encodedHeader}.${encodedPayload}`
 
-  // Assinar com a private key (RSA-SHA256)
-  const crypto = globalThis.crypto || require('crypto')
-  const sign = crypto.createSign('RSA-SHA256')
-  sign.update(unsignedToken)
-  const signature = sign.sign(privateKey, 'base64')
-  const encodedSignature = signature.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+  const key = await crypto.subtle.importKey(
+    'pkcs8',
+    pemToArrayBuffer(normalizePrivateKey(privateKey)),
+    {
+      name: 'RSASSA-PKCS1-v1_5',
+      hash: 'SHA-256',
+    },
+    false,
+    ['sign'],
+  )
 
+  const signature = await crypto.subtle.sign(
+    'RSASSA-PKCS1-v1_5',
+    key,
+    new TextEncoder().encode(unsignedToken),
+  )
+
+  const encodedSignature = base64UrlEncode(new Uint8Array(signature))
   return `${unsignedToken}.${encodedSignature}`
 }
 
@@ -62,7 +106,7 @@ async function getAccessToken(clientEmail: string, privateKey: string): Promise<
   return data.access_token
 }
 
-serve(async (req) => {
+Deno.serve(async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -78,7 +122,7 @@ serve(async (req) => {
     }
 
     // Obter dados do corpo da requisição
-    const { tokenFcm, titulo, corpo, dados } = await req.json()
+    const { tokenFcm, titulo, corpo, dados } = await req.json() as NotificationPayload
 
     // Validações
     if (!tokenFcm || !titulo || !corpo) {
@@ -128,7 +172,6 @@ serve(async (req) => {
           priority: 'high',
           notification: {
             channel_id: 'high_importance_channel',
-            priority: 'high',
             visibility: 'public',
             sound: 'default',
           },
@@ -188,12 +231,13 @@ serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Erro na Edge Function:', error)
+    const details = error instanceof Error ? error.message : String(error)
     return new Response(
       JSON.stringify({ 
         error: 'Erro interno do servidor',
-        details: error.message 
+        details 
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )

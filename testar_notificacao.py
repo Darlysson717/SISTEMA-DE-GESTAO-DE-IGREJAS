@@ -1,70 +1,59 @@
 #!/usr/bin/env python3
 """
-Script para enviar notificação de teste via Firebase Cloud Messaging API.
-Uso: python testar_notificacao.py <TOKEN_FCM>
+Script para enviar notificação de teste via Edge Function do Supabase.
+Uso: python testar_notificacao.py <TOKEN_FCM> <SUPABASE_URL> <SUPABASE_ANON_KEY>
 """
 
 import sys
-import requests
 import json
+from urllib import request, error
 
-# Configurações do Firebase
-FIREBASE_PROJECT_ID = "app-iadet"
-FIREBASE_API_KEY = "AIzaSyCeHQKj_SjVwQr92S_GVXuskcTVPMZ2YBA"  # API key do google-services.json
+def enviar_notificacao(token_fcm, supabase_url, supabase_anon_key):
+    """Envia notificação de teste via Edge Function do Supabase."""
 
-def enviar_notificacao(token_fcm):
-    """Envia notificação de teste via FCM HTTP v1 API."""
-    
-    # URL da API FCM
-    url = f"https://fcm.googleapis.com/v1/projects/{FIREBASE_PROJECT_ID}/messages:send"
-    
-    # Headers com autenticação
+    url = f"{supabase_url.rstrip('/')}/functions/v1/enviar-notificacao"
+
     headers = {
-        "Authorization": f"Bearer {FIREBASE_API_KEY}",
+        "Authorization": f"Bearer {supabase_anon_key}",
+        "apikey": supabase_anon_key,
         "Content-Type": "application/json"
     }
-    
-    # Corpo da mensagem - APENAS notification (sem data)
+
     mensagem = {
-        "message": {
-            "token": token_fcm,
-            "notification": {
-                "title": "TESTE",
-                "body": "Teste de notificação"
-            },
-            "android": {
-                "priority": "high",
-                "notification": {
-                    "channel_id": "high_importance_channel",
-                    "priority": "high",
-                    "visibility": "public"
-                }
-            }
+        "tokenFcm": token_fcm,
+        "titulo": "TESTE",
+        "corpo": "Teste de notificação via Supabase",
+        "dados": {
+            "tipo": "teste"
         }
     }
     
     try:
-        response = requests.post(url, headers=headers, json=mensagem)
-        
-        if response.status_code == 200:
-            resultado = response.json()
+        data = json.dumps(mensagem).encode('utf-8')
+        req = request.Request(url, data=data, headers=headers, method='POST')
+        with request.urlopen(req) as response:
+            response_body = response.read().decode('utf-8')
+            resultado = json.loads(response_body)
+
+        if resultado:
             print("✅ Notificação enviada com sucesso!")
-            print(f"   Message ID: {resultado.get('name', 'N/A')}")
+            print(f"   Message ID: {resultado.get('messageId', 'N/A')}")
             print("\n⏱️  A notificação deve chegar em até 10 segundos.")
             print("   Se não chegar, verifique:")
             print("   1. Se o app está fechado")
             print("   2. Se as permissões de notificação estão habilitadas")
             print("   3. Se o token FCM é válido")
-        else:
-            print(f"❌ Erro ao enviar notificação: {response.status_code}")
-            print(f"   Resposta: {response.text}")
-            
+            return
     except Exception as e:
-        print(f"❌ Erro: {e}")
+        if isinstance(e, error.HTTPError):
+            print(f"❌ Erro ao enviar notificação: {e.code}")
+            print(f"   Resposta: {e.read().decode('utf-8')}")
+        else:
+            print(f"❌ Erro: {e}")
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Uso: python testar_notificacao.py <TOKEN_FCM>")
+    if len(sys.argv) < 4:
+        print("Uso: python testar_notificacao.py <TOKEN_FCM> <SUPABASE_URL> <SUPABASE_ANON_KEY>")
         print("\nPara obter o token FCM:")
         print("1. Execute o app: flutter run")
         print("2. Faça login")
@@ -74,6 +63,8 @@ if __name__ == "__main__":
         sys.exit(1)
     
     token = sys.argv[1]
+    supabase_url = sys.argv[2]
+    supabase_anon_key = sys.argv[3]
     print(f"📱 Enviando notificação para token: {token[:20]}...")
     print()
-    enviar_notificacao(token)
+    enviar_notificacao(token, supabase_url, supabase_anon_key)

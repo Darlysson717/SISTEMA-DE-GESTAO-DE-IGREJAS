@@ -3,6 +3,7 @@ import 'package:centro_social_app/src/nucleo/configuracao/configuracao_app.dart'
 import 'package:centro_social_app/src/nucleo/notificacoes/servico_notificacoes.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -46,6 +47,9 @@ Future<void> main() async {
   );
 
   // Inicializa serviço de notificações
+  FirebaseMessaging.onBackgroundMessage(
+    ServicoNotificacoes.manipularMensagemBackground,
+  );
   await ServicoNotificacoes().inicializar();
 
   runApp(const ProviderScope(child: CentroSocialApp()));
