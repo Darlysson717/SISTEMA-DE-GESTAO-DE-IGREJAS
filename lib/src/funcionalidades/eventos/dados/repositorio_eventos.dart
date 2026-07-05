@@ -122,43 +122,48 @@ class EventsRepository {
 
   EventsRepository(this._client);
 
-  Stream<List<AppEvent>> watchMyEvents() {
+  Future<List<AppEvent>> fetchMyEvents() async {
     final currentUser = _client.auth.currentUser;
     if (currentUser == null) {
-      return Stream.value(const []);
+      return const [];
     }
 
-    return _client
+    final rows = await _client
         .from('eventos')
-        .stream(primaryKey: ['id'])
+        .select()
         .eq('user_id', currentUser.id)
-        .order('created_at', ascending: false)
-        .map((rows) => rows.map((row) => AppEvent.fromJson(row)).toList());
+        .order('created_at', ascending: false);
+
+    return (rows as List<dynamic>)
+        .map((row) => AppEvent.fromJson(row as Map<String, dynamic>))
+        .toList();
   }
 
-  Stream<List<AppEvent>> watchPublishedEvents() {
-    return _client
+  Future<List<AppEvent>> fetchPublishedEvents() async {
+    final rows = await _client
         .from('eventos')
-        .stream(primaryKey: ['id'])
+        .select()
         .neq('status', 'cancelado')
-        .order('publicado_em', ascending: false)
-        .map((rows) {
-          final now = DateTime.now();
-          return rows.map((row) => AppEvent.fromJson(row)).where((event) {
-            if (event.status == 'publicado') {
-              return true;
-            }
+        .order('publicado_em', ascending: false);
 
-            if (event.status == 'agendado') {
-              if (event.publicadoEm == null) {
-                return false;
-              }
-              return !event.publicadoEm!.isAfter(now);
-            }
+    final now = DateTime.now();
+    return (rows as List<dynamic>)
+        .map((row) => AppEvent.fromJson(row as Map<String, dynamic>))
+        .where((event) {
+          if (event.status == 'publicado') {
+            return true;
+          }
 
-            return false;
-          }).toList();
-        });
+          if (event.status == 'agendado') {
+            if (event.publicadoEm == null) {
+              return false;
+            }
+            return !event.publicadoEm!.isAfter(now);
+          }
+
+          return false;
+        })
+        .toList();
   }
 
   Future<List<AppEvent>> listPublishedEvents() async {
@@ -188,28 +193,30 @@ class EventsRepository {
         .toList();
   }
 
-  Stream<List<EventRegistrationEntry>> watchEventRegistrations(String eventId) {
-    return _client
+  Future<List<EventRegistrationEntry>> fetchEventRegistrations(String eventId) async {
+    final rows = await _client
         .from('event_registrations')
-        .stream(primaryKey: ['id'])
+        .select()
         .eq('event_id', eventId)
-        .order('created_at', ascending: true)
-        .asyncMap(_attachProfilesToRegistrations);
+        .order('created_at', ascending: true);
+
+    return _attachProfilesToRegistrations(
+      (rows as List<dynamic>).cast<Map<String, dynamic>>(),
+    );
   }
 
-  Stream<EventRegistrationStats> watchEventRegistrationStats(String eventId) {
-    return watchEventRegistrations(eventId).map((items) {
-      final participantes = items
-          .where((item) => item.interestType == EventInterestType.participante)
-          .length;
-      final voluntarios = items
-          .where((item) => item.interestType == EventInterestType.voluntario)
-          .length;
-      return EventRegistrationStats(
-        participantes: participantes,
-        voluntarios: voluntarios,
-      );
-    });
+  Future<EventRegistrationStats> fetchEventRegistrationStats(String eventId) async {
+    final items = await fetchEventRegistrations(eventId);
+    final participantes = items
+        .where((item) => item.interestType == EventInterestType.participante)
+        .length;
+    final voluntarios = items
+        .where((item) => item.interestType == EventInterestType.voluntario)
+        .length;
+    return EventRegistrationStats(
+      participantes: participantes,
+      voluntarios: voluntarios,
+    );
   }
 
   Future<void> registerInterest({

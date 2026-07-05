@@ -1,7 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../eventos/dados/repositorio_eventos.dart';
+import '../../../eventos/dominio/entidades/evento_app.dart';
 
 class AnnounceEventPage extends StatefulWidget {
   final dynamic initialEvent;
@@ -46,6 +50,10 @@ class _AnnounceEventPageState extends State<AnnounceEventPage> {
   bool _isEventoPago = false;
   bool _necessitaInscricaoPrevia = false;
   final TextEditingController _limiteVagasController = TextEditingController();
+  XFile? _capaImagem;
+  List<XFile> _imagensGaleria = [];
+  String? _capaImagemUrlExistente;
+  List<String> _imagensGaleriaUrlsExistentes = [];
 
   // Janela 4: Voluntariado, Acessibilidade e Contato
   bool _permitirVoluntarios = false;
@@ -55,11 +63,239 @@ class _AnnounceEventPageState extends State<AnnounceEventPage> {
   final TextEditingController _telefoneController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
 
+  String _toSnakeCase(String value) {
+    final buffer = StringBuffer();
+    for (var i = 0; i < value.length; i++) {
+      final char = value[i];
+      if (char.toUpperCase() == char && char.toLowerCase() != char && i > 0) {
+        buffer.write('_');
+      }
+      buffer.write(char.toLowerCase());
+    }
+    return buffer.toString();
+  }
+
+  AppEvent? _resolveExistingEvent() {
+    if (widget.initialEvent == null) return null;
+    if (widget.initialEvent is AppEvent) {
+      return widget.initialEvent as AppEvent;
+    }
+    if (widget.initialEvent is Map) {
+      final map = Map<String, dynamic>.from(widget.initialEvent as Map);
+      return AppEvent.fromJson(map);
+    }
+    return null;
+  }
+
+  dynamic _getEventValue(String key) {
+    if (widget.initialEvent == null) return null;
+
+    if (widget.initialEvent is Map) {
+      final map = widget.initialEvent as Map;
+      if (map.containsKey(key)) return map[key];
+      final snakeKey = _toSnakeCase(key);
+      if (map.containsKey(snakeKey)) return map[snakeKey];
+      return null;
+    }
+
+    final event = widget.initialEvent;
+    switch (key) {
+      case 'nome':
+        return event.nome;
+      case 'descricao':
+        return event.descricao;
+      case 'categoria':
+        return event.categoria;
+      case 'publicoAlvo':
+        return event.publicoAlvo;
+      case 'dataInicio':
+        return event.dataInicio;
+      case 'dataFim':
+        return event.dataFim;
+      case 'horaInicio':
+        return event.horaInicio;
+      case 'horaFim':
+        return event.horaFim;
+      case 'diaInteiro':
+        return event.diaInteiro;
+      case 'repeticao':
+        return event.repeticao;
+      case 'tipoLocal':
+        return event.tipoLocal;
+      case 'endereco':
+        return event.endereco;
+      case 'eventoPago':
+        return event.eventoPago;
+      case 'limiteVagas':
+        return event.limiteVagas;
+      case 'requerInscricao':
+        return event.requerInscricao;
+      case 'permitirVoluntarios':
+        return event.permitirVoluntarios;
+      case 'agendarPublicacao':
+        return event.agendarPublicacao;
+      case 'acessibilidade':
+        return event.acessibilidade;
+      case 'contatoNome':
+        return event.contatoNome;
+      case 'contatoTelefone':
+        return event.contatoTelefone;
+      case 'contatoEmail':
+        return event.contatoEmail;
+      case 'imagemCapaUrl':
+        return event.imagemCapaUrl;
+      case 'galeriaImagensUrls':
+        return event.galeriaImagensUrls;
+      default:
+        return null;
+    }
+  }
+
+  String _getStringValue(String key, {String fallback = ''}) {
+    final value = _getEventValue(key);
+    if (value == null) return fallback;
+    return value.toString();
+  }
+
+  bool _getBoolValue(String key, {bool fallback = false}) {
+    final value = _getEventValue(key);
+    if (value is bool) return value;
+    return fallback;
+  }
+
+  int? _getIntValue(String key) {
+    final value = _getEventValue(key);
+    if (value is int) return value;
+    if (value is String) return int.tryParse(value);
+    return null;
+  }
+
+  DateTime? _getDateValue(String key) {
+    final value = _getEventValue(key);
+    if (value is DateTime) return value;
+    if (value is String && value.isNotEmpty) {
+      try {
+        return DateTime.parse(value);
+      } catch (_) {
+        return null;
+      }
+    }
+    return null;
+  }
+
+  TimeOfDay? _parseTimeOfDay(String? value) {
+    if (value == null || value.isEmpty) return null;
+
+    final normalized = value.trim();
+    final parts = normalized.split(':');
+    if (parts.length < 2) return null;
+
+    final hour = int.tryParse(parts[0]);
+    final minute = int.tryParse(parts[1]);
+
+    if (hour == null || minute == null) return null;
+    return TimeOfDay(hour: hour, minute: minute);
+  }
+
+  String _normalizeRepeticao(String? value) {
+    final normalized = (value ?? '').toLowerCase();
+    switch (normalized) {
+      case 'sem_repeticao':
+      case 'sem repeticao':
+      case 'sem repetição':
+        return 'Sem repeticao';
+      case 'diario':
+      case 'diário':
+        return 'Diário';
+      case 'semanal':
+        return 'Semanal';
+      case 'mensal':
+        return 'Mensal';
+      default:
+        return 'Sem repeticao';
+    }
+  }
+
+  String _normalizeTipoLocal(String? value) {
+    final normalized = (value ?? '').toLowerCase();
+    switch (normalized) {
+      case 'online':
+        return 'Online';
+      case 'hibrido':
+      case 'híbrido':
+        return 'Híbrido';
+      case 'presencial':
+      default:
+        return 'Presencial';
+    }
+  }
+
   @override
   void initState() {
     super.initState();
-    if (widget.initialEvent != null) {
-      // Inicializações futuras de edição aqui
+
+    if (widget.initialEvent == null) return;
+
+    final event = widget.initialEvent;
+
+    _nomeEventoController.text = _getStringValue('nome');
+    _descricaoController.text = _getStringValue('descricao');
+    _categoriaSelecionada = _getStringValue('categoria');
+
+    final publicoAlvo = _getEventValue('publicoAlvo');
+    if (publicoAlvo is List) {
+      _publicosSelecionados
+        ..clear()
+        ..addAll(publicoAlvo.whereType().map((item) => item.toString()));
+    } else if (publicoAlvo is List<String>) {
+      _publicosSelecionados
+        ..clear()
+        ..addAll(publicoAlvo);
+    } else if (publicoAlvo is List<dynamic>) {
+      _publicosSelecionados
+        ..clear()
+        ..addAll(publicoAlvo.map((item) => item.toString()));
+    }
+
+    final dataInicio = _getDateValue('dataInicio');
+    final dataFim = _getDateValue('dataFim');
+    if (dataInicio != null) _dataInicio = dataInicio;
+    if (dataFim != null) _dataFim = dataFim;
+
+    final horaInicio = _parseTimeOfDay(_getStringValue('horaInicio'));
+    final horaFim = _parseTimeOfDay(_getStringValue('horaFim'));
+    if (horaInicio != null) _horaInicio = horaInicio;
+    if (horaFim != null) _horaFim = horaFim;
+
+    _isDiaInteiro = _getBoolValue('diaInteiro');
+    _repeticaoSelecionada = _normalizeRepeticao(_getStringValue('repeticao'));
+    _formatoLocal = _normalizeTipoLocal(_getStringValue('tipoLocal'));
+    _enderecoController.text = _getStringValue('endereco');
+
+    _isEventoPago = _getBoolValue('eventoPago');
+    _necessitaInscricaoPrevia = _getBoolValue('requerInscricao');
+    _limiteVagasController.text = _getIntValue('limiteVagas')?.toString() ?? '';
+
+    _permitirVoluntarios = _getBoolValue('permitirVoluntarios');
+    _agendarPublicacao = _getBoolValue('agendarPublicacao');
+    _acessibilidadeController.text = _getStringValue('acessibilidade');
+    _responsavelController.text = _getStringValue('contatoNome');
+    _telefoneController.text = _getStringValue('contatoTelefone');
+    _emailController.text = _getStringValue('contatoEmail');
+
+    final coverUrl = _getEventValue('imagemCapaUrl');
+    if (coverUrl is String && coverUrl.isNotEmpty) {
+      _capaImagemUrlExistente = coverUrl;
+    }
+
+    final galleryUrls = _getEventValue('galeriaImagensUrls');
+    if (galleryUrls is List) {
+      _imagensGaleriaUrlsExistentes = galleryUrls
+          .whereType<String>()
+          .where((url) => url.trim().isNotEmpty)
+          .toList();
+    } else if (galleryUrls is List<String>) {
+      _imagensGaleriaUrlsExistentes = galleryUrls.where((url) => url.trim().isNotEmpty).toList();
     }
   }
 
@@ -129,6 +365,28 @@ class _AnnounceEventPageState extends State<AnnounceEventPage> {
     }
   }
 
+  Future<void> _selecionarCapa() async {
+    final picker = ImagePicker();
+    final image = await picker.pickImage(source: ImageSource.gallery);
+
+    if (image != null) {
+      setState(() {
+        _capaImagem = image;
+      });
+    }
+  }
+
+  Future<void> _selecionarGaleria() async {
+    final picker = ImagePicker();
+    final imagens = await picker.pickMultiImage();
+
+    if (imagens.isNotEmpty) {
+      setState(() {
+        _imagensGaleria.addAll(imagens);
+      });
+    }
+  }
+
   Future<void> _publicarEvento() async {
     // Validar o formulário do step 4 (último passo)
     if (_formKeyStep4.currentState?.validate() != true) {
@@ -188,6 +446,7 @@ class _AnnounceEventPageState extends State<AnnounceEventPage> {
       // Obter instância do Supabase e criar repositório
       final supabaseClient = Supabase.instance.client;
       final eventsRepository = EventsRepository(supabaseClient);
+      final existingEvent = _resolveExistingEvent();
 
       // Converter horários para TimeOfDaySql se necessário
       TimeOfDaySql? horaInicio;
@@ -243,15 +502,16 @@ class _AnnounceEventPageState extends State<AnnounceEventPage> {
           : _emailController.text.trim(),
         agendarPublicacao: _agendarPublicacao,
         dataPublicacao: _agendarPublicacao ? DateTime.now().add(const Duration(days: 1)) : null,
-        imagemCapa: null,
-        galeriaImagensExistentes: const [],
-        galeriaImagens: const [],
+        imagemCapa: _capaImagem,
+        galeriaImagensExistentes: existingEvent?.galeriaImagensUrls ?? const [],
+        galeriaImagens: _imagensGaleria,
       );
 
       // Salvar evento no repositório
       final eventId = await eventsRepository.saveEvent(
         input: eventInput,
         mode: EventPersistenceMode.publish,
+        existingEvent: existingEvent,
       );
 
       // Fechar loading dialog
@@ -263,7 +523,11 @@ class _AnnounceEventPageState extends State<AnnounceEventPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Evento publicado com sucesso!'),
+            content: Text(
+              existingEvent != null
+                  ? 'Evento atualizado com sucesso!'
+                  : 'Evento publicado com sucesso!',
+            ),
             backgroundColor: Colors.green,
             duration: const Duration(seconds: 2),
             behavior: SnackBarBehavior.floating,
@@ -605,13 +869,46 @@ class _AnnounceEventPageState extends State<AnnounceEventPage> {
             _buildSectionCard(
               title: 'Mídia',
               children: [
+                if (_capaImagem != null) ...[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.file(
+                      File(_capaImagem!.path),
+                      height: 150,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ] else if (_capaImagemUrlExistente != null && _capaImagemUrlExistente!.isNotEmpty) ...[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.network(
+                      _capaImagemUrlExistente!,
+                      height: 150,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        height: 150,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Center(
+                          child: Icon(Icons.image_not_supported_outlined, color: Color(0xFF94A3B8)),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
                 Row(
                   children: [
                     Expanded(
                       child: OutlinedButton.icon(
                         icon: const Icon(Icons.image),
                         label: const Text('Selecionar capa'),
-                        onPressed: () {},
+                        onPressed: _selecionarCapa,
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -619,16 +916,84 @@ class _AnnounceEventPageState extends State<AnnounceEventPage> {
                       child: OutlinedButton.icon(
                         icon: const Icon(Icons.collections),
                         label: const Text('Galeria'),
-                        onPressed: () {},
+                        onPressed: _selecionarGaleria,
                       ),
                     ),
                   ],
                 ),
+                if (_capaImagem != null) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Icon(Icons.check_circle, color: Colors.green, size: 16),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          _capaImagem!.name,
+                          style: const TextStyle(fontSize: 12, color: Color(0xFF0F766E)),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
                 const SizedBox(height: 8),
-                const Align(
+                Align(
                   alignment: Alignment.centerLeft,
-                  child: Text('Galeria: 0 imagem(ns)', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                  child: Text(
+                    'Galeria: ${_imagensGaleria.length} imagem(ns)',
+                    style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                  ),
                 ),
+                if (_imagensGaleria.isNotEmpty || _imagensGaleriaUrlsExistentes.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    height: 90,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: _imagensGaleria.isNotEmpty
+                          ? _imagensGaleria.length
+                          : _imagensGaleriaUrlsExistentes.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 8),
+                      itemBuilder: (context, index) {
+                        if (_imagensGaleria.isNotEmpty) {
+                          final image = _imagensGaleria[index];
+                          return ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: Image.file(
+                              File(image.path),
+                              width: 90,
+                              height: 90,
+                              fit: BoxFit.cover,
+                            ),
+                          );
+                        }
+
+                        final imageUrl = _imagensGaleriaUrlsExistentes[index];
+                        return ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: Image.network(
+                            imageUrl,
+                            width: 90,
+                            height: 90,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Container(
+                              width: 90,
+                              height: 90,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF1F5F9),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Center(
+                                child: Icon(Icons.image_not_supported_outlined, color: Color(0xFF94A3B8)),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
               ],
             ),
             _buildSectionCard(
