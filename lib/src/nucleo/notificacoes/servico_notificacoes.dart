@@ -25,7 +25,11 @@ class ServicoNotificacoes {
   factory ServicoNotificacoes() => _instance;
   ServicoNotificacoes._internal();
 
-  final FirebaseMessaging _messaging = FirebaseMessaging.instance;
+  /// Getter (e não campo) de propósito: `FirebaseMessaging.instance` lança
+  /// exceção quando o Firebase não inicializou — situação tolerada pelo
+  /// `main.dart` na web. Como campo, a exceção estouraria já na construção
+  /// de qualquer classe que use este serviço (ex.: EventsRepository).
+  FirebaseMessaging get _messaging => FirebaseMessaging.instance;
   final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
 
   /// Inicializa o serviço de notificações.
