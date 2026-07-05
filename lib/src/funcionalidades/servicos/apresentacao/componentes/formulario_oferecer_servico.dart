@@ -1,14 +1,14 @@
-// ignore_for_file: avoid_print, use_build_context_synchronously
+// ignore_for_file: use_build_context_synchronously
 
 import 'dart:io';
+
+import 'package:centro_social_app/src/funcionalidades/agendamentos/apresentacao/provedores/provedores_agendamentos.dart';
+import 'package:centro_social_app/src/funcionalidades/agendamentos/dominio/entidades/servico.dart';
+import 'package:centro_social_app/src/nucleo/notificacoes/servico_notificacoes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:centro_social_app/src/funcionalidades/agendamentos/dominio/entidades/servico.dart';
-import 'package:centro_social_app/src/funcionalidades/agendamentos/apresentacao/provedores/provedores_agendamentos.dart';
-import 'package:centro_social_app/src/nucleo/notificacoes/servico_notificacoes.dart';
 
 class OfferServiceForm extends ConsumerStatefulWidget {
   final Service? initialService;
@@ -21,19 +21,21 @@ class OfferServiceForm extends ConsumerStatefulWidget {
 
 class _OfferServiceFormState extends ConsumerState<OfferServiceForm> {
   final ServicoNotificacoes _notificacoes = ServicoNotificacoes();
-  final _formKey = GlobalKey<FormState>();
-  final _nomeController = TextEditingController();
-  final _categoriaController = TextEditingController();
-  final _nomeProfissionalController = TextEditingController();
-  final _descricaoController = TextEditingController();
-  final _telefoneController = TextEditingController();
-  final _localController = TextEditingController();
-  final _observacoesController = TextEditingController();
+  final PageController _pageController = PageController();
+  final GlobalKey<FormState> _formKeyStep1 = GlobalKey<FormState>();
+  final GlobalKey<FormState> _formKeyStep2 = GlobalKey<FormState>();
+  final GlobalKey<FormState> _formKeyStep3 = GlobalKey<FormState>();
 
-  final List<String> _horariosDisponiveis = [];
-  int? _duracaoAtendimento; // em minutos
+  final TextEditingController _nomeController = TextEditingController();
+  final TextEditingController _categoriaController = TextEditingController();
+  final TextEditingController _nomeProfissionalController = TextEditingController();
+  final TextEditingController _descricaoController = TextEditingController();
+  final TextEditingController _telefoneController = TextEditingController();
+  final TextEditingController _localController = TextEditingController();
+  final TextEditingController _observacoesController = TextEditingController();
 
-  final List<String> _diasSemana = [
+  final List<String> _horariosDisponiveis = <String>[];
+  final List<String> _diasSemana = <String>[
     'Segunda-feira',
     'Terça-feira',
     'Quarta-feira',
@@ -42,17 +44,18 @@ class _OfferServiceFormState extends ConsumerState<OfferServiceForm> {
     'Sábado',
     'Domingo',
   ];
+  final List<int> _duracoesPossiveis = <int>[15, 30, 45, 60, 90, 120];
+  final List<bool> _diasSelecionados = List<bool>.filled(7, false);
 
-  final List<int> _duracoesPossiveis = [15, 30, 45, 60, 90, 120]; // em minutos
-  final List<bool> _diasSelecionados = List.filled(7, false);
-
+  int _currentStep = 0;
+  final int _totalSteps = 3;
+  int? _duracaoAtendimento;
+  String? _tipoAtendimento;
   File? _selectedImage;
-  final ImagePicker _picker = ImagePicker();
-
-  String? _tipoAtendimento; // 'presencial' ou 'online'
-
+  String? _existingImageUrl;
   bool _isLoading = false;
   late final bool _isEditing;
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
@@ -61,6 +64,19 @@ class _OfferServiceFormState extends ConsumerState<OfferServiceForm> {
     if (_isEditing) {
       _prefillForm(widget.initialService!);
     }
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    _nomeController.dispose();
+    _categoriaController.dispose();
+    _nomeProfissionalController.dispose();
+    _descricaoController.dispose();
+    _telefoneController.dispose();
+    _localController.dispose();
+    _observacoesController.dispose();
+    super.dispose();
   }
 
   void _prefillForm(Service service) {
@@ -76,9 +92,10 @@ class _OfferServiceFormState extends ConsumerState<OfferServiceForm> {
     _horariosDisponiveis
       ..clear()
       ..addAll(service.horarios);
+    _existingImageUrl = service.imagemProfissional;
 
     final selected = service.diasDisponiveis.map(_normalizeDay).toSet();
-    for (int i = 0; i < _diasSemana.length; i++) {
+    for (var i = 0; i < _diasSemana.length; i++) {
       final day = _normalizeDay(_diasSemana[i]);
       _diasSelecionados[i] = selected.contains(day);
     }
@@ -96,56 +113,92 @@ class _OfferServiceFormState extends ConsumerState<OfferServiceForm> {
     return lower;
   }
 
-  @override
-  void dispose() {
-    _nomeController.dispose();
-    _categoriaController.dispose();
-    _nomeProfissionalController.dispose();
-    _descricaoController.dispose();
-    _telefoneController.dispose();
-    _localController.dispose();
-    _observacoesController.dispose();
-    super.dispose();
+  void _nextStep() {
+    bool isValid = false;
+    if (_currentStep == 0) {
+      isValid = _formKeyStep1.currentState?.validate() ?? false;
+    } else if (_currentStep == 1) {
+      final hasSelectedDay = _diasSelecionados.any((selected) => selected);
+      if (_horariosDisponiveis.isEmpty || !hasSelectedDay) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Selecione pelo menos um dia e adicione pelo menos um horário disponível.')),
+        );
+        return;
+      }
+
+      isValid = _formKeyStep2.currentState?.validate() ?? false;
+    } else if (_currentStep == 2) {
+      isValid = _formKeyStep3.currentState?.validate() ?? false;
+    }
+
+    if (!isValid) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Preencha os campos obrigatórios antes de avançar.')),
+      );
+      return;
+    }
+
+    if (_currentStep < _totalSteps - 1) {
+      _pageController.nextPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
   }
 
-  Future<bool> _requestPermission(Permission permission) async {
-    final status = await permission.request();
-    if (status.isGranted) {
-      return true;
-    } else if (status.isPermanentlyDenied) {
-      // Abrir configurações do app
-      await openAppSettings();
-      return false;
-    } else {
-      return false;
+  void _previousStep() {
+    if (_currentStep > 0) {
+      _pageController.previousPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: source,
+        imageQuality: 75,
+        maxWidth: 1600,
+        maxHeight: 1600,
+      );
+
+      if (image != null) {
+        setState(() {
+          _selectedImage = File(image.path);
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao selecionar imagem: $e')),
+        );
+      }
     }
   }
 
   Future<void> _showImageSourceDialog() async {
-    showDialog(
+    await showDialog<void>(
       context: context,
-      builder: (BuildContext context) {
+      builder: (context) {
         return AlertDialog(
-          title: const Text('Selecionar Imagem'),
-          content: const Text('Escolha a origem da imagem:'),
+          title: const Text('Selecionar imagem'),
+          content: const Text('Escolha a origem da imagem do profissional.'),
           actions: [
             TextButton(
               onPressed: () async {
-                Navigator.of(context).pop();
-                await _pickImage(ImageSource.camera);
-              },
-              child: const Text('Câmera'),
-            ),
-            TextButton(
-              onPressed: () async {
-                Navigator.of(context).pop();
+                Navigator.pop(context);
                 await _pickImage(ImageSource.gallery);
               },
               child: const Text('Galeria'),
             ),
             TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancelar'),
+              onPressed: () async {
+                Navigator.pop(context);
+                await _pickImage(ImageSource.camera);
+              },
+              child: const Text('Câmera'),
             ),
           ],
         );
@@ -153,56 +206,8 @@ class _OfferServiceFormState extends ConsumerState<OfferServiceForm> {
     );
   }
 
-  Future<void> _pickImage(ImageSource source) async {
-    try {
-      Permission permission;
-      if (source == ImageSource.camera) {
-        permission = Permission.camera;
-      } else {
-        permission = Permission.photos;
-      }
-
-      final hasPermission = await _requestPermission(permission);
-      if (!hasPermission) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'Permissão necessária para acessar a imagem. Vá para configurações e conceda a permissão.',
-              ),
-              duration: Duration(seconds: 5),
-            ),
-          );
-        }
-        return;
-      }
-
-      final XFile? image = await _picker.pickImage(
-        source: source,
-        imageQuality: 75,
-        maxWidth: 1600,
-        maxHeight: 1600,
-      );
-      if (image != null) {
-        setState(() {
-          _selectedImage = File(image.path);
-        });
-        print('DEBUG: Imagem selecionada: ${image.path}');
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erro ao selecionar imagem: $e'),
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
-    }
-  }
-
   Future<void> _addHorario() async {
-    final TimeOfDay? startTime = await showTimePicker(
+    final startTime = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.now(),
       helpText: 'Selecione horário de início',
@@ -210,12 +215,9 @@ class _OfferServiceFormState extends ConsumerState<OfferServiceForm> {
 
     if (startTime == null) return;
 
-    final TimeOfDay? endTime = await showTimePicker(
+    final endTime = await showTimePicker(
       context: context,
-      initialTime: TimeOfDay(
-        hour: startTime.hour + 1,
-        minute: startTime.minute,
-      ),
+      initialTime: TimeOfDay(hour: startTime.hour + 1, minute: startTime.minute),
       helpText: 'Selecione horário de fim',
     );
 
@@ -226,7 +228,7 @@ class _OfferServiceFormState extends ConsumerState<OfferServiceForm> {
 
     if (startMinutes >= endMinutes) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Horário de fim deve ser após o início')),
+        const SnackBar(content: Text('O horário de fim deve ser após o início.')),
       );
       return;
     }
@@ -259,46 +261,31 @@ class _OfferServiceFormState extends ConsumerState<OfferServiceForm> {
       return null;
     }
 
-    final encodedPath = segments.sublist(bucketIndex + 1).join('/');
-    return Uri.decodeComponent(encodedPath);
+    return Uri.decodeComponent(segments.sublist(bucketIndex + 1).join('/'));
   }
 
   Future<void> _deleteStorageImageByUrl(String? imageUrl) async {
     final path = _extractStoragePathFromPublicUrl(imageUrl);
-    if (path == null) {
-      return;
-    }
+    if (path == null) return;
 
-    await Supabase.instance.client.storage.from('servicos_images').remove([
-      path,
-    ]);
-  }
-
-  Future<void> _deleteStorageImageByPath(String? imagePath) async {
-    if (imagePath == null || imagePath.trim().isEmpty) {
-      return;
-    }
-
-    await Supabase.instance.client.storage.from('servicos_images').remove([
-      imagePath,
-    ]);
+    await Supabase.instance.client.storage.from('servicos_images').remove([path]);
   }
 
   Future<void> _submitForm() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    if (_horariosDisponiveis.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Adicione pelo menos um horário disponível'),
-        ),
-      );
+    if (!_formKeyStep3.currentState!.validate()) {
       return;
     }
 
     if (_duracaoAtendimento == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Selecione a duração do atendimento')),
+        const SnackBar(content: Text('Selecione a duração do atendimento.')),
+      );
+      return;
+    }
+
+    if (_tipoAtendimento == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Selecione o tipo de atendimento.')),
       );
       return;
     }
@@ -306,48 +293,14 @@ class _OfferServiceFormState extends ConsumerState<OfferServiceForm> {
     final userId = Supabase.instance.client.auth.currentUser?.id;
     if (userId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Usuário não logado. Faça login novamente.'),
-        ),
+        const SnackBar(content: Text('Usuário não autenticado.')),
       );
       return;
     }
 
-    // Debug: mostrar userId
-    print('DEBUG: UserID obtido: $userId');
+    setState(() => _isLoading = true);
 
-    // Verificar se o perfil do usuário existe
-    try {
-      print('DEBUG: Verificando perfil na tabela profiles...');
-      final profileCheck = await Supabase.instance.client
-          .from('profiles')
-          .select('id, email, full_name')
-          .eq('id', userId)
-          .maybeSingle();
-
-      print('DEBUG: Resultado da verificação de perfil: $profileCheck');
-
-      if (profileCheck == null) {
-        print('DEBUG: Perfil não encontrado para userId: $userId');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Perfil não encontrado (ID: $userId). Tente fazer logout e login novamente.',
-            ),
-          ),
-        );
-        return;
-      }
-
-      print('DEBUG: Perfil encontrado: ${profileCheck['email']}');
-    } catch (profileError) {
-      print('DEBUG: Erro ao verificar perfil: $profileError');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao verificar perfil: $profileError')),
-      );
-      return;
-    }
-
+    final previousImageUrl = widget.initialService?.imagemProfissional;
     final diasSelecionados = _diasSemana
         .asMap()
         .entries
@@ -355,47 +308,24 @@ class _OfferServiceFormState extends ConsumerState<OfferServiceForm> {
         .map((entry) => entry.value)
         .toList();
 
-    setState(() => _isLoading = true);
-
-    final previousImageUrl = widget.initialService?.imagemProfissional;
+    String? imageUrl = previousImageUrl;
     String? uploadedImagePath;
-    bool servicePersisted = false;
+    bool persisted = false;
 
     try {
-      String? imageUrl = widget.initialService?.imagemProfissional;
       if (_selectedImage != null) {
-        try {
-          final timestamp = DateTime.now().millisecondsSinceEpoch;
-          final fileName = '$userId/$timestamp.jpg';
-          uploadedImagePath = fileName;
-          await Supabase.instance.client.storage
-              .from('servicos_images')
-              .upload(fileName, _selectedImage!);
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        final fileName = '$userId/$timestamp.jpg';
+        uploadedImagePath = fileName;
 
-          imageUrl = Supabase.instance.client.storage
-              .from('servicos_images')
-              .getPublicUrl(fileName);
-        } catch (imageError) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  'Aviso: Não foi possível fazer upload da imagem. Serviço será publicado sem imagem. Erro: $imageError',
-                ),
-                duration: const Duration(seconds: 5),
-              ),
-            );
-          }
-          imageUrl = _isEditing ? previousImageUrl : null;
-          uploadedImagePath = null;
-        }
+        await Supabase.instance.client.storage
+            .from('servicos_images')
+            .upload(fileName, _selectedImage!);
+
+        imageUrl = Supabase.instance.client.storage
+            .from('servicos_images')
+            .getPublicUrl(fileName);
       }
-
-      // Verificação final antes do insert
-      print('DEBUG: Verificação final - UserID: $userId');
-      print(
-        'DEBUG: Current session: ${Supabase.instance.client.auth.currentSession}',
-      );
 
       final payload = {
         'user_id': userId,
@@ -415,46 +345,33 @@ class _OfferServiceFormState extends ConsumerState<OfferServiceForm> {
         'observacoes': _observacoesController.text.trim(),
       };
 
-      if (_isEditing) {
-        final updatedRows = await Supabase.instance.client
+      if (_isEditing && widget.initialService != null) {
+        final rows = await Supabase.instance.client
             .from('servicos')
             .update(payload)
             .eq('id', widget.initialService!.id)
             .eq('user_id', userId)
             .select();
 
-        final updatedList = (updatedRows as List<dynamic>);
+        final updatedList = rows as List<dynamic>;
         if (updatedList.isEmpty) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Nao foi possivel atualizar o servico.'),
-              ),
-            );
-          }
-          return;
+          throw Exception('Não foi possível atualizar o serviço.');
         }
 
-        final updatedService = Service.fromJson(
-          updatedList.first as Map<String, dynamic>,
-        );
-        servicePersisted = true;
+        final updatedService = Service.fromJson(updatedList.first as Map<String, dynamic>);
+        persisted = true;
 
-        if (_selectedImage != null &&
-            previousImageUrl != null &&
-            previousImageUrl.trim().isNotEmpty) {
+        if (_selectedImage != null && previousImageUrl != null && previousImageUrl.isNotEmpty) {
           try {
             await _deleteStorageImageByUrl(previousImageUrl);
-          } catch (deleteOldImageError) {
-            print('DEBUG: Erro ao excluir imagem antiga: $deleteOldImageError');
-          }
+          } catch (_) {}
         }
 
         if (mounted) {
           ref.invalidate(myServicesProvider);
           ref.invalidate(publishedServicesProvider);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Servico atualizado com sucesso!')),
+            const SnackBar(content: Text('Serviço atualizado com sucesso!')),
           );
           Navigator.of(context).pop(updatedService);
         }
@@ -463,7 +380,7 @@ class _OfferServiceFormState extends ConsumerState<OfferServiceForm> {
           ...payload,
           'status': 'ativo',
         });
-        servicePersisted = true;
+        persisted = true;
 
         await _notificacoes.enviarParaTodos(
           titulo: 'Novo serviço disponível',
@@ -474,251 +391,355 @@ class _OfferServiceFormState extends ConsumerState<OfferServiceForm> {
           },
         );
 
-        ref.invalidate(myServicesProvider);
-        ref.invalidate(publishedServicesProvider);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Servico publicado com sucesso!')),
-        );
-
-        // Limpar formulário ou navegar
-        _formKey.currentState!.reset();
-        _categoriaController.clear();
-        _nomeProfissionalController.clear();
-        _localController.clear();
-        setState(() {
-          _diasSelecionados.fillRange(0, 7, false);
-          _tipoAtendimento = null;
-          _horariosDisponiveis.clear();
-          _duracaoAtendimento = null;
-        });
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Erro ao enviar: $e')));
-    } finally {
-      if (!servicePersisted && uploadedImagePath != null) {
-        try {
-          await _deleteStorageImageByPath(uploadedImagePath);
-        } catch (rollbackImageError) {
-          print(
-            'DEBUG: Erro ao remover imagem após falha de persistência: $rollbackImageError',
+        if (mounted) {
+          ref.invalidate(myServicesProvider);
+          ref.invalidate(publishedServicesProvider);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Serviço publicado com sucesso!')),
           );
+          Navigator.of(context).pop();
         }
       }
-
-      setState(() => _isLoading = false);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao salvar serviço: $e')),
+        );
+      }
+    } finally {
+      if (!persisted && uploadedImagePath != null) {
+        try {
+          await Supabase.instance.client.storage.from('servicos_images').remove([uploadedImagePath]);
+        } catch (_) {}
+      }
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
+  }
+
+  Widget _buildProgressHeader() {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Card(
+            elevation: 0,
+            color: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: const BorderSide(color: Color(0xFFE2E8F0)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Publique ou edite seu serviço de forma segura',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Organize os dados principais, disponibilidade e contato em etapas claras.',
+                    style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+                  ),
+                  const SizedBox(height: 12),
+                  LinearProgressIndicator(
+                    value: (_currentStep + 1) / _totalSteps,
+                    backgroundColor: const Color(0xFFE2E8F0),
+                    valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF536194)),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Etapa ${_currentStep + 1} de $_totalSteps',
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Color(0xFF536194)),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStep1Dados() {
+    return SingleChildScrollView(
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 24),
+        child: Form(
+          key: _formKeyStep1,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextFormField(
+                controller: _nomeController,
+                decoration: const InputDecoration(labelText: 'Nome do serviço *', border: OutlineInputBorder()),
+                validator: (value) => value == null || value.trim().isEmpty ? 'Informe o nome do serviço' : null,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _categoriaController,
+                decoration: const InputDecoration(labelText: 'Categoria *', border: OutlineInputBorder()),
+                validator: (value) => value == null || value.trim().isEmpty ? 'Informe a categoria' : null,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _nomeProfissionalController,
+                decoration: const InputDecoration(labelText: 'Nome do profissional *', border: OutlineInputBorder()),
+                validator: (value) => value == null || value.trim().isEmpty ? 'Informe o nome do profissional' : null,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _descricaoController,
+                maxLines: 4,
+                decoration: const InputDecoration(labelText: 'Descrição *', border: OutlineInputBorder(), alignLabelWithHint: true),
+                validator: (value) => value == null || value.trim().isEmpty ? 'Descreva o serviço' : null,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStep2Disponibilidade() {
+    return SingleChildScrollView(
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 24),
+        child: Form(
+          key: _formKeyStep2,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Dias disponíveis', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 8),
+              ...List.generate(_diasSemana.length, (index) {
+                return CheckboxListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(_diasSemana[index]),
+                  value: _diasSelecionados[index],
+                  onChanged: (value) => setState(() => _diasSelecionados[index] = value ?? false),
+                );
+              }),
+              const SizedBox(height: 16),
+              const Text('Horários disponíveis', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 8),
+              if (_horariosDisponiveis.isEmpty)
+                const Text('Nenhum horário adicionado.', style: TextStyle(color: Color(0xFF64748B)))
+              else
+                Column(
+                  children: _horariosDisponiveis.asMap().entries.map((entry) {
+                    final index = entry.key;
+                    return Card(
+                      child: ListTile(
+                        title: Text(entry.value),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.delete_outline),
+                          onPressed: () => _removeHorario(index),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: _addHorario,
+                icon: const Icon(Icons.add),
+                label: const Text('Adicionar horário'),
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<int>(
+                value: _duracaoAtendimento,
+                decoration: const InputDecoration(labelText: 'Duração do atendimento *', border: OutlineInputBorder()),
+                items: _duracoesPossiveis.map((d) => DropdownMenuItem(value: d, child: Text('$d minutos'))).toList(),
+                onChanged: (value) => setState(() => _duracaoAtendimento = value),
+                validator: (value) => value == null ? 'Selecione a duração' : null,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStep3ContatoMidia() {
+    return SingleChildScrollView(
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 24),
+        child: Form(
+          key: _formKeyStep3,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Imagem do profissional', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 8),
+              if (_selectedImage != null)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.file(
+                    _selectedImage!,
+                    height: 180,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
+                )
+              else if (_existingImageUrl != null && _existingImageUrl!.isNotEmpty)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    _existingImageUrl!,
+                    height: 180,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                      height: 180,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Center(child: Icon(Icons.image_not_supported_outlined, color: Color(0xFF94A3B8))),
+                    ),
+                  ),
+                )
+              else
+                Container(
+                  height: 180,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: const Center(child: Text('Nenhuma imagem selecionada', style: TextStyle(color: Color(0xFF64748B)))),
+                ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _showImageSourceDialog,
+                  icon: const Icon(Icons.image_outlined),
+                  label: const Text('Selecionar imagem'),
+                ),
+              ),
+              const SizedBox(height: 16),
+              FormField<String>(
+                initialValue: _tipoAtendimento,
+                validator: (value) => (value == null || value.isEmpty) ? 'Selecione o tipo de atendimento' : null,
+                builder: (field) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Tipo de atendimento', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                      RadioListTile<String>(
+                        title: const Text('Presencial'),
+                        value: 'presencial',
+                        groupValue: _tipoAtendimento,
+                        onChanged: (value) {
+                          setState(() => _tipoAtendimento = value);
+                          field.didChange(value);
+                        },
+                      ),
+                      RadioListTile<String>(
+                        title: const Text('Online'),
+                        value: 'online',
+                        groupValue: _tipoAtendimento,
+                        onChanged: (value) {
+                          setState(() => _tipoAtendimento = value);
+                          field.didChange(value);
+                        },
+                      ),
+                      if (field.hasError)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            field.errorText ?? 'Selecione o tipo de atendimento',
+                            style: TextStyle(color: Theme.of(context).colorScheme.error, fontSize: 12),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
+              if (_tipoAtendimento == 'presencial') ...[
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _localController,
+                  decoration: const InputDecoration(labelText: 'Local de atendimento *', border: OutlineInputBorder()),
+                  validator: (value) => value == null || value.trim().isEmpty ? 'Informe o local' : null,
+                ),
+              ],
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _telefoneController,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(labelText: 'Telefone para contato *', border: OutlineInputBorder()),
+                validator: (value) => value == null || value.trim().isEmpty ? 'Informe o telefone' : null,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _observacoesController,
+                maxLines: 2,
+                decoration: const InputDecoration(labelText: 'Observações (opcional)', border: OutlineInputBorder()),
+              ),
+              const SizedBox(height: 24),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final bottomPadding = MediaQuery.of(context).padding.bottom;
 
-    return Form(
-      key: _formKey,
-      child: SingleChildScrollView(
-        padding: EdgeInsets.only(bottom: bottomPadding + 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            TextFormField(
-              controller: _nomeController,
-              decoration: const InputDecoration(labelText: 'Nome do serviço'),
-              validator: (value) =>
-                  value?.isEmpty ?? true ? 'Campo obrigatório' : null,
+    return Column(
+      children: [
+        _buildProgressHeader(),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: PageView(
+              controller: _pageController,
+              physics: const NeverScrollableScrollPhysics(),
+              onPageChanged: (page) => setState(() => _currentStep = page),
+              children: [
+                _buildStep1Dados(),
+                _buildStep2Disponibilidade(),
+                _buildStep3ContatoMidia(),
+              ],
             ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _nomeProfissionalController,
-              decoration: const InputDecoration(
-                labelText: 'Nome do profissional',
-              ),
-              validator: (value) =>
-                  value?.isEmpty ?? true ? 'Campo obrigatório' : null,
-            ),
-            const SizedBox(height: 16),
-            const Text('Imagem do profissional'),
-            const SizedBox(height: 8),
-            Container(
-              height: 150,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: _selectedImage != null
-                  ? ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.file(
-                        _selectedImage!,
-                        fit: BoxFit.cover,
-                        width: double.infinity,
-                        height: double.infinity,
-                      ),
-                    )
-                  : (widget.initialService?.imagemProfissional != null
-                        ? ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Image.network(
-                              widget.initialService!.imagemProfissional!,
-                              fit: BoxFit.cover,
-                              width: double.infinity,
-                              height: double.infinity,
-                              errorBuilder: (context, error, stackTrace) {
-                                return const Center(
-                                  child: Text(
-                                    'Nao foi possivel carregar a imagem',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(color: Colors.grey),
-                                  ),
-                                );
-                              },
-                            ),
-                          )
-                        : const Center(
-                            child: Text(
-                              'Nenhuma imagem selecionada',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(color: Colors.grey),
-                            ),
-                          )),
-            ),
-            const SizedBox(height: 8),
-            ElevatedButton.icon(
-              onPressed: _showImageSourceDialog,
-              icon: const Icon(Icons.image),
-              label: const Text('Selecionar Imagem'),
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 48),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _categoriaController,
-              decoration: const InputDecoration(labelText: 'Categoria'),
-              validator: (value) =>
-                  value?.isEmpty ?? true ? 'Campo obrigatório' : null,
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _descricaoController,
-              decoration: const InputDecoration(
-                labelText: 'Descrição do serviço',
-              ),
-              maxLines: 3,
-              validator: (value) =>
-                  value?.isEmpty ?? true ? 'Campo obrigatório' : null,
-            ),
-            const SizedBox(height: 16),
-            const Text('Dias disponíveis'),
-            ...List.generate(_diasSemana.length, (index) {
-              return CheckboxListTile(
-                title: Text(_diasSemana[index]),
-                value: _diasSelecionados[index],
-                onChanged: (value) =>
-                    setState(() => _diasSelecionados[index] = value ?? false),
-              );
-            }),
-            const SizedBox(height: 16),
-            const Text('Horários disponíveis'),
-            const SizedBox(height: 8),
-            if (_horariosDisponiveis.isEmpty)
-              const Text('Nenhum horário adicionado')
-            else
-              Column(
-                children: _horariosDisponiveis.asMap().entries.map((entry) {
-                  final index = entry.key;
-                  final horario = entry.value;
-                  return Card(
-                    child: ListTile(
-                      title: Text(horario),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.delete),
-                        onPressed: () => _removeHorario(index),
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-            const SizedBox(height: 8),
-            ElevatedButton.icon(
-              onPressed: _addHorario,
-              icon: const Icon(Icons.add),
-              label: const Text('Adicionar Horário'),
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<int>(
-              value: _duracaoAtendimento,
-              decoration: const InputDecoration(
-                labelText: 'Duração do atendimento',
-              ),
-              items: _duracoesPossiveis.map((duracao) {
-                return DropdownMenuItem(
-                  value: duracao,
-                  child: Text('$duracao minutos'),
-                );
-              }).toList(),
-              onChanged: (value) => setState(() => _duracaoAtendimento = value),
-              validator: (value) =>
-                  value == null ? 'Selecione a duração do atendimento' : null,
-            ),
-            const SizedBox(height: 16),
-            const Text('Atendimento'),
-            RadioListTile<String>(
-              title: const Text('Presencial'),
-              value: 'presencial',
-              groupValue: _tipoAtendimento,
-              onChanged: (value) => setState(() => _tipoAtendimento = value),
-            ),
-            RadioListTile<String>(
-              title: const Text('Online'),
-              value: 'online',
-              groupValue: _tipoAtendimento,
-              onChanged: (value) => setState(() => _tipoAtendimento = value),
-            ),
-            if (_tipoAtendimento == 'presencial') ...[
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _localController,
-                decoration: const InputDecoration(
-                  labelText: 'Local de atendimento',
+          ),
+        ),
+        Padding(
+          padding: EdgeInsets.fromLTRB(16, 0, 16, 16 + bottomPadding),
+          child: Row(
+            children: [
+              if (_currentStep > 0)
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _previousStep,
+                    child: const Text('Voltar'),
+                  ),
                 ),
-                validator: (value) => value?.isEmpty ?? true
-                    ? 'Campo obrigatório para atendimento presencial'
-                    : null,
+              if (_currentStep > 0) const SizedBox(width: 12),
+              Expanded(
+                child: FilledButton(
+                  onPressed: _currentStep < _totalSteps - 1 ? _nextStep : _submitForm,
+                  child: Text(_currentStep < _totalSteps - 1 ? 'Avançar' : 'Publicar Serviço'),
+                ),
               ),
             ],
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _telefoneController,
-              decoration: const InputDecoration(
-                labelText: 'Telefone para contato',
-              ),
-              validator: (value) =>
-                  value?.isEmpty ?? true ? 'Campo obrigatório' : null,
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _observacoesController,
-              decoration: const InputDecoration(
-                labelText: 'Observações adicionais (opcional)',
-              ),
-              maxLines: 2,
-            ),
-            const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : _submitForm,
-                child: _isLoading
-                    ? const CircularProgressIndicator()
-                    : const Text('Publicar Serviço'),
-              ),
-            ),
-          ],
+          ),
         ),
-      ),
+      ],
     );
   }
 }
