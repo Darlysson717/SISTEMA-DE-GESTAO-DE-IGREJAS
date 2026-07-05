@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
   <!--
     If you are serving your web app in a path other than the root, change the
@@ -18,19 +18,48 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="description" content="Aplicativo do Centro Social da Igreja: eventos, serviços comunitários gratuitos e agendamentos.">
+  <meta name="theme-color" content="#4F46E5">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="centro_social_app">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Centro Social">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>centro_social_app</title>
+  <title>Centro Social da Igreja</title>
   <link rel="manifest" href="manifest.json">
+
+  <script>
+    // WORKAROUND (GitHub Pages em subcaminho): o Firebase JS SDK registra o
+    // service worker de messaging com caminho e escopo FIXOS na raiz do
+    // domínio ('/firebase-messaging-sw.js', escopo
+    // '/firebase-cloud-messaging-push-scope'), sem opção de configuração
+    // (firebase/firebase-js-sdk#8496). Aqui reescrevemos exatamente essa
+    // chamada para o caminho relativo ao <base href>. Em hosts na raiz
+    // (ex.: localhost), basePath é '/' e nada muda. Rever após upgrades
+    // major dos pacotes firebase_* (se o caminho hardcoded mudar, este
+    // patch vira no-op e o push web volta a falhar em subcaminho).
+    (function () {
+      if (!('serviceWorker' in navigator)) return;
+      var basePath = new URL(document.baseURI).pathname; // ex.: /SISTEMA-DE-GESTAO-DE-IGREJAS/
+      var nativeRegister = navigator.serviceWorker.register.bind(navigator.serviceWorker);
+      navigator.serviceWorker.register = function (url, options) {
+        if (String(url) === '/firebase-messaging-sw.js') {
+          url = basePath + 'firebase-messaging-sw.js';
+          options = Object.assign({}, options);
+          if (options.scope === '/firebase-cloud-messaging-push-scope') {
+            options.scope = basePath + 'firebase-cloud-messaging-push-scope';
+          }
+        }
+        return nativeRegister(url, options);
+      };
+    })();
+  </script>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>

@@ -26,9 +26,9 @@ class AuthController extends StateNotifier<AsyncValue<void>> {
 
   Future<void> logout() async {
     state = const AsyncLoading();
-    state = await AsyncValue.guard(_signOut.call);
     
-    // Remover token FCM após logout
+    // Remover token FCM antes de encerrar a sessão, para garantir acesso ao currentUser
     await ServicoNotificacoes().removerToken();
+    state = await AsyncValue.guard(_signOut.call);
   }
 }

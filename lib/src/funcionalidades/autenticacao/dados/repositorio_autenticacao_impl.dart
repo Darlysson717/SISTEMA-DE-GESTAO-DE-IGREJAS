@@ -1,6 +1,7 @@
 import 'package:centro_social_app/src/nucleo/configuracao/configuracao_app.dart';
 import 'package:centro_social_app/src/funcionalidades/autenticacao/dominio/entidades/usuario_app.dart';
 import 'package:centro_social_app/src/funcionalidades/autenticacao/dominio/repositorios/repositorio_autenticacao.dart';
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
@@ -15,10 +16,14 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<void> signInWithGoogle() async {
+    // Na web o fluxo PKCE redireciona a própria aba; em mobile abre o
+    // navegador externo e retorna pelo deep link configurado.
     await _client.auth.signInWithOAuth(
       OAuthProvider.google,
       redirectTo: AppConfig.oauthRedirectUrl,
-      authScreenLaunchMode: LaunchMode.externalApplication,
+      authScreenLaunchMode: kIsWeb
+          ? LaunchMode.platformDefault
+          : LaunchMode.externalApplication,
     );
   }
 

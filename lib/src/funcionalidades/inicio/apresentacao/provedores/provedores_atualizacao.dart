@@ -2,8 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 
-const _githubRepositoryUrl =
-    'https://github.com/Darlysson717/SISTEMA-DE-GESTAO-DE-IGREJAS';
 const _githubPagesUrl =
   'https://darlysson717.github.io/SISTEMA-DE-GESTAO-DE-IGREJAS/';
 const _githubRawPubspecUrl =

@@ -53,6 +53,7 @@ supabase functions deploy enviar-notificacao
 curl -X POST \
   'https://SEU_PROJECT_ID.supabase.co/functions/v1/enviar-notificacao' \
   -H 'Authorization: Bearer SEU_ANON_KEY' \
+  -H 'apikey: SEU_ANON_KEY' \
   -H 'Content-Type: application/json' \
   -d '{
     "tokenFcm": "TOKEN_FCM_AQUI",
@@ -102,6 +103,7 @@ Future<void> enviarNotificacao(String tokenFcm, String titulo, String corpo) asy
     url,
     headers: {
       'Authorization': 'Bearer SEU_ANON_KEY',
+      'apikey': 'SEU_ANON_KEY',
       'Content-Type': 'application/json',
     },
     body: jsonEncode({
@@ -197,7 +199,7 @@ Future<void> criarAgendamento(Agendamento agendamento) async {
 ## 🐛 Troubleshooting
 
 ### Erro 401 (Não autorizado)
-- Verifique se a API Key está correta
+- Verifique se a anon key está correta
 - Verifique se o token FCM é válido
 
 ### Erro 404 (Not found)

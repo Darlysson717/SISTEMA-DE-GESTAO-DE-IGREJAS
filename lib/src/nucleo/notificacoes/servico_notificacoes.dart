@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:centro_social_app/src/nucleo/configuracao/configuracao_app.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -33,8 +33,10 @@ class ServicoNotificacoes {
   /// Deve ser chamado após a inicialização do Firebase e Supabase.
   Future<void> inicializar() async {
     try {
-      // Inicializa notificações locais
-      await _inicializarNotificacoesLocais();
+      // Inicializa notificações locais (na web o plugin é no-op)
+      if (!kIsWeb) {
+        await _inicializarNotificacoesLocais();
+      }
 
       // Configura handler para mensagens em foreground
       FirebaseMessaging.onMessage.listen(_manipularMensagemForeground);
@@ -48,14 +50,39 @@ class ServicoNotificacoes {
         _manipularAberturaNotificacao(mensagemInicial);
       }
 
-      // Solicita permissão
-      await _solicitarPermissao();
+      if (kIsWeb) {
+        // Navegadores só aceitam pedir permissão em contexto de interação
+        // do usuário: no arranque apenas renova o token se a permissão já
+        // foi concedida em uma visita anterior.
+        final usuario = Supabase.instance.client.auth.currentUser;
+        if (usuario != null) {
+          final configuracoes = await _messaging.getNotificationSettings();
+          if (configuracoes.authorizationStatus ==
+              AuthorizationStatus.authorized) {
+            await _obterESalvarTokenFCM();
+          }
+        }
+      } else {
+        // Solicita permissão
+        await _solicitarPermissao();
 
-      // Se já estiver logado, registra o token
-      final usuario = Supabase.instance.client.auth.currentUser;
-      if (usuario != null) {
-        await _obterESalvarTokenFCM();
+        // Se já estiver logado, registra o token
+        final usuario = Supabase.instance.client.auth.currentUser;
+        if (usuario != null) {
+          await _obterESalvarTokenFCM();
+        }
       }
+
+      // Registra o token no momento em que um login é concluído. Na web o
+      // signInWithOAuth navega para fora da página, então este listener é o
+      // gancho confiável após o retorno do redirect; no mobile a sessão só
+      // existe depois do deep link, ou seja, depois do registrarToken()
+      // chamado pelo AuthController.
+      Supabase.instance.client.auth.onAuthStateChange.listen((estado) {
+        if (estado.event == AuthChangeEvent.signedIn) {
+          registrarToken();
+        }
+      });
 
       if (kDebugMode) {
         print('✅ Serviço de notificações inicializado com sucesso');
@@ -79,6 +106,27 @@ class ServicoNotificacoes {
         return;
       }
 
+      if (kIsWeb) {
+        // Ex.: Safari sem o PWA instalado não suporta web push.
+        if (!await _messaging.isSupported()) {
+          if (kDebugMode) {
+            print('⚠️ Web push não suportado neste navegador');
+          }
+          return;
+        }
+
+        // Na web a permissão é pedida aqui (pós-login), não no arranque.
+        await _solicitarPermissao();
+        final configuracoes = await _messaging.getNotificationSettings();
+        if (configuracoes.authorizationStatus !=
+            AuthorizationStatus.authorized) {
+          if (kDebugMode) {
+            print('⚠️ Permissão de notificações não concedida no navegador');
+          }
+          return;
+        }
+      }
+
       await _obterESalvarTokenFCM();
     } catch (e) {
       if (kDebugMode) {
@@ -86,6 +134,111 @@ class ServicoNotificacoes {
       }
     }
   }
+
+    /// Envia uma notificação para um usuário específico.
+    Future<void> enviarParaUsuario({
+      required String userId,
+      required String titulo,
+      required String corpo,
+      Map<String, dynamic>? dados,
+    }) async {
+      try {
+        final perfil = await Supabase.instance.client
+            .from('profiles')
+            .select('fcm_token')
+            .eq('id', userId)
+            .maybeSingle();
+
+        final tokenFcm = perfil?['fcm_token'] as String?;
+        if (tokenFcm == null || tokenFcm.isEmpty) {
+          return;
+        }
+
+        await _enviarNotificacaoPorToken(
+          tokenFcm: tokenFcm,
+          titulo: titulo,
+          corpo: corpo,
+          dados: dados,
+        );
+      } catch (e) {
+        if (kDebugMode) {
+          print('❌ Erro ao enviar notificação para usuário $userId: $e');
+        }
+      }
+    }
+
+    /// Envia uma notificação para vários usuários específicos.
+    Future<void> enviarParaUsuarios({
+      required Iterable<String> userIds,
+      required String titulo,
+      required String corpo,
+      Map<String, dynamic>? dados,
+    }) async {
+      final ids = userIds.map((id) => id.trim()).where((id) => id.isNotEmpty).toSet().toList();
+      if (ids.isEmpty) {
+        return;
+      }
+
+      try {
+        final rows = await Supabase.instance.client
+            .from('profiles')
+            .select('id, fcm_token')
+            .inFilter('id', ids)
+            .not('fcm_token', 'is', null);
+
+        final profiles = (rows as List<dynamic>).cast<Map<String, dynamic>>();
+        for (final perfil in profiles) {
+          final tokenFcm = perfil['fcm_token'] as String?;
+          if (tokenFcm == null || tokenFcm.isEmpty) {
+            continue;
+          }
+
+          await _enviarNotificacaoPorToken(
+            tokenFcm: tokenFcm,
+            titulo: titulo,
+            corpo: corpo,
+            dados: dados,
+          );
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          print('❌ Erro ao enviar notificação para múltiplos usuários: $e');
+        }
+      }
+    }
+
+    /// Envia uma notificação para todos os usuários com token FCM salvo.
+    Future<void> enviarParaTodos({
+      required String titulo,
+      required String corpo,
+      Map<String, dynamic>? dados,
+    }) async {
+      try {
+        final rows = await Supabase.instance.client
+            .from('profiles')
+            .select('id, fcm_token')
+            .not('fcm_token', 'is', null);
+
+        final profiles = (rows as List<dynamic>).cast<Map<String, dynamic>>();
+        for (final perfil in profiles) {
+          final tokenFcm = perfil['fcm_token'] as String?;
+          if (tokenFcm == null || tokenFcm.isEmpty) {
+            continue;
+          }
+
+          await _enviarNotificacaoPorToken(
+            tokenFcm: tokenFcm,
+            titulo: titulo,
+            corpo: corpo,
+            dados: dados,
+          );
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          print('❌ Erro ao enviar notificação geral: $e');
+        }
+      }
+    }
 
   /// Inicializa notificações locais para exibir quando app está em background/terminated
   Future<void> _inicializarNotificacoesLocais() async {
@@ -112,7 +265,7 @@ class ServicoNotificacoes {
       await _localNotifications.initialize(initializationSettings);
 
       // Cria o canal de notificações para Android
-      if (Platform.isAndroid) {
+      if (defaultTargetPlatform == TargetPlatform.android) {
         await _localNotifications
             .resolvePlatformSpecificImplementation<
                 AndroidFlutterLocalNotificationsPlugin>()
@@ -153,8 +306,10 @@ class ServicoNotificacoes {
   /// Obtém o token FCM e salva no Supabase.
   Future<void> _obterESalvarTokenFCM() async {
     try {
-      // Obtém token FCM
-      String? token = await _messaging.getToken();
+      // Obtém token FCM (na web exige a chave pública VAPID)
+      String? token = await _messaging.getToken(
+        vapidKey: kIsWeb ? AppConfig.fcmVapidKey : null,
+      );
 
       if (token == null) {
         if (kDebugMode) {
@@ -220,6 +375,10 @@ class ServicoNotificacoes {
       print('   Dados: ${mensagem.data}');
     }
 
+    // Na web o navegador não exibe notificações com a aba em foco e o
+    // plugin de notificações locais é no-op — apenas registra no log.
+    if (kIsWeb) return;
+
     // Exibe notificação local mesmo em foreground
     await _exibirNotificacaoLocal(
       titulo: mensagem.notification?.title ?? 'Nova notificação',
@@ -234,6 +393,8 @@ class ServicoNotificacoes {
     required String corpo,
     Map<String, dynamic>? dados,
   }) async {
+    if (kIsWeb) return;
+
     try {
       const AndroidNotificationDetails androidPlatformChannelSpecifics =
           AndroidNotificationDetails(
@@ -272,6 +433,26 @@ class ServicoNotificacoes {
     }
   }
 
+  Future<void> _enviarNotificacaoPorToken({
+    required String tokenFcm,
+    required String titulo,
+    required String corpo,
+    Map<String, dynamic>? dados,
+  }) async {
+    await Supabase.instance.client.functions.invoke(
+      'enviar-notificacao',
+      body: {
+        'tokenFcm': tokenFcm,
+        'titulo': titulo,
+        'corpo': corpo,
+        if (dados != null) 
+          'dados': Map.fromEntries(
+            dados.entries.map((entry) => MapEntry(entry.key, entry.value.toString())),
+          ),
+      },
+    );
+  }
+
   /// Manipula abertura do app por toque em notificação.
   void _manipularAberturaNotificacao(RemoteMessage mensagem) {
     if (kDebugMode) {
@@ -286,6 +467,7 @@ class ServicoNotificacoes {
 
   /// Manipula mensagens recebidas quando o app está em background/terminated
   /// Esta função é chamada automaticamente pelo Firebase
+  @pragma('vm:entry-point')
   static Future<void> manipularMensagemBackground(RemoteMessage mensagem) async {
     if (kDebugMode) {
       print('📨 Notificação recebida (background/terminated):');

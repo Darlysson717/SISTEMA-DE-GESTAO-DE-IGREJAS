@@ -1,68 +1,46 @@
-# Script para enviar notificacao de teste via Firebase Cloud Messaging
-# Uso: .\enviar_notificacao_teste.ps1 -TokenFcm "SEU_TOKEN_AQUI"
+# Script para enviar notificacao de teste via Edge Function do Supabase
+# Uso: .\enviar_notificacao_teste.ps1 -TokenFcm "SEU_TOKEN_AQUI" -SupabaseUrl "https://SEU_PROJECT_ID.supabase.co" -SupabaseAnonKey "SUA_ANON_KEY"
 
 param(
     [Parameter(Mandatory=$true)]
     [string]$TokenFcm
+    ,
+    [Parameter(Mandatory=$true)]
+    [string]$SupabaseUrl,
+    [Parameter(Mandatory=$true)]
+    [string]$SupabaseAnonKey
 )
 
-Write-Host "Enviando notificacao de teste..."
+Write-Host "Enviando notificacao de teste via Edge Function..."
 Write-Host "   Token: $($TokenFcm.Substring(0, [Math]::Min(20, $TokenFcm.Length)))..."
 Write-Host ""
 
-# Projeto Firebase
-$PROJECT_ID = "app-iadet"
-
-# URL da API FCM
-$URL = "https://fcm.googleapis.com/v1/projects/${PROJECT_ID}/messages:send"
-
-# API Key (do google-services.json)
-$API_KEY = "AIzaSyCeHQKj_SjVwQr92S_GVXuskcTVPMZ2YBA"
+# URL da Edge Function
+$URL = "$SupabaseUrl/functions/v1/enviar-notificacao"
 
 # Corpo da mensagem
 $PAYLOAD = @{
-    message = @{
-        token = $TokenFcm
-        notification = @{
-            title = "TESTE"
-            body = "Notificacao de teste - chegou rapido?"
-        }
-        android = @{
-            priority = "high"
-            notification = @{
-                channel_id = "high_importance_channel"
-                priority = "high"
-                visibility = "public"
-                sound = "default"
-            }
-        }
-        apns = @{
-            payload = @{
-                aps = @{
-                    alert = @{
-                        title = "TESTE"
-                        body = "Notificacao de teste - chegou rapido?"
-                    }
-                    sound = "default"
-                    badge = 1
-                }
-            }
-        }
+    tokenFcm = $TokenFcm
+    titulo = "TESTE"
+    corpo = "Notificacao de teste via Supabase"
+    dados = @{
+        tipo = "teste"
     }
 } | ConvertTo-Json -Depth 10
 
 try {
     $HEADERS = @{
-        "Authorization" = "Bearer $API_KEY"
+        "Authorization" = "Bearer $SupabaseAnonKey"
+        "apikey" = $SupabaseAnonKey
         "Content-Type" = "application/json"
     }
 
-    $RESPONSE = Invoke-RestMethod -Uri $URL -Method Post -Headers $HEADERS -Body $PAYLOAD
+    $RESPONSE = Invoke-RestMethod -Uri $URL -Method Post -Headers $HEADERS -Body $PAYLOAD -ErrorAction Stop
     
-    Write-Host "SUCESSO! Notificacao enviada."
+    Write-Host "SUCESSO! Notificacao enviada pela Edge Function."
     Write-Host ""
     Write-Host "Detalhes:"
-    Write-Host "   Message ID: $($RESPONSE.name)"
+    Write-Host "   Message ID: $($RESPONSE.messageId)"
     Write-Host ""
     Write-Host "A notificacao deve chegar em ate 10 segundos."
     Write-Host ""
@@ -74,6 +52,20 @@ try {
 catch {
     Write-Host "ERRO ao enviar notificacao"
     Write-Host ""
+    $response = $_.Exception.Response
+    if ($response -ne $null) {
+        $stream = $response.GetResponseStream()
+        if ($stream -ne $null) {
+            $reader = New-Object System.IO.StreamReader($stream)
+            $body = $reader.ReadToEnd()
+            if ($body) {
+                Write-Host "Resposta do servidor:"
+                Write-Host $body
+                Write-Host ""
+            }
+        }
+    }
+
     Write-Host "Detalhes do erro:"
     Write-Host $_.Exception.Message
 }
