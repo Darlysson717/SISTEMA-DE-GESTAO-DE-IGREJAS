@@ -135,6 +135,111 @@ class ServicoNotificacoes {
     }
   }
 
+    /// Envia uma notificação para um usuário específico.
+    Future<void> enviarParaUsuario({
+      required String userId,
+      required String titulo,
+      required String corpo,
+      Map<String, dynamic>? dados,
+    }) async {
+      try {
+        final perfil = await Supabase.instance.client
+            .from('profiles')
+            .select('fcm_token')
+            .eq('id', userId)
+            .maybeSingle();
+
+        final tokenFcm = perfil?['fcm_token'] as String?;
+        if (tokenFcm == null || tokenFcm.isEmpty) {
+          return;
+        }
+
+        await _enviarNotificacaoPorToken(
+          tokenFcm: tokenFcm,
+          titulo: titulo,
+          corpo: corpo,
+          dados: dados,
+        );
+      } catch (e) {
+        if (kDebugMode) {
+          print('❌ Erro ao enviar notificação para usuário $userId: $e');
+        }
+      }
+    }
+
+    /// Envia uma notificação para vários usuários específicos.
+    Future<void> enviarParaUsuarios({
+      required Iterable<String> userIds,
+      required String titulo,
+      required String corpo,
+      Map<String, dynamic>? dados,
+    }) async {
+      final ids = userIds.map((id) => id.trim()).where((id) => id.isNotEmpty).toSet().toList();
+      if (ids.isEmpty) {
+        return;
+      }
+
+      try {
+        final rows = await Supabase.instance.client
+            .from('profiles')
+            .select('id, fcm_token')
+            .inFilter('id', ids)
+            .not('fcm_token', 'is', null);
+
+        final profiles = (rows as List<dynamic>).cast<Map<String, dynamic>>();
+        for (final perfil in profiles) {
+          final tokenFcm = perfil['fcm_token'] as String?;
+          if (tokenFcm == null || tokenFcm.isEmpty) {
+            continue;
+          }
+
+          await _enviarNotificacaoPorToken(
+            tokenFcm: tokenFcm,
+            titulo: titulo,
+            corpo: corpo,
+            dados: dados,
+          );
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          print('❌ Erro ao enviar notificação para múltiplos usuários: $e');
+        }
+      }
+    }
+
+    /// Envia uma notificação para todos os usuários com token FCM salvo.
+    Future<void> enviarParaTodos({
+      required String titulo,
+      required String corpo,
+      Map<String, dynamic>? dados,
+    }) async {
+      try {
+        final rows = await Supabase.instance.client
+            .from('profiles')
+            .select('id, fcm_token')
+            .not('fcm_token', 'is', null);
+
+        final profiles = (rows as List<dynamic>).cast<Map<String, dynamic>>();
+        for (final perfil in profiles) {
+          final tokenFcm = perfil['fcm_token'] as String?;
+          if (tokenFcm == null || tokenFcm.isEmpty) {
+            continue;
+          }
+
+          await _enviarNotificacaoPorToken(
+            tokenFcm: tokenFcm,
+            titulo: titulo,
+            corpo: corpo,
+            dados: dados,
+          );
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          print('❌ Erro ao enviar notificação geral: $e');
+        }
+      }
+    }
+
   /// Inicializa notificações locais para exibir quando app está em background/terminated
   Future<void> _inicializarNotificacoesLocais() async {
     try {
@@ -326,6 +431,26 @@ class ServicoNotificacoes {
         print('❌ Erro ao exibir notificação local: $e');
       }
     }
+  }
+
+  Future<void> _enviarNotificacaoPorToken({
+    required String tokenFcm,
+    required String titulo,
+    required String corpo,
+    Map<String, dynamic>? dados,
+  }) async {
+    await Supabase.instance.client.functions.invoke(
+      'enviar-notificacao',
+      body: {
+        'tokenFcm': tokenFcm,
+        'titulo': titulo,
+        'corpo': corpo,
+        if (dados != null) 
+          'dados': Map.fromEntries(
+            dados.entries.map((entry) => MapEntry(entry.key, entry.value.toString())),
+          ),
+      },
+    );
   }
 
   /// Manipula abertura do app por toque em notificação.

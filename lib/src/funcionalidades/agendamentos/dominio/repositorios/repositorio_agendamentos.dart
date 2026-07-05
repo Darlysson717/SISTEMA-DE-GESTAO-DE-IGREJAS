@@ -146,4 +146,7 @@ abstract class SchedulingRepository {
     required String appointmentId,
     required AppointmentStatus status,
   });
+
+  /// Marca um agendamento como concluído e notifica o usuário.
+  Future<void> completeAppointment(String appointmentId);
 }

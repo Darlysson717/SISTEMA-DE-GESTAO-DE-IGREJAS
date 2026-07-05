@@ -1,4 +1,5 @@
 import 'package:centro_social_app/src/funcionalidades/eventos/dominio/entidades/evento_app.dart';
+import 'package:centro_social_app/src/nucleo/notificacoes/servico_notificacoes.dart';
 import 'package:centro_social_app/src/nucleo/utilitarios/imagem_selecionada.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -115,46 +116,52 @@ class TimeOfDaySql {
 
 class EventsRepository {
   final SupabaseClient _client;
+  final ServicoNotificacoes _notificacoes = ServicoNotificacoes();
 
-  const EventsRepository(this._client);
+  EventsRepository(this._client);
 
-  Stream<List<AppEvent>> watchMyEvents() {
+  Future<List<AppEvent>> fetchMyEvents() async {
     final currentUser = _client.auth.currentUser;
     if (currentUser == null) {
-      return Stream.value(const []);
+      return const [];
     }
 
-    return _client
+    final rows = await _client
         .from('eventos')
-        .stream(primaryKey: ['id'])
+        .select()
         .eq('user_id', currentUser.id)
-        .order('created_at', ascending: false)
-        .map((rows) => rows.map((row) => AppEvent.fromJson(row)).toList());
+        .order('created_at', ascending: false);
+
+    return (rows as List<dynamic>)
+        .map((row) => AppEvent.fromJson(row as Map<String, dynamic>))
+        .toList();
   }
 
-  Stream<List<AppEvent>> watchPublishedEvents() {
-    return _client
+  Future<List<AppEvent>> fetchPublishedEvents() async {
+    final rows = await _client
         .from('eventos')
-        .stream(primaryKey: ['id'])
+        .select()
         .neq('status', 'cancelado')
-        .order('publicado_em', ascending: false)
-        .map((rows) {
-          final now = DateTime.now();
-          return rows.map((row) => AppEvent.fromJson(row)).where((event) {
-            if (event.status == 'publicado') {
-              return true;
-            }
+        .order('publicado_em', ascending: false);
 
-            if (event.status == 'agendado') {
-              if (event.publicadoEm == null) {
-                return false;
-              }
-              return !event.publicadoEm!.isAfter(now);
-            }
+    final now = DateTime.now();
+    return (rows as List<dynamic>)
+        .map((row) => AppEvent.fromJson(row as Map<String, dynamic>))
+        .where((event) {
+          if (event.status == 'publicado') {
+            return true;
+          }
 
-            return false;
-          }).toList();
-        });
+          if (event.status == 'agendado') {
+            if (event.publicadoEm == null) {
+              return false;
+            }
+            return !event.publicadoEm!.isAfter(now);
+          }
+
+          return false;
+        })
+        .toList();
   }
 
   Future<List<AppEvent>> listPublishedEvents() async {
@@ -184,28 +191,30 @@ class EventsRepository {
         .toList();
   }
 
-  Stream<List<EventRegistrationEntry>> watchEventRegistrations(String eventId) {
-    return _client
+  Future<List<EventRegistrationEntry>> fetchEventRegistrations(String eventId) async {
+    final rows = await _client
         .from('event_registrations')
-        .stream(primaryKey: ['id'])
+        .select()
         .eq('event_id', eventId)
-        .order('created_at', ascending: true)
-        .asyncMap(_attachProfilesToRegistrations);
+        .order('created_at', ascending: true);
+
+    return _attachProfilesToRegistrations(
+      (rows as List<dynamic>).cast<Map<String, dynamic>>(),
+    );
   }
 
-  Stream<EventRegistrationStats> watchEventRegistrationStats(String eventId) {
-    return watchEventRegistrations(eventId).map((items) {
-      final participantes = items
-          .where((item) => item.interestType == EventInterestType.participante)
-          .length;
-      final voluntarios = items
-          .where((item) => item.interestType == EventInterestType.voluntario)
-          .length;
-      return EventRegistrationStats(
-        participantes: participantes,
-        voluntarios: voluntarios,
-      );
-    });
+  Future<EventRegistrationStats> fetchEventRegistrationStats(String eventId) async {
+    final items = await fetchEventRegistrations(eventId);
+    final participantes = items
+        .where((item) => item.interestType == EventInterestType.participante)
+        .length;
+    final voluntarios = items
+        .where((item) => item.interestType == EventInterestType.voluntario)
+        .length;
+    return EventRegistrationStats(
+      participantes: participantes,
+      voluntarios: voluntarios,
+    );
   }
 
   Future<void> registerInterest({
@@ -245,6 +254,78 @@ class EventsRepository {
           ? normalizedWhatsapp
           : null,
     }, onConflict: 'event_id,user_id');
+
+    // 🔒 NOTIFICAÇÕES PRIVADAS: Registro em evento
+    await _enviarNotificacaoRegistroEvento(
+      eventId: eventId,
+      userId: currentUser.id,
+      interestType: interestType,
+    );
+  }
+
+  /// Envia notificações quando um usuário se registra em um evento
+  Future<void> _enviarNotificacaoRegistroEvento({
+    required String eventId,
+    required String userId,
+    required EventInterestType interestType,
+  }) async {
+    try {
+      final event = await _client
+          .from('eventos')
+          .select('user_id, nome, data_inicio, hora_inicio')
+          .eq('id', eventId)
+          .maybeSingle();
+
+      if (event == null) return;
+
+      final organizerId = event['user_id'] as String?;
+      final eventName = event['nome'] as String? ?? 'Evento';
+      final dataInicio = event['data_inicio'] as String? ?? '';
+      final horaInicio = event['hora_inicio'] as String?;
+
+      final userProfile = await _client
+          .from('profiles')
+          .select('full_name')
+          .eq('id', userId)
+          .maybeSingle();
+
+      final userName = userProfile?['full_name'] as String? ?? 'Um usuário';
+      final tipo = interestType == EventInterestType.voluntario ? 'voluntário' : 'participante';
+
+      // Formata data
+      final dateParts = dataInicio.split('-');
+      final dataFormatada = dateParts.length == 3
+          ? '${dateParts[2]}/${dateParts[1]}/${dateParts[0]}'
+          : dataInicio;
+
+      // 🔒 NOTIFICAÇÃO PRIVADA 6: Organizador ← Novo registro
+      if (organizerId != null && organizerId != userId) {
+        await _notificacoes.enviarParaUsuario(
+          userId: organizerId,
+          titulo: 'Novo $tipo no Evento',
+          corpo: '$userName se registrou como $tipo em "$eventName".',
+          dados: {
+            'tipo': interestType == EventInterestType.voluntario
+                ? 'novo_voluntario_evento'
+                : 'novo_participante_evento',
+            'event_id': eventId,
+          },
+        );
+      }
+
+      // 🔒 NOTIFICAÇÃO PRIVADA 7: Usuário ← Confirmação de registro
+      await _notificacoes.enviarParaUsuario(
+        userId: userId,
+        titulo: 'Inscrição Confirmada',
+        corpo: 'Sua inscrição como $tipo no evento "$eventName" foi confirmada para $dataFormatada${horaInicio != null ? ' às ${horaInicio.substring(0, 5)}' : ''}.',
+        dados: {
+          'tipo': 'confirmacao_inscricao_evento',
+          'event_id': eventId,
+        },
+      );
+    } catch (e) {
+      print('Erro ao enviar notificação de registro em evento: $e');
+    }
   }
 
   Future<String> saveEvent({
@@ -385,6 +466,18 @@ class EventsRepository {
             await _client.storage.from('eventos_images').remove(removedPaths);
           } catch (_) {}
         }
+      }
+
+      // 🌐 NOTIFICAÇÃO GERAL: Novo evento publicado
+      if (existingEvent == null) {
+        await _notificacoes.enviarParaTodos(
+          titulo: 'Novo Evento: ${input.nome}',
+          corpo: 'Confira o novo evento "${input.nome}" que acaba de ser publicado!',
+          dados: {
+            'tipo': 'novo_evento',
+            'event_id': saved['id'] as String,
+          },
+        );
       }
 
       return saved['id'] as String;

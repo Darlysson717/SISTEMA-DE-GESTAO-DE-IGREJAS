@@ -8,10 +8,10 @@ final eventsRepositoryProvider = Provider<EventsRepository>((ref) {
   return EventsRepository(client);
 });
 
-final myEventsProvider = StreamProvider<List<AppEvent>>((ref) {
+final myEventsProvider = FutureProvider<List<AppEvent>>((ref) async {
   ref.watch(authStateChangesProvider);
   final repository = ref.watch(eventsRepositoryProvider);
-  return repository.watchMyEvents();
+  return repository.fetchMyEvents();
 });
 
 final publishedEventsProvider = FutureProvider<List<AppEvent>>((ref) async {
@@ -21,15 +21,15 @@ final publishedEventsProvider = FutureProvider<List<AppEvent>>((ref) async {
 });
 
 final eventRegistrationsProvider =
-    StreamProvider.family<List<EventRegistrationEntry>, String>((ref, eventId) {
+    FutureProvider.family<List<EventRegistrationEntry>, String>((ref, eventId) async {
       ref.watch(authStateChangesProvider);
       final repository = ref.watch(eventsRepositoryProvider);
-      return repository.watchEventRegistrations(eventId);
+      return repository.fetchEventRegistrations(eventId);
     });
 
 final eventRegistrationStatsProvider =
-    StreamProvider.family<EventRegistrationStats, String>((ref, eventId) {
+    FutureProvider.family<EventRegistrationStats, String>((ref, eventId) async {
       ref.watch(authStateChangesProvider);
       final repository = ref.watch(eventsRepositoryProvider);
-      return repository.watchEventRegistrationStats(eventId);
+      return repository.fetchEventRegistrationStats(eventId);
     });

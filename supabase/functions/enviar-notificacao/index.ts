@@ -1,39 +1,50 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+declare const Deno: {
+  env: {
+    get(key: string): string | undefined
+  }
+  serve(handler: (req: Request) => Response | Promise<Response>): void
+}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Converte uma chave privada PEM (PKCS#8) para DER (bytes)
-function pemToDer(pem: string): ArrayBuffer {
-  const base64 = pem
-    .replace('-----BEGIN PRIVATE KEY-----', '')
-    .replace('-----END PRIVATE KEY-----', '')
-    .replace(/\s+/g, '')
-  const binary = atob(base64)
-  const bytes = new Uint8Array(binary.length)
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i)
-  }
-  return bytes.buffer
+interface NotificationPayload {
+  tokenFcm: string
+  titulo: string
+  corpo: string
+  dados?: Record<string, string>
 }
 
 function base64UrlEncode(bytes: Uint8Array): string {
   let binary = ''
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i])
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte)
   }
+
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 }
 
-// Função para gerar JWT a partir da Service Account.
-// Usa WebCrypto (crypto.subtle), a API disponível no runtime Deno das
-// Edge Functions — `crypto.createSign` é API do Node e não existe aqui.
+function normalizePrivateKey(privateKey: string): string {
+  return privateKey.replace(/\\n/g, '\n').trim()
+}
+
+function pemToArrayBuffer(pem: string): ArrayBuffer {
+  const base64 = pem
+    .replace(/-----BEGIN PRIVATE KEY-----/g, '')
+    .replace(/-----END PRIVATE KEY-----/g, '')
+    .replace(/\s+/g, '')
+
+  const binary = Uint8Array.from(atob(base64), (character) => character.charCodeAt(0))
+  return binary.buffer
+}
+
+// Função para gerar JWT a partir da Service Account
 async function generateJWT(clientEmail: string, privateKey: string): Promise<string> {
   const header = {
     alg: 'RS256',
-    typ: 'JWT'
+    typ: 'JWT',
   }
 
   const now = Math.floor(Date.now() / 1000)
@@ -42,32 +53,31 @@ async function generateJWT(clientEmail: string, privateKey: string): Promise<str
     scope: 'https://www.googleapis.com/auth/firebase.messaging',
     aud: 'https://oauth2.googleapis.com/token',
     iat: now,
-    exp: now + 3600 // 1 hora
+    exp: now + 3600,
   }
 
-  // Codificar header e payload em base64
-  const encodedHeader = btoa(JSON.stringify(header)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
-  const encodedPayload = btoa(JSON.stringify(payload)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
-
+  const encodedHeader = base64UrlEncode(new TextEncoder().encode(JSON.stringify(header)))
+  const encodedPayload = base64UrlEncode(new TextEncoder().encode(JSON.stringify(payload)))
   const unsignedToken = `${encodedHeader}.${encodedPayload}`
 
-  // Secrets costumam armazenar a chave com '\n' literais no lugar de quebras
-  const pem = privateKey.replace(/\\n/g, '\n')
   const key = await crypto.subtle.importKey(
     'pkcs8',
-    pemToDer(pem),
-    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+    pemToArrayBuffer(normalizePrivateKey(privateKey)),
+    {
+      name: 'RSASSA-PKCS1-v1_5',
+      hash: 'SHA-256',
+    },
     false,
-    ['sign']
+    ['sign'],
   )
 
   const signature = await crypto.subtle.sign(
     'RSASSA-PKCS1-v1_5',
     key,
-    new TextEncoder().encode(unsignedToken)
+    new TextEncoder().encode(unsignedToken),
   )
-  const encodedSignature = base64UrlEncode(new Uint8Array(signature))
 
+  const encodedSignature = base64UrlEncode(new Uint8Array(signature))
   return `${unsignedToken}.${encodedSignature}`
 }
 
@@ -96,7 +106,7 @@ async function getAccessToken(clientEmail: string, privateKey: string): Promise<
   return data.access_token
 }
 
-serve(async (req) => {
+Deno.serve(async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -112,7 +122,7 @@ serve(async (req) => {
     }
 
     // Obter dados do corpo da requisição
-    const { tokenFcm, titulo, corpo, dados } = await req.json()
+    const { tokenFcm, titulo, corpo, dados } = await req.json() as NotificationPayload
 
     // Validações
     if (!tokenFcm || !titulo || !corpo) {
@@ -162,7 +172,6 @@ serve(async (req) => {
           priority: 'high',
           notification: {
             channel_id: 'high_importance_channel',
-            priority: 'high',
             visibility: 'public',
             sound: 'default',
           },
@@ -177,12 +186,6 @@ serve(async (req) => {
               sound: 'default',
               badge: 1,
             },
-          },
-        },
-        webpush: {
-          // Clique na notificação web abre o PWA (Android/iOS ignoram)
-          fcm_options: {
-            link: 'https://darlysson717.github.io/SISTEMA-DE-GESTAO-DE-IGREJAS/',
           },
         },
       },
@@ -228,12 +231,13 @@ serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Erro na Edge Function:', error)
+    const details = error instanceof Error ? error.message : String(error)
     return new Response(
       JSON.stringify({ 
         error: 'Erro interno do servidor',
-        details: error.message 
+        details 
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
