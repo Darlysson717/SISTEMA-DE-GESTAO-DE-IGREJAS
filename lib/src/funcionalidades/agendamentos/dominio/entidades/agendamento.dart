@@ -54,6 +54,8 @@ AppointmentStatus parseAppointmentStatus(String status) {
       return AppointmentStatus.completed;
     case 'cancelado':
       return AppointmentStatus.cancelled;
+    case 'faltou':
+      return AppointmentStatus.noShow;
     default:
       return AppointmentStatus.scheduled;
   }
