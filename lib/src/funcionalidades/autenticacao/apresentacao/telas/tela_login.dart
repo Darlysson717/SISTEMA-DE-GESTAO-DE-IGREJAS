@@ -40,6 +40,7 @@ class LoginScreen extends ConsumerWidget {
                   constraints: const BoxConstraints(maxWidth: 430),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       const SizedBox(height: 2),
                       const _LoginEmblem(),
@@ -223,6 +224,27 @@ class LoginScreen extends ConsumerWidget {
   }
 }
 
+class _LoginEmblem extends StatelessWidget {
+  const _LoginEmblem();
+
+  @override
+  Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktop = screenWidth >= 600;
+    
+    return Center(
+      child: SizedBox(
+        width: isDesktop ? 300 : 248,
+        child: Image.asset(
+          'Imagens/LOGO DEPARTAMENTO.png',
+          fit: BoxFit.contain,
+          alignment: Alignment.center,
+        ),
+      ),
+    );
+  }
+}
+
 class _LoginBackground extends StatelessWidget {
   const _LoginBackground();
 
@@ -326,24 +348,6 @@ class _LoginBackground extends StatelessWidget {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _LoginEmblem extends StatelessWidget {
-  const _LoginEmblem();
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: SizedBox(
-        width: 248,
-        child: Image.asset(
-          'Imagens/LOGO DEPARTAMENTO.png',
-          fit: BoxFit.contain,
-          alignment: Alignment.center,
         ),
       ),
     );

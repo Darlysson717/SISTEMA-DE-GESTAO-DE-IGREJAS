@@ -8,6 +8,7 @@ import 'package:centro_social_app/src/funcionalidades/perfil/apresentacao/compon
 import 'package:centro_social_app/src/funcionalidades/servicos/apresentacao/telas/pagina_meus_servicos.dart';
 import 'package:centro_social_app/src/funcionalidades/servicos/apresentacao/telas/pagina_acesso_publicar_servico.dart';
 import 'package:centro_social_app/src/funcionalidades/inicio/apresentacao/provedores/provedores_atualizacao.dart';
+import 'package:centro_social_app/src/nucleo/utilitarios/layout_responsivo.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -48,7 +49,6 @@ class ProfilePage extends ConsumerWidget {
     final isSmallScreen = screenSize.width < 600;
     final isMediumScreen = screenSize.width >= 600 && screenSize.width < 1200;
 
-    // Ajustes responsivos
     final headerPadding = isSmallScreen
         ? const EdgeInsets.fromLTRB(20, 20, 20, 32)
         : const EdgeInsets.fromLTRB(32, 32, 32, 48);
@@ -81,365 +81,347 @@ class ProfilePage extends ConsumerWidget {
           ref.invalidate(isCurrentUserAdminProvider);
           await Future<void>.delayed(const Duration(milliseconds: 200));
         },
-        child: CustomScrollView(
-          slivers: [
-            // Header atrativo para Perfil
-            SliverToBoxAdapter(
-              child: Container(
-                padding: headerPadding,
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Color(0xFF7C3AED), // Purple
-                      Color(0xFF6366F1), // Indigo
-                    ],
-                  ),
-                  borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(32),
-                    bottomRight: Radius.circular(32),
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Icon(
-                            Icons.person_outline,
-                            color: Colors.white,
-                            size: isSmallScreen ? 28 : 32,
-                          ),
-                        ),
-                        SizedBox(width: isSmallScreen ? 16 : 20),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Meu Perfil',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: titleFontSize,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              SizedBox(height: isSmallScreen ? 4 : 8),
-                              Text(
-                                'Gerencie sua conta e atividades',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: subtitleFontSize,
-                                  fontWeight: FontWeight.w300,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+        child: ResponsiveLayout(
+          padding: EdgeInsets.zero,
+          child: CustomScrollView(
+            slivers: [
+              SliverToBoxAdapter(
+                child: Container(
+                  padding: headerPadding,
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Color(0xFF7C3AED),
+                        Color(0xFF6366F1),
                       ],
                     ),
-                    SizedBox(height: isSmallScreen ? 24 : 32),
-                    Container(
-                      padding: EdgeInsets.all(isSmallScreen ? 20 : 24),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.2),
-                          width: 1,
-                        ),
-                      ),
-                      child: Row(
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(32),
+                      bottomRight: Radius.circular(32),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
                         children: [
-                          Icon(
-                            Icons.info_outline,
-                            color: Colors.white,
-                            size: isSmallScreen ? 24 : 28,
+                          Container(
+                            padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Icon(
+                              Icons.person_outline,
+                              color: Colors.white,
+                              size: isSmallScreen ? 28 : 32,
+                            ),
                           ),
                           SizedBox(width: isSmallScreen ? 16 : 20),
                           Expanded(
-                            child: Text(
-                              'Aqui você pode gerenciar seus dados, anúncios e acompanhar suas atividades no centro social.',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: isSmallScreen ? 14 : 16,
-                                height: 1.4,
-                              ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Meu Perfil',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: titleFontSize,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                SizedBox(height: isSmallScreen ? 4 : 8),
+                                Text(
+                                  'Gerencie sua conta e atividades',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: subtitleFontSize,
+                                    fontWeight: FontWeight.w300,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
                       ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // Navegação por chips (se habilitado)
-            if (showNavigationChips && hasValidChipOffset) ...[
-              SliverToBoxAdapter(
-                child: Container(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      NotificationListener<ScrollNotification>(
-                        onNotification: (notification) {
-                          if (notification.metrics.axis == Axis.horizontal) {
-                            onChipsScroll?.call(notification.metrics.pixels);
-                          }
-                          return false;
-                        },
-                        child: SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          controller: chipsScrollController,
-                          child: Row(
-                            children: [
-                              _NavigationChip(
-                                label: 'Inicio',
-                                icon: Icons.home_outlined,
-                                isSelected: currentIndex == 0,
-                                onTap: onNavigateToInicio ?? () {},
-                              ),
-                              const SizedBox(width: 12),
-                              _NavigationChip(
-                                label: 'Agendamentos',
-                                icon: Icons.event_note_outlined,
-                                isSelected: currentIndex == 1,
-                                onTap: onNavigateToAgendamentos ?? () {},
-                              ),
-                              const SizedBox(width: 12),
-                              _NavigationChip(
-                                label: 'Perfil',
-                                icon: Icons.person_outline,
-                                isSelected: currentIndex == 2,
-                                onTap: onNavigateToPerfil ?? () {},
-                              ),
-                            ],
+                      SizedBox(height: isSmallScreen ? 24 : 32),
+                      Container(
+                        padding: EdgeInsets.all(isSmallScreen ? 20 : 24),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            width: 1,
                           ),
                         ),
-                      ),
-                      // Indicadores de scroll com setas
-                      Positioned(
-                        left: -12,
-                        top: 0,
-                        bottom: 0,
-                        child: Container(
-                          width: 24,
-                          alignment: Alignment.centerLeft,
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.9),
-                              borderRadius: BorderRadius.circular(12),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.1),
-                                  blurRadius: 4,
-                                  offset: const Offset(1, 1),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.info_outline,
+                              color: Colors.white,
+                              size: isSmallScreen ? 24 : 28,
+                            ),
+                            SizedBox(width: isSmallScreen ? 16 : 20),
+                            Expanded(
+                              child: Text(
+                                'Aqui você pode gerenciar seus dados, anúncios e acompanhar suas atividades no centro social.',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: isSmallScreen ? 14 : 16,
+                                  height: 1.4,
                                 ),
-                              ],
+                              ),
                             ),
-                            child: Icon(
-                              Icons.chevron_left,
-                              size: 16,
-                              color: const Color(0xFF6366F1),
-                            ),
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        right: -12,
-                        top: 0,
-                        bottom: 0,
-                        child: Container(
-                          width: 24,
-                          alignment: Alignment.centerRight,
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.9),
-                              borderRadius: BorderRadius.circular(12),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.1),
-                                  blurRadius: 4,
-                                  offset: const Offset(1, 1),
-                                ),
-                              ],
-                            ),
-                            child: Icon(
-                              Icons.chevron_right,
-                              size: 16,
-                              color: const Color(0xFF6366F1),
-                            ),
-                          ),
+                          ],
                         ),
                       ),
                     ],
                   ),
                 ),
               ),
-            ],
 
-            // Conteúdo do perfil
-            SliverPadding(
-              padding: contentPadding,
-              sliver: SliverList(
-                delegate: SliverChildListDelegate([
-                  SizedBox(height: isSmallScreen ? 32 : 48),
-
-                  // Card do perfil do usuário
-                  Container(
-                    padding: EdgeInsets.all(isSmallScreen ? 20 : 24),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.08),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
+              if (showNavigationChips && hasValidChipOffset) ...[
+                SliverToBoxAdapter(
+                  child: Container(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        NotificationListener<ScrollNotification>(
+                          onNotification: (notification) {
+                            if (notification.metrics.axis == Axis.horizontal) {
+                              onChipsScroll?.call(notification.metrics.pixels);
+                            }
+                            return false;
+                          },
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            controller: chipsScrollController,
+                            child: Row(
+                              children: [
+                                _NavigationChip(
+                                  label: 'Inicio',
+                                  icon: Icons.home_outlined,
+                                  isSelected: currentIndex == 0,
+                                  onTap: onNavigateToInicio ?? () {},
+                                ),
+                                const SizedBox(width: 12),
+                                _NavigationChip(
+                                  label: 'Agendamentos',
+                                  icon: Icons.event_note_outlined,
+                                  isSelected: currentIndex == 1,
+                                  onTap: onNavigateToAgendamentos ?? () {},
+                                ),
+                                const SizedBox(width: 12),
+                                _NavigationChip(
+                                  label: 'Perfil',
+                                  icon: Icons.person_outline,
+                                  isSelected: currentIndex == 2,
+                                  onTap: onNavigateToPerfil ?? () {},
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          left: -12,
+                          top: 0,
+                          bottom: 0,
+                          child: Container(
+                            width: 24,
+                            alignment: Alignment.centerLeft,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.9),
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.1),
+                                    blurRadius: 4,
+                                    offset: const Offset(1, 1),
+                                  ),
+                                ],
+                              ),
+                              child: Icon(
+                                Icons.chevron_left,
+                                size: 16,
+                                color: const Color(0xFF6366F1),
+                              ),
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          right: -12,
+                          top: 0,
+                          bottom: 0,
+                          child: Container(
+                            width: 24,
+                            alignment: Alignment.centerRight,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.9),
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.1),
+                                    blurRadius: 4,
+                                    offset: const Offset(1, 1),
+                                  ),
+                                ],
+                              ),
+                              child: Icon(
+                                Icons.chevron_right,
+                                size: 16,
+                                color: const Color(0xFF6366F1),
+                              ),
+                            ),
+                          ),
                         ),
                       ],
                     ),
-                    child: Column(
+                  ),
+                ),
+              ],
+
+              SliverPadding(
+                padding: contentPadding,
+                sliver: SliverList(
+                  delegate: SliverChildListDelegate([
+                    SizedBox(height: isSmallScreen ? 32 : 48),
+
+                    Container(
+                      padding: EdgeInsets.all(isSmallScreen ? 20 : 24),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.08),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        children: [
+                          CircleAvatar(
+                            radius: isSmallScreen ? 40 : 48,
+                            backgroundColor: const Color(0xFF7C3AED).withValues(alpha: 0.1),
+                            backgroundImage: photoUrl != null ? NetworkImage(photoUrl!) : null,
+                            child: photoUrl == null
+                                ? Icon(Icons.person, size: isSmallScreen ? 40 : 48, color: const Color(0xFF7C3AED))
+                                : null,
+                          ),
+                          SizedBox(height: isSmallScreen ? 16 : 20),
+                          Text(
+                            user.nome ?? 'Usuário',
+                            style: TextStyle(
+                              fontSize: isSmallScreen ? 20 : 24,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF1E293B),
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          SizedBox(height: isSmallScreen ? 4 : 8),
+                          Text(
+                            user.email,
+                            style: TextStyle(
+                              fontSize: isSmallScreen ? 14 : 16,
+                              color: const Color(0xFF64748B),
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    SizedBox(height: isSmallScreen ? 32 : 48),
+
+                    Row(
                       children: [
-                        CircleAvatar(
-                          radius: isSmallScreen ? 40 : 48,
-                          backgroundColor: const Color(
-                            0xFF7C3AED,
-                          ).withValues(alpha: 0.1),
-                          backgroundImage: photoUrl != null
-                              ? NetworkImage(photoUrl!)
-                              : null,
-                          child: photoUrl == null
-                              ? Icon(
-                                  Icons.person,
-                                  size: isSmallScreen ? 40 : 48,
-                                  color: const Color(0xFF7C3AED),
-                                )
-                              : null,
+                        Container(
+                          padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF7C3AED).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(
+                            Icons.bolt,
+                            color: const Color(0xFF7C3AED),
+                            size: isSmallScreen ? 20 : 24,
+                          ),
                         ),
-                        SizedBox(height: isSmallScreen ? 16 : 20),
+                        SizedBox(width: isSmallScreen ? 12 : 16),
                         Text(
-                          user.nome ?? 'Usuário',
+                          'Ações rápidas',
                           style: TextStyle(
-                            fontSize: isSmallScreen ? 20 : 24,
+                            fontSize: sectionTitleFontSize,
                             fontWeight: FontWeight.w600,
                             color: const Color(0xFF1E293B),
                           ),
-                          textAlign: TextAlign.center,
-                        ),
-                        SizedBox(height: isSmallScreen ? 4 : 8),
-                        Text(
-                          user.email,
-                          style: TextStyle(
-                            fontSize: isSmallScreen ? 14 : 16,
-                            color: const Color(0xFF64748B),
-                          ),
-                          textAlign: TextAlign.center,
                         ),
                       ],
                     ),
-                  ),
 
-                  SizedBox(height: isSmallScreen ? 32 : 48),
+                    SizedBox(height: isSmallScreen ? 20 : 24),
 
-                  // Seção de Ações Rápidas
-                  Row(
-                    children: [
-                      Container(
-                        padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF7C3AED).withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Icon(
-                          Icons.bolt,
-                          color: const Color(0xFF7C3AED),
-                          size: isSmallScreen ? 20 : 24,
-                        ),
-                      ),
-                      SizedBox(width: isSmallScreen ? 12 : 16),
-                      Text(
-                        'Ações rápidas',
-                        style: TextStyle(
-                          fontSize: sectionTitleFontSize,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF1E293B),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  SizedBox(height: isSmallScreen ? 20 : 24),
-
-                  // Grid de ações
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      final crossAxisCount = constraints.maxWidth >= 700 ? 3 : 2;
-                      return GridView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: actions.length,
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: crossAxisCount,
-                          crossAxisSpacing: isSmallScreen ? 12 : 16,
-                          mainAxisSpacing: isSmallScreen ? 12 : 16,
-                          childAspectRatio: 1,
-                        ),
-                        itemBuilder: (context, index) => actions[index],
-                      );
-                    },
-                  ),
-
-                  // Versão do app
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Center(
-                      child: Column(
-                        children: [
-                          Text(
-                            'Developed by Darlison de Sousa / DS TECH',
-                            style: TextStyle(
-                              color: const Color(0xFF64748B).withValues(alpha: 0.85),
-                              fontSize: isSmallScreen ? 12 : 13,
-                              fontWeight: FontWeight.w500,
-                            ),
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final crossAxisCount = constraints.maxWidth >= 700 ? 3 : 2;
+                        return GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: actions.length,
+                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: crossAxisCount,
+                            crossAxisSpacing: isSmallScreen ? 12 : 16,
+                            mainAxisSpacing: isSmallScreen ? 12 : 16,
+                            childAspectRatio: 1,
                           ),
-                          const SizedBox(height: 4),
-                          _AppVersionBadge(),
-                        ],
+                          itemBuilder: (context, index) => actions[index],
+                        );
+                      },
+                    ),
+
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Center(
+                        child: Column(
+                          children: [
+                            Text(
+                              'Developed by Darlison de Sousa / DS TECH',
+                              style: TextStyle(
+                                color: const Color(0xFF64748B).withValues(alpha: 0.85),
+                                fontSize: isSmallScreen ? 12 : 13,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            const _AppVersionBadge(),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
 
-                  // Espaço final
-                  SizedBox(
-                    height: (isSmallScreen ? 32 : 48) + bottomPadding + 80,
-                  ),
-                ]),
+                    SizedBox(
+                      height: (isSmallScreen ? 32 : 48) + bottomPadding + 80,
+                    ),
+                  ]),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
-  List<Widget> _buildActions(
-    BuildContext context,
-    WidgetRef ref,
-    bool isAdmin,
-  ) {
+  List<Widget> _buildActions(BuildContext context, WidgetRef ref, bool isAdmin) {
     final actions = <Widget>[
       ProfileActionTile(
         icon: Icons.medical_services_outlined,
@@ -513,6 +495,8 @@ class ProfilePage extends ConsumerWidget {
 }
 
 class _AppVersionBadge extends ConsumerWidget {
+  const _AppVersionBadge();
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final packageAsync = ref.watch(packageInfoProvider);

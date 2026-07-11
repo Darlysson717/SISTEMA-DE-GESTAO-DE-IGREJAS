@@ -1,5 +1,6 @@
 import 'package:centro_social_app/src/nucleo/navegacao/observador_rotas.dart';
 import 'package:centro_social_app/src/funcionalidades/autenticacao/apresentacao/telas/pagina_portal_autenticacao.dart';
+import 'package:centro_social_app/src/nucleo/utilitarios/layout_responsivo.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
@@ -68,7 +69,10 @@ class CentroSocialApp extends StatelessWidget {
         ),
       ),
       navigatorObservers: [routeObserver],
-      home: const AuthGatePage(),
+      home: const ResponsiveLayout(
+        centerOnDesktop: false,
+        child: AuthGatePage(),
+      ),
     );
   }
 }

@@ -14,6 +14,7 @@ import 'package:centro_social_app/src/funcionalidades/agendamentos/apresentacao/
 import 'package:centro_social_app/src/funcionalidades/agendamentos/apresentacao/provedores/provedores_agendamentos.dart';
 import 'package:centro_social_app/src/funcionalidades/agendamentos/dominio/entidades/servico.dart';
 import 'package:centro_social_app/src/funcionalidades/inicio/apresentacao/provedores/provedores_atualizacao.dart';
+import 'package:centro_social_app/src/nucleo/utilitarios/layout_responsivo.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class HomePage extends ConsumerStatefulWidget {
@@ -233,26 +234,29 @@ class _HomePageState extends ConsumerState<HomePage> {
       },
       child: Scaffold(
         appBar: AppBar(title: const Text('Comunidade IADET')),
-        body: Stack(
-          children: [
-            IndexedStack(
-              index: _currentIndex,
-              children: [
-                _buildInicioTab(context, eventsAsync, updateAsync),
-                _buildAgendamentosTab(context),
-                _buildPerfilTab(context),
-              ],
-            ),
-            // Overlay de atualização obrigatória - bloqueia toda a navegação
-            updateAsync.when(
-              data: (updateInfo) {
-                if (updateInfo == null) return const SizedBox.shrink();
-                return _buildUpdateOverlay(context, updateInfo);
-              },
-              loading: () => const SizedBox.shrink(),
-              error: (_, __) => const SizedBox.shrink(),
-            ),
-          ],
+        body: ResponsiveLayout(
+          padding: EdgeInsets.zero,
+          child: Stack(
+            children: [
+              IndexedStack(
+                index: _currentIndex,
+                children: [
+                  _buildInicioTab(context, eventsAsync, updateAsync),
+                  _buildAgendamentosTab(context),
+                  _buildPerfilTab(context),
+                ],
+              ),
+              // Overlay de atualização obrigatória - bloqueia toda a navegação
+              updateAsync.when(
+                data: (updateInfo) {
+                  if (updateInfo == null) return const SizedBox.shrink();
+                  return _buildUpdateOverlay(context, updateInfo);
+                },
+                loading: () => const SizedBox.shrink(),
+                error: (_, __) => const SizedBox.shrink(),
+              ),
+            ],
+          ),
         ),
       ),
     );
