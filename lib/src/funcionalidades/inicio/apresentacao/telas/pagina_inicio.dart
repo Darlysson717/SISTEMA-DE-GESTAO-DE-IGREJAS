@@ -233,12 +233,25 @@ class _HomePageState extends ConsumerState<HomePage> {
       },
       child: Scaffold(
         appBar: AppBar(title: const Text('Comunidade IADET')),
-        body: IndexedStack(
-          index: _currentIndex,
+        body: Stack(
           children: [
-            _buildInicioTab(context, eventsAsync, updateAsync),
-            _buildAgendamentosTab(context),
-            _buildPerfilTab(context),
+            IndexedStack(
+              index: _currentIndex,
+              children: [
+                _buildInicioTab(context, eventsAsync, updateAsync),
+                _buildAgendamentosTab(context),
+                _buildPerfilTab(context),
+              ],
+            ),
+            // Overlay de atualização obrigatória - bloqueia toda a navegação
+            updateAsync.when(
+              data: (updateInfo) {
+                if (updateInfo == null) return const SizedBox.shrink();
+                return _buildUpdateOverlay(context, updateInfo);
+              },
+              loading: () => const SizedBox.shrink(),
+              error: (_, __) => const SizedBox.shrink(),
+            ),
           ],
         ),
       ),
@@ -381,33 +394,8 @@ class _HomePageState extends ConsumerState<HomePage> {
 
             _buildNavigationChips(0),
 
-            // Card de atualização obrigatória - bloqueia o app se houver update
-            updateAsync.when(
-              data: (updateInfo) {
-                if (updateInfo == null) {
-                  return const SliverToBoxAdapter(child: SizedBox.shrink());
-                }
-
-                // Exibe o card de atualização obrigatória
-                return SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.fromLTRB(
-                      contentPadding.left,
-                      20,
-                      contentPadding.right,
-                      0,
-                    ),
-                    child: _buildUpdateCard(
-                      context,
-                      updateInfo,
-                      isSmallScreen,
-                    ),
-                  ),
-                );
-              },
-              loading: () => const SliverToBoxAdapter(child: SizedBox.shrink()),
-              error: (_, __) => const SliverToBoxAdapter(child: SizedBox.shrink()),
-            ),
+            // O overlay de atualização obrigatória está no build() acima,
+            // bloqueando toda a interface quando há uma nova versão.
 
             // Seção de Eventos
             SliverToBoxAdapter(
@@ -677,6 +665,150 @@ class _HomePageState extends ConsumerState<HomePage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// Overlay fullscreen que bloqueia todo o app quando há atualização
+  Widget _buildUpdateOverlay(BuildContext context, AppUpdateInfo updateInfo) {
+    return Container(
+      color: Colors.black.withValues(alpha: 0.7),
+      child: PopScope(
+        canPop: false,
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Ícone de atualização
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: const Icon(
+                    Icons.system_update_alt,
+                    color: Colors.white,
+                    size: 40,
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Título
+                Text(
+                  'Atualização Necessária',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+
+                // Versão
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    'Nova versão: ${updateInfo.displayVersion}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Mensagem
+                Text(
+                  'Você precisa atualizar o aplicativo para continuar usando.',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.85),
+                    fontSize: 16,
+                    height: 1.4,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+
+                // Changelog se houver
+                if (updateInfo.changelog.isNotEmpty) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'O que há de novo:',
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.9),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          updateInfo.changelog,
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.75),
+                            fontSize: 13,
+                            height: 1.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+
+                // Botão de download
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: FilledButton.icon(
+                    onPressed: () => _openUpdateLink(updateInfo.apkDownloadUrl),
+                    icon: const Icon(Icons.download, size: 22),
+                    label: Text(
+                      'Baixar v${updateInfo.displayVersion}',
+                      style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+                    ),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: const Color(0xFF1D4ED8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Texto de aviso
+                Text(
+                  'Após baixar, instale o APK para continuar usando o app.',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.5),
+                    fontSize: 12,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
