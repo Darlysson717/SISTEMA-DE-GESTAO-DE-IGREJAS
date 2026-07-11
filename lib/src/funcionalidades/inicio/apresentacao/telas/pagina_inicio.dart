@@ -1081,6 +1081,32 @@ class _HomePageState extends ConsumerState<HomePage> {
                           ),
                         );
                       }
+
+                      // Desktop: lista horizontal de cards compactos
+                      if (!isSmallScreen) {
+                        return SizedBox(
+                          height: 380,
+                          child: ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: services.length,
+                            itemBuilder: (context, index) {
+                              final service = services[index];
+                              return Container(
+                                width: 300,
+                                margin: EdgeInsets.only(
+                                  right: index < services.length - 1 ? 16 : 0,
+                                ),
+                                child: _ServiceCard(
+                                  service: service,
+                                  onShowDetails: _showServiceDetails,
+                                ),
+                              );
+                            },
+                          ),
+                        );
+                      }
+
+                      // Mobile: lista vertical
                       return Column(
                         children: services
                             .map(
