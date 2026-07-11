@@ -234,18 +234,17 @@ class ProfilePage extends ConsumerWidget {
 
                     SizedBox(height: isSmallScreen ? 20 : 24),
 
-                    GridView.builder(
+                    ListView.builder(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 4,
-                        crossAxisSpacing: isSmallScreen ? 8 : 12,
-                        mainAxisSpacing: isSmallScreen ? 8 : 12,
-                        childAspectRatio: 0.85,
-                      ),
                       itemCount: actions.length,
                       itemBuilder: (context, index) {
-                        return actions[index];
+                        return Padding(
+                          padding: EdgeInsets.only(
+                            bottom: isSmallScreen ? 12 : 16,
+                          ),
+                          child: actions[index],
+                        );
                       },
                     ),
 
