@@ -224,39 +224,67 @@ class _HomePageState extends ConsumerState<HomePage> {
   Widget build(BuildContext context) {
     final eventsAsync = ref.watch(publishedEventsProvider);
     final updateAsync = ref.watch(appUpdateProvider);
+    final isDesktop = context.isDesktop;
 
     return PopScope(
-      canPop: _currentIndex == 0, // Permite fechar apenas na primeira aba
+      canPop: _currentIndex == 0,
       onPopInvokedWithResult: (didPop, result) {
         if (!didPop && _currentIndex > 0) {
           setState(() => _currentIndex--);
         }
       },
       child: Scaffold(
-        appBar: AppBar(title: const Text('Comunidade IADET')),
-        body: ResponsiveLayout(
-          padding: EdgeInsets.zero,
-          child: Stack(
-            children: [
-              IndexedStack(
-                index: _currentIndex,
-                children: [
-                  _buildInicioTab(context, eventsAsync, updateAsync),
-                  _buildAgendamentosTab(context),
-                  _buildPerfilTab(context),
+        body: Row(
+          children: [
+            // Sidebar para desktop
+            if (isDesktop)
+              DesktopSidebar(
+                currentIndex: _currentIndex,
+                onTap: (index) => _setCurrentIndex(index),
+                items: [
+                  SidebarItem(icon: Icons.home_outlined, label: 'Início'),
+                  SidebarItem(icon: Icons.event_note_outlined, label: 'Agendamentos'),
+                  SidebarItem(icon: Icons.person_outline, label: 'Perfil'),
                 ],
               ),
-              // Overlay de atualização obrigatória - bloqueia toda a navegação
-              updateAsync.when(
-                data: (updateInfo) {
-                  if (updateInfo == null) return const SizedBox.shrink();
-                  return _buildUpdateOverlay(context, updateInfo);
-                },
-                loading: () => const SizedBox.shrink(),
-                error: (_, __) => const SizedBox.shrink(),
+            // Conteúdo principal
+            Expanded(
+              child: Column(
+                children: [
+                  // AppBar para desktop
+                  if (isDesktop)
+                    DesktopAppBar(
+                      title: 'Comunidade IADET',
+                    ),
+                  Expanded(
+                    child: ResponsiveLayout(
+                      padding: EdgeInsets.zero,
+                      child: Stack(
+                        children: [
+                          IndexedStack(
+                            index: _currentIndex,
+                            children: [
+                              _buildInicioTab(context, eventsAsync, updateAsync),
+                              _buildAgendamentosTab(context),
+                              _buildPerfilTab(context),
+                            ],
+                          ),
+                          updateAsync.when(
+                            data: (updateInfo) {
+                              if (updateInfo == null) return const SizedBox.shrink();
+                              return _buildUpdateOverlay(context, updateInfo);
+                            },
+                            loading: () => const SizedBox.shrink(),
+                            error: (_, __) => const SizedBox.shrink(),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
