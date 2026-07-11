@@ -147,13 +147,6 @@ class _HomePageState extends ConsumerState<HomePage> {
                       isSelected: _currentIndex == 1,
                       onTap: () => _setCurrentIndex(1),
                     ),
-                    const SizedBox(width: 12),
-                    _NavigationChip(
-                      label: 'Perfil',
-                      icon: Icons.person_outline,
-                      isSelected: _currentIndex == 2,
-                      onTap: () => _setCurrentIndex(2),
-                    ),
                   ],
                 ),
               ),
@@ -224,6 +217,7 @@ class _HomePageState extends ConsumerState<HomePage> {
   Widget build(BuildContext context) {
     final eventsAsync = ref.watch(publishedEventsProvider);
     final updateAsync = ref.watch(appUpdateProvider);
+    final isDesktop = MediaQuery.of(context).size.width >= 900;
 
     return PopScope(
       canPop: _currentIndex == 0,
@@ -233,28 +227,46 @@ class _HomePageState extends ConsumerState<HomePage> {
         }
       },
       child: Scaffold(
-        body: ResponsiveLayout(
-          padding: EdgeInsets.zero,
-          child: Stack(
-            children: [
-              IndexedStack(
-                index: _currentIndex,
+        body: Row(
+          children: [
+            // Conteúdo principal
+            Expanded(
+              child: Stack(
                 children: [
-                  _buildInicioTab(context, eventsAsync, updateAsync),
-                  _buildAgendamentosTab(context),
-                  _buildPerfilTab(context),
+                  IndexedStack(
+                    index: _currentIndex,
+                    children: [
+                      _buildInicioTab(context, eventsAsync, updateAsync),
+                      _buildAgendamentosTab(context),
+                    ],
+                  ),
+                  updateAsync.when(
+                    data: (updateInfo) {
+                      if (updateInfo == null) return const SizedBox.shrink();
+                      return _buildUpdateOverlay(context, updateInfo);
+                    },
+                    loading: () => const SizedBox.shrink(),
+                    error: (_, __) => const SizedBox.shrink(),
+                  ),
                 ],
               ),
-              updateAsync.when(
-                data: (updateInfo) {
-                  if (updateInfo == null) return const SizedBox.shrink();
-                  return _buildUpdateOverlay(context, updateInfo);
-                },
-                loading: () => const SizedBox.shrink(),
-                error: (_, __) => const SizedBox.shrink(),
+            ),
+            // Sidebar de perfil no desktop
+            if (isDesktop)
+              Container(
+                width: 320,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  border: Border(
+                    left: BorderSide(
+                      color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
+                      width: 1,
+                    ),
+                  ),
+                ),
+                child: _buildPerfilTab(context),
               ),
-            ],
-          ),
+          ],
         ),
       ),
     );
