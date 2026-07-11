@@ -50,16 +50,16 @@ class ProfilePage extends ConsumerWidget {
     final isMediumScreen = screenSize.width >= 600 && screenSize.width < 1200;
 
     final headerPadding = isSmallScreen
-        ? const EdgeInsets.fromLTRB(20, 20, 20, 32)
-        : const EdgeInsets.fromLTRB(32, 32, 32, 48);
+        ? const EdgeInsets.fromLTRB(16, 12, 16, 16)
+        : const EdgeInsets.fromLTRB(24, 16, 24, 20);
 
     final contentPadding = isSmallScreen
-        ? const EdgeInsets.symmetric(horizontal: 20)
-        : const EdgeInsets.symmetric(horizontal: 32);
+        ? const EdgeInsets.symmetric(horizontal: 16)
+        : const EdgeInsets.symmetric(horizontal: 24);
 
-    final titleFontSize = isSmallScreen ? 24.0 : (isMediumScreen ? 28.0 : 32.0);
-    final subtitleFontSize = isSmallScreen ? 16.0 : 18.0;
-    final sectionTitleFontSize = isSmallScreen ? 18.0 : 20.0;
+    final titleFontSize = isSmallScreen ? 20.0 : (isMediumScreen ? 22.0 : 24.0);
+    final subtitleFontSize = isSmallScreen ? 14.0 : 16.0;
+    final sectionTitleFontSize = isSmallScreen ? 16.0 : 18.0;
 
     final isAdmin = ref
         .watch(isCurrentUserAdminProvider)
@@ -107,18 +107,18 @@ class ProfilePage extends ConsumerWidget {
                       Row(
                         children: [
                           Container(
-                            padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+                            padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
                             decoration: BoxDecoration(
                               color: Colors.white.withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius: BorderRadius.circular(12),
                             ),
                             child: Icon(
                               Icons.person_outline,
                               color: Colors.white,
-                              size: isSmallScreen ? 28 : 32,
+                              size: isSmallScreen ? 22 : 26,
                             ),
                           ),
-                          SizedBox(width: isSmallScreen ? 16 : 20),
+                          SizedBox(width: isSmallScreen ? 12 : 16),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -131,7 +131,7 @@ class ProfilePage extends ConsumerWidget {
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
-                                SizedBox(height: isSmallScreen ? 4 : 8),
+                                SizedBox(height: isSmallScreen ? 2 : 4),
                                 Text(
                                   'Gerencie sua conta e atividades',
                                   style: TextStyle(
@@ -144,38 +144,6 @@ class ProfilePage extends ConsumerWidget {
                             ),
                           ),
                         ],
-                      ),
-                      SizedBox(height: isSmallScreen ? 24 : 32),
-                      Container(
-                        padding: EdgeInsets.all(isSmallScreen ? 20 : 24),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.2),
-                            width: 1,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.info_outline,
-                              color: Colors.white,
-                              size: isSmallScreen ? 24 : 28,
-                            ),
-                            SizedBox(width: isSmallScreen ? 16 : 20),
-                            Expanded(
-                              child: Text(
-                                'Aqui você pode gerenciar seus dados, anúncios e acompanhar suas atividades no centro social.',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: isSmallScreen ? 14 : 16,
-                                  height: 1.4,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
                       ),
                     ],
                   ),
@@ -286,7 +254,7 @@ class ProfilePage extends ConsumerWidget {
                         child: Column(
                           children: [
                             Text(
-                              'Developed by Darlison de Sousa / DS TECH',
+                              'Developed by Darlison de Sousa',
                               style: TextStyle(
                                 color: const Color(0xFF64748B).withValues(alpha: 0.85),
                                 fontSize: isSmallScreen ? 12 : 13,
