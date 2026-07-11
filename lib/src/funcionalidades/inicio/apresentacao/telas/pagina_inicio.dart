@@ -658,9 +658,9 @@ class _HomePageState extends ConsumerState<HomePage> {
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton.icon(
-                    onPressed: () => _openUpdateLink(updateInfo.link),
-                    icon: const Icon(Icons.open_in_new),
-                    label: const Text('Abrir atualização no GitHub'),
+                    onPressed: () => _openUpdateLink(updateInfo.apkDownloadUrl),
+                    icon: const Icon(Icons.download),
+                    label: Text('Baixar v${updateInfo.displayVersion}'),
                     style: FilledButton.styleFrom(
                       backgroundColor: Colors.white,
                       foregroundColor: const Color(0xFF1D4ED8),

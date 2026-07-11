@@ -1,37 +1,54 @@
+import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 
-const _githubPagesUrl =
-  'https://darlysson717.github.io/SISTEMA-DE-GESTAO-DE-IGREJAS/';
-const _githubUpdatePageUrl =
-  'https://darlysson717.github.io/SISTEMA-DE-GESTAO-DE-IGREJAS/update/';
-const _githubRawPubspecUrl =
-    'https://raw.githubusercontent.com/Darlysson717/SISTEMA-DE-GESTAO-DE-IGREJAS/main/pubspec.yaml';
+const _githubApiLatestRelease =
+    'https://api.github.com/repos/Darlysson717/SISTEMA-DE-GESTAO-DE-IGREJAS/releases/latest';
 
 final appUpdateProvider = FutureProvider<AppUpdateInfo?>((ref) async {
   try {
     final packageInfo = await PackageInfo.fromPlatform();
     final localVersionStr = '${packageInfo.version}+${packageInfo.buildNumber}';
     final localVersion = AppVersion.parse(localVersionStr);
-    final remoteVersion = await _fetchLatestVersion();
+    final latestRelease = await _fetchLatestReleaseInfo();
 
-    if (remoteVersion == null) {
+    if (latestRelease == null) {
       return null;
     }
 
-    if (localVersion.compareTo(remoteVersion.version) >= 0) {
+    final remoteVersion = AppVersion.parse(
+      latestRelease['tag_name'] as String? ?? '',
+    );
+
+    if (localVersion.compareTo(remoteVersion) >= 0) {
       return null;
     }
 
-    // Constrói link para a página de update passando a versão local via query param
-    final updateLink = '$_githubUpdatePageUrl?v=$localVersionStr';
+    // Procura o primeiro APK nos assets da release
+    final assets = latestRelease['assets'] as List<dynamic>? ?? [];
+    String? apkUrl;
+    String? apkName;
+
+    for (final asset in assets) {
+      final name = (asset['name'] as String? ?? '').toLowerCase();
+      if (name.endsWith('.apk')) {
+        apkUrl = asset['browser_download_url'] as String?;
+        apkName = asset['name'] as String?;
+        break;
+      }
+    }
+
+    // Se não encontrou APK, usa a página da release como fallback
+    apkUrl ??= latestRelease['html_url'] as String? ?? '';
+
+    final tagName =
+        latestRelease['tag_name'] as String? ?? remoteVersion.toString();
 
     return AppUpdateInfo(
-      version: remoteVersion.version,
-      link: updateLink,
-      title: remoteVersion.title,
-      message: remoteVersion.message,
+      version: remoteVersion,
+      apkDownloadUrl: apkUrl,
+      apkFileName: apkName,
     );
   } catch (_) {
     return null;
@@ -41,17 +58,20 @@ final appUpdateProvider = FutureProvider<AppUpdateInfo?>((ref) async {
 class AppUpdateInfo {
   const AppUpdateInfo({
     required this.version,
-    required this.link,
-    required this.title,
-    required this.message,
+    required this.apkDownloadUrl,
+    this.apkFileName,
   });
 
   final AppVersion version;
-  final String link;
-  final String title;
-  final String message;
+  final String apkDownloadUrl;
+  final String? apkFileName;
 
   String get displayVersion => version.toString();
+
+  String get title => 'Nova versão disponível';
+
+  String get message =>
+      'Uma nova versão do aplicativo está disponível para download.';
 }
 
 class AppVersion implements Comparable<AppVersion> {
@@ -89,7 +109,9 @@ class AppVersion implements Comparable<AppVersion> {
 
   @override
   int compareTo(AppVersion other) {
-    for (var index = 0; index < parts.length && index < other.parts.length; index++) {
+    for (var index = 0;
+        index < parts.length && index < other.parts.length;
+        index++) {
       final comparison = parts[index].compareTo(other.parts[index]);
       if (comparison != 0) {
         return comparison;
@@ -111,11 +133,12 @@ class AppVersion implements Comparable<AppVersion> {
   }
 }
 
-Future<AppUpdateInfo?> _fetchLatestVersion() async {
+/// Busca as informações da última release do GitHub
+Future<Map<String, dynamic>?> _fetchLatestReleaseInfo() async {
   final response = await http.get(
-    Uri.parse(_githubRawPubspecUrl),
-    headers: const {
-      'Accept': 'text/plain',
+    Uri.parse(_githubApiLatestRelease),
+    headers: {
+      'Accept': 'application/vnd.github.v3+json',
       'User-Agent': 'centro-social-app',
     },
   );
@@ -124,19 +147,5 @@ Future<AppUpdateInfo?> _fetchLatestVersion() async {
     return null;
   }
 
-  final match = RegExp(r'^version:\s*([^\s#]+)', multiLine: true)
-      .firstMatch(response.body);
-  if (match == null) {
-    return null;
-  }
-
-  final version = AppVersion.parse(match.group(1) ?? '');
-
-  return AppUpdateInfo(
-    version: version,
-    link: _githubPagesUrl,
-    title: 'Atualização disponível',
-    message:
-        'Existe uma versão mais recente do app no GitHub. Abra o link abaixo para acessar a atualização.',
-  );
+  return jsonDecode(response.body) as Map<String, dynamic>?;
 }
