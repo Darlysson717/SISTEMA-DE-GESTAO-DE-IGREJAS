@@ -381,12 +381,14 @@ class _HomePageState extends ConsumerState<HomePage> {
 
             _buildNavigationChips(0),
 
+            // Card de atualização obrigatória - bloqueia o app se houver update
             updateAsync.when(
               data: (updateInfo) {
                 if (updateInfo == null) {
                   return const SliverToBoxAdapter(child: SizedBox.shrink());
                 }
 
+                // Exibe o card de atualização obrigatória
                 return SliverToBoxAdapter(
                   child: Padding(
                     padding: EdgeInsets.fromLTRB(

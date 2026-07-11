@@ -7,6 +7,7 @@ import 'package:centro_social_app/src/funcionalidades/eventos/apresentacao/telas
 import 'package:centro_social_app/src/funcionalidades/perfil/apresentacao/componentes/tile_acao_perfil.dart';
 import 'package:centro_social_app/src/funcionalidades/servicos/apresentacao/telas/pagina_meus_servicos.dart';
 import 'package:centro_social_app/src/funcionalidades/servicos/apresentacao/telas/pagina_acesso_publicar_servico.dart';
+import 'package:centro_social_app/src/funcionalidades/inicio/apresentacao/provedores/provedores_atualizacao.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -400,16 +401,23 @@ class ProfilePage extends ConsumerWidget {
                     },
                   ),
 
+                  // Versão do app
                   Padding(
                     padding: const EdgeInsets.only(top: 8),
                     child: Center(
-                      child: Text(
-                        'Developed by Darlison de Sousa / DS TECH',
-                        style: TextStyle(
-                          color: const Color(0xFF64748B).withValues(alpha: 0.85),
-                          fontSize: isSmallScreen ? 12 : 13,
-                          fontWeight: FontWeight.w500,
-                        ),
+                      child: Column(
+                        children: [
+                          Text(
+                            'Developed by Darlison de Sousa / DS TECH',
+                            style: TextStyle(
+                              color: const Color(0xFF64748B).withValues(alpha: 0.85),
+                              fontSize: isSmallScreen ? 12 : 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          _AppVersionBadge(),
+                        ],
                       ),
                     ),
                   ),
@@ -501,6 +509,37 @@ class ProfilePage extends ConsumerWidget {
     }
 
     return actions;
+  }
+}
+
+class _AppVersionBadge extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final packageAsync = ref.watch(packageInfoProvider);
+
+    return packageAsync.when(
+      data: (info) {
+        final versionStr = '${info.version}+${info.buildNumber}';
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: const Color(0xFF6366F1).withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            'v$versionStr',
+            style: TextStyle(
+              fontSize: 11,
+              color: const Color(0xFF6366F1).withValues(alpha: 0.8),
+              fontWeight: FontWeight.w500,
+              letterSpacing: 0.5,
+            ),
+          ),
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+    );
   }
 }
 
