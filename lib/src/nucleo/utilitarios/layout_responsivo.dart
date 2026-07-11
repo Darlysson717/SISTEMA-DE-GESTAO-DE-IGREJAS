@@ -116,8 +116,6 @@ class ResponsiveScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isSmallScreen = context.isSmallScreen;
-
     return Scaffold(
       appBar: title != null
           ? AppBar(
