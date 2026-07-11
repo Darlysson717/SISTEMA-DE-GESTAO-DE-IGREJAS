@@ -224,7 +224,6 @@ class _HomePageState extends ConsumerState<HomePage> {
   Widget build(BuildContext context) {
     final eventsAsync = ref.watch(publishedEventsProvider);
     final updateAsync = ref.watch(appUpdateProvider);
-    final isDesktop = context.isDesktop;
 
     return PopScope(
       canPop: _currentIndex == 0,
@@ -234,57 +233,28 @@ class _HomePageState extends ConsumerState<HomePage> {
         }
       },
       child: Scaffold(
-        body: Row(
-          children: [
-            // Sidebar para desktop
-            if (isDesktop)
-              DesktopSidebar(
-                currentIndex: _currentIndex,
-                onTap: (index) => _setCurrentIndex(index),
-                items: [
-                  SidebarItem(icon: Icons.home_outlined, label: 'Início'),
-                  SidebarItem(icon: Icons.event_note_outlined, label: 'Agendamentos'),
-                  SidebarItem(icon: Icons.person_outline, label: 'Perfil'),
-                ],
-              ),
-            // Conteúdo principal
-            Expanded(
-              child: Column(
+        body: ResponsiveLayout(
+          padding: EdgeInsets.zero,
+          child: Stack(
+            children: [
+              IndexedStack(
+                index: _currentIndex,
                 children: [
-                  // AppBar para desktop
-                  if (isDesktop)
-                    DesktopAppBar(
-                      title: 'Comunidade IADET',
-                    ),
-                  Expanded(
-                    child: ResponsiveLayout(
-                      padding: EdgeInsets.zero,
-                      child: Stack(
-                        children: [
-                          IndexedStack(
-                            index: _currentIndex,
-                            children: [
-                              _buildInicioTab(context, eventsAsync, updateAsync),
-                              _buildAgendamentosTab(context),
-                              _buildPerfilTab(context),
-                            ],
-                          ),
-                          updateAsync.when(
-                            data: (updateInfo) {
-                              if (updateInfo == null) return const SizedBox.shrink();
-                              return _buildUpdateOverlay(context, updateInfo);
-                            },
-                            loading: () => const SizedBox.shrink(),
-                            error: (_, __) => const SizedBox.shrink(),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                  _buildInicioTab(context, eventsAsync, updateAsync),
+                  _buildAgendamentosTab(context),
+                  _buildPerfilTab(context),
                 ],
               ),
-            ),
-          ],
+              updateAsync.when(
+                data: (updateInfo) {
+                  if (updateInfo == null) return const SizedBox.shrink();
+                  return _buildUpdateOverlay(context, updateInfo);
+                },
+                loading: () => const SizedBox.shrink(),
+                error: (_, __) => const SizedBox.shrink(),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -494,7 +464,54 @@ class _HomePageState extends ConsumerState<HomePage> {
                   );
                 }
 
-                    return SliverPadding(
+                // Desktop: lista horizontal de cards compactos
+                if (!isSmallScreen) {
+                  return SliverToBoxAdapter(
+                    child: SizedBox(
+                      height: 320,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        padding: contentPadding,
+                        itemCount: events.length,
+                        itemBuilder: (context, index) {
+                          final event = events[index];
+                          return Container(
+                            width: 280,
+                            margin: EdgeInsets.only(
+                              right: index < events.length - 1 ? 16 : 0,
+                            ),
+                            child: EventFeedCard(
+                              event: event,
+                              onCardTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => EventDetailsPage(event: event),
+                                  ),
+                                );
+                              },
+                              onPrimaryAction: () => _registerEventInterest(
+                                context,
+                                event,
+                                EventInterestType.participante,
+                              ),
+                              onVolunteerAction: event.permitirVoluntarios
+                                  ? () => _registerEventInterest(
+                                      context,
+                                      event,
+                                      EventInterestType.voluntario,
+                                    )
+                                  : null,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  );
+                }
+
+                // Mobile: lista vertical
+                return SliverPadding(
                   padding: contentPadding,
                   sliver: SliverList(
                     delegate: SliverChildBuilderDelegate((context, index) {
@@ -503,7 +520,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                         padding: EdgeInsets.only(
                           bottom: index == events.length - 1
                               ? 0
-                              : (isSmallScreen ? 12 : 16),
+                              : 12,
                         ),
                         child: EventFeedCard(
                           event: event,
