@@ -183,110 +183,7 @@ class ProfilePage extends ConsumerWidget {
                 ),
               ),
 
-              if (showNavigationChips && hasValidChipOffset) ...[
-                SliverToBoxAdapter(
-                  child: Container(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                    child: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        NotificationListener<ScrollNotification>(
-                          onNotification: (notification) {
-                            if (notification.metrics.axis == Axis.horizontal) {
-                              onChipsScroll?.call(notification.metrics.pixels);
-                            }
-                            return false;
-                          },
-                          child: SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            controller: chipsScrollController,
-                            child: Row(
-                              children: [
-                                _NavigationChip(
-                                  label: 'Inicio',
-                                  icon: Icons.home_outlined,
-                                  isSelected: currentIndex == 0,
-                                  onTap: onNavigateToInicio ?? () {},
-                                ),
-                                const SizedBox(width: 12),
-                                _NavigationChip(
-                                  label: 'Agendamentos',
-                                  icon: Icons.event_note_outlined,
-                                  isSelected: currentIndex == 1,
-                                  onTap: onNavigateToAgendamentos ?? () {},
-                                ),
-                                const SizedBox(width: 12),
-                                _NavigationChip(
-                                  label: 'Perfil',
-                                  icon: Icons.person_outline,
-                                  isSelected: currentIndex == 2,
-                                  onTap: onNavigateToPerfil ?? () {},
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        Positioned(
-                          left: -12,
-                          top: 0,
-                          bottom: 0,
-                          child: Container(
-                            width: 24,
-                            alignment: Alignment.centerLeft,
-                            child: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.9),
-                                borderRadius: BorderRadius.circular(12),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.1),
-                                    blurRadius: 4,
-                                    offset: const Offset(1, 1),
-                                  ),
-                                ],
-                              ),
-                              child: Icon(
-                                Icons.chevron_left,
-                                size: 16,
-                                color: const Color(0xFF6366F1),
-                              ),
-                            ),
-                          ),
-                        ),
-                        Positioned(
-                          right: -12,
-                          top: 0,
-                          bottom: 0,
-                          child: Container(
-                            width: 24,
-                            alignment: Alignment.centerRight,
-                            child: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.9),
-                                borderRadius: BorderRadius.circular(12),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.1),
-                                    blurRadius: 4,
-                                    offset: const Offset(1, 1),
-                                  ),
-                                ],
-                              ),
-                              child: Icon(
-                                Icons.chevron_right,
-                                size: 16,
-                                color: const Color(0xFF6366F1),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+              // Chips de navegação removidos - agora usa sidebar no desktop
 
               SliverPadding(
                 padding: contentPadding,
@@ -370,20 +267,16 @@ class ProfilePage extends ConsumerWidget {
 
                     SizedBox(height: isSmallScreen ? 20 : 24),
 
-                    LayoutBuilder(
-                      builder: (context, constraints) {
-                        final crossAxisCount = constraints.maxWidth >= 700 ? 3 : 2;
-                        return GridView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: actions.length,
-                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: crossAxisCount,
-                            crossAxisSpacing: isSmallScreen ? 12 : 16,
-                            mainAxisSpacing: isSmallScreen ? 12 : 16,
-                            childAspectRatio: 1,
+                    ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: actions.length,
+                      itemBuilder: (context, index) {
+                        return Padding(
+                          padding: EdgeInsets.only(
+                            bottom: isSmallScreen ? 12 : 16,
                           ),
-                          itemBuilder: (context, index) => actions[index],
+                          child: actions[index],
                         );
                       },
                     ),
