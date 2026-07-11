@@ -4,15 +4,16 @@ import 'package:package_info_plus/package_info_plus.dart';
 
 const _githubPagesUrl =
   'https://darlysson717.github.io/SISTEMA-DE-GESTAO-DE-IGREJAS/';
+const _githubUpdatePageUrl =
+  'https://darlysson717.github.io/SISTEMA-DE-GESTAO-DE-IGREJAS/update/';
 const _githubRawPubspecUrl =
     'https://raw.githubusercontent.com/Darlysson717/SISTEMA-DE-GESTAO-DE-IGREJAS/main/pubspec.yaml';
 
 final appUpdateProvider = FutureProvider<AppUpdateInfo?>((ref) async {
   try {
     final packageInfo = await PackageInfo.fromPlatform();
-    final localVersion = AppVersion.parse(
-      '${packageInfo.version}+${packageInfo.buildNumber}',
-    );
+    final localVersionStr = '${packageInfo.version}+${packageInfo.buildNumber}';
+    final localVersion = AppVersion.parse(localVersionStr);
     final remoteVersion = await _fetchLatestVersion();
 
     if (remoteVersion == null) {
@@ -23,7 +24,15 @@ final appUpdateProvider = FutureProvider<AppUpdateInfo?>((ref) async {
       return null;
     }
 
-    return remoteVersion;
+    // Constrói link para a página de update passando a versão local via query param
+    final updateLink = '$_githubUpdatePageUrl?v=$localVersionStr';
+
+    return AppUpdateInfo(
+      version: remoteVersion.version,
+      link: updateLink,
+      title: remoteVersion.title,
+      message: remoteVersion.message,
+    );
   } catch (_) {
     return null;
   }

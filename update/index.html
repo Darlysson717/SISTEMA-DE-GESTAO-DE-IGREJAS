@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Atualização - Comunidade IADET</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 520px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 24px;
+            padding: 40px 32px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
+
+        .icon-wrapper {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+        }
+
+        .icon-wrapper svg {
+            width: 40px;
+            height: 40px;
+            fill: white;
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1a1a2e;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            font-size: 16px;
+            color: #64748b;
+            margin-bottom: 32px;
+            line-height: 1.5;
+        }
+
+        .version-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 24px;
+        }
+
+        .options {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .option-card {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 20px;
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 16px;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .option-card:hover {
+            border-color: #667eea;
+            background: #f1f5f9;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+        }
+
+        .option-card:active {
+            transform: translateY(0);
+        }
+
+        .option-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .option-icon.pwa {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+        }
+
+        .option-icon.android {
+            background: linear-gradient(135deg, #059669, #0d9488);
+        }
+
+        .option-icon.releases {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+        }
+
+        .option-icon svg {
+            width: 24px;
+            height: 24px;
+            fill: white;
+        }
+
+        .option-content {
+            flex: 1;
+        }
+
+        .option-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1a1a2e;
+            margin-bottom: 4px;
+        }
+
+        .option-desc {
+            font-size: 13px;
+            color: #64748b;
+            line-height: 1.4;
+        }
+
+        .option-arrow {
+            color: #94a3b8;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .footer {
+            border-top: 1px solid #e2e8f0;
+            padding-top: 20px;
+            margin-top: 8px;
+        }
+
+        .footer p {
+            font-size: 13px;
+            color: #94a3b8;
+            line-height: 1.5;
+        }
+
+        .footer a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 28px 20px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+
+            .option-card {
+                padding: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon-wrapper">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+            </svg>
+        </div>
+
+        <h1>Nova versão disponível!</h1>
+        <p class="subtitle">Escolha como deseja acessar a atualização do aplicativo Comunidade IADET.</p>
+
+        <div class="version-badge" id="versionBadge">Carregando...</div>
+
+        <div class="options">
+            <a class="option-card" id="pwaLink" href="/SISTEMA-DE-GESTAO-DE-IGREJAS/" target="_blank">
+                <div class="option-icon pwa">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+                    </svg>
+                </div>
+                <div class="option-content">
+                    <div class="option-title">Abrir versão Web (PWA)</div>
+                    <div class="option-desc">Acesse o app diretamente pelo navegador. Instalável como aplicativo.</div>
+                </div>
+                <span class="option-arrow">→</span>
+            </a>
+
+            <a class="option-card" id="apkLink" href="#" target="_blank">
+                <div class="option-icon android">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M17.523 16.433c-.553 0-1-.447-1-1s.447-1 1-1 1 .447 1 1-.447 1-1 1zm-11 0c-.553 0-1-.447-1-1s.447-1 1-1 1 .447 1 1-.447 1-1 1zm12.569-5.498L20.8 8.132c.233-.4.1-.913-.3-1.146-.4-.233-.912-.1-1.146.3l-.012.02-1.785 3.073c-1.56-.755-3.388-1.195-5.357-1.195s-3.797.44-5.357 1.195L5.26 7.307c-.232-.4-.744-.535-1.146-.304-.4.232-.535.744-.304 1.146l2.097 3.798c-2.484 1.624-4.08 4.14-4.09 7.022v.014h18v-.013c0-2.882-1.606-5.398-4.088-7.022z"/>
+                    </svg>
+                </div>
+                <div class="option-content">
+                    <div class="option-title">Baixar APK (Android)</div>
+                    <div class="option-desc">Instale o aplicativo no seu dispositivo Android.</div>
+                </div>
+                <span class="option-arrow">→</span>
+            </a>
+
+            <a class="option-card" id="releasesLink" href="https://github.com/Darlysson717/SISTEMA-DE-GESTAO-DE-IGREJAS/releases" target="_blank">
+                <div class="option-icon releases">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14l-5-5 1.41-1.41L12 14.17l7.59-7.59L21 8l-9 9z"/>
+                    </svg>
+                </div>
+                <div class="option-content">
+                    <div class="option-title">Ver todas as versões</div>
+                    <div class="option-desc">Confira o histórico de versões e changelog no GitHub.</div>
+                </div>
+                <span class="option-arrow">→</span>
+            </a>
+        </div>
+
+        <div class="footer">
+            <p>
+                <strong>Comunidade IADET</strong> · 
+                <a href="https://github.com/Darlysson717/SISTEMA-DE-GESTAO-DE-IGREJAS" target="_blank">GitHub</a>
+            </p>
+            <p style="margin-top: 8px; font-size: 12px;">
+                Versão local: <span id="localVersion">—</span> · 
+                Versão remota: <span id="remoteVersion">—</span>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Busca a última release do GitHub para obter o link do APK
+        async function loadReleaseInfo() {
+            try {
+                const response = await fetch('https://api.github.com/repos/Darlysson717/SISTEMA-DE-GESTAO-DE-IGREJAS/releases/latest');
+                if (!response.ok) throw new Error('Falha ao buscar release');
+                
+                const release = await response.json();
+                const tagName = release.tag_name || '';
+                const versionName = tagName.replace(/^v/, '');
+                
+                document.getElementById('versionBadge').textContent = 'v' + versionName;
+                document.getElementById('remoteVersion').textContent = tagName;
+                
+                // Procura por APK nos assets da release
+                const apkAsset = release.assets.find(a => a.name.endsWith('.apk'));
+                const apkLink = document.getElementById('apkLink');
+                
+                if (apkAsset) {
+                    apkLink.href = apkAsset.browser_download_url;
+                } else {
+                    // Se não encontrar APK, busca na página de releases
+                    apkLink.href = release.html_url;
+                    apkLink.querySelector('.option-desc').textContent = 
+                        'APK não encontrado nesta versão. Acesse a página de releases.';
+                }
+
+                // Tenta obter a versão local via query parameter passado pelo app
+                const params = new URLSearchParams(window.location.search);
+                const localVer = params.get('v');
+                if (localVer) {
+                    document.getElementById('localVersion').textContent = 'v' + localVer;
+                }
+            } catch (e) {
+                document.getElementById('versionBadge').textContent = 'Nova versão';
+                document.getElementById('apkLink').href = 
+                    'https://github.com/Darlysson717/SISTEMA-DE-GESTAO-DE-IGREJAS/releases';
+                document.getElementById('remoteVersion').textContent = '—';
+            }
+        }
+
+        loadReleaseInfo();
+    </script>
+</body>
+</html>
