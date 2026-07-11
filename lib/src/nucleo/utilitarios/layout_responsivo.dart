@@ -1,26 +1,26 @@
 import 'package:flutter/material.dart';
 
-/// Constantes de breakpoints para layout responsivo.
+/// Constantes de breakpoints para layout responsivo baseado em padrões profissionais.
 class Breakpoints {
-  /// Mobile pequeno: até 599px
+  /// Mobile: até 599px
   static const double mobile = 600;
 
   /// Tablet: de 600px a 899px
   static const double tablet = 900;
 
-  /// Desktop: de 900px a 1400px
+  /// Desktop: de 900px a 1199px
   static const double desktop = 900;
 
-  /// Desktop grande: 1400px ou mais
-  static const double desktopLarge = 1400;
+  /// Desktop Large: 1200px ou mais
+  static const double desktopLarge = 1200;
 
-  /// Largura máxima para conteúdo em telas grandes
-  static const double maxContentWidth = 1400;
+  /// Largura máxima para conteúdo (padrão profissional: 1200-1400px)
+  static const double maxContentWidth = 1280;
 }
 
 /// Extensão para facilitar verificações de breakpoint.
 extension ResponsiveExtension on BuildContext {
-  /// Retorna true se a tela for considerada pequena (mobile).
+  /// Retorna true se a tela for considerada mobile.
   bool get isSmallScreen => MediaQuery.sizeOf(this).width < Breakpoints.mobile;
 
   /// Retorna true se a tela for considerada tablet.
@@ -40,7 +40,7 @@ extension ResponsiveExtension on BuildContext {
     if (isSmallScreen) return 1;
     if (isTablet) return 2;
     if (isDesktopLarge) return 4;
-    return 3; // desktop padrão
+    return 3; // desktop padrão (900px - 1199px)
   }
 }
 
@@ -62,7 +62,7 @@ class ResponsiveLayout extends StatelessWidget {
   Widget build(BuildContext context) {
     final defaultPadding = context.isSmallScreen
         ? const EdgeInsets.symmetric(horizontal: 16)
-        : const EdgeInsets.symmetric(horizontal: 32);
+        : const EdgeInsets.symmetric(horizontal: 24);
 
     return Center(
       child: ConstrainedBox(
@@ -76,7 +76,7 @@ class ResponsiveLayout extends StatelessWidget {
   }
 }
 
-/// Sidebar de navegação para desktop.
+/// Sidebar de navegação para desktop (estilo profissional).
 class DesktopSidebar extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
@@ -91,39 +91,46 @@ class DesktopSidebar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return Container(
-      width: 80,
+      width: 72,
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        color: theme.colorScheme.surface,
         border: Border(
           right: BorderSide(
-            color: Theme.of(context).dividerColor,
+            color: theme.dividerColor.withValues(alpha: 0.5),
             width: 1,
           ),
         ),
       ),
       child: Column(
         children: [
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
           // Logo
           Container(
-            width: 48,
-            height: 48,
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primary,
-              borderRadius: BorderRadius.circular(12),
+              gradient: LinearGradient(
+                colors: [
+                  theme.colorScheme.primary,
+                  theme.colorScheme.primaryContainer,
+                ],
+              ),
+              borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
               Icons.church,
-              color: Theme.of(context).colorScheme.onPrimary,
-              size: 28,
+              color: theme.colorScheme.onPrimary,
+              size: 24,
             ),
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 24),
           // Items de navegação
           Expanded(
             child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
               itemCount: items.length,
               itemBuilder: (context, index) {
                 final item = items[index];
@@ -165,38 +172,42 @@ class _SidebarItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
         onTap: onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
+          margin: const EdgeInsets.symmetric(vertical: 4),
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
           decoration: BoxDecoration(
             color: isSelected
-                ? Theme.of(context).colorScheme.primaryContainer
+                ? theme.colorScheme.primaryContainer.withValues(alpha: 0.5)
                 : null,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(10),
           ),
           child: Row(
             children: [
               Icon(
                 icon,
                 color: isSelected
-                    ? Theme.of(context).colorScheme.primary
-                    : Theme.of(context).colorScheme.onSurfaceVariant,
-                size: 24,
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                size: 22,
               ),
               if (isSelected) ...[
-                const SizedBox(width: 12),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     label,
                     style: TextStyle(
-                      color: Theme.of(context).colorScheme.primary,
+                      color: theme.colorScheme.primary,
                       fontWeight: FontWeight.w600,
-                      fontSize: 14,
+                      fontSize: 13,
                     ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
@@ -208,7 +219,7 @@ class _SidebarItem extends StatelessWidget {
   }
 }
 
-/// Barra superior para desktop.
+/// Barra superior para desktop (estilo profissional).
 class DesktopAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
   final List<Widget>? actions;
@@ -226,14 +237,16 @@ class DesktopAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return Container(
       height: preferredSize.height,
       padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        color: theme.colorScheme.surface,
         border: Border(
           bottom: BorderSide(
-            color: Theme.of(context).dividerColor,
+            color: theme.dividerColor.withValues(alpha: 0.5),
             width: 1,
           ),
         ),
@@ -242,9 +255,10 @@ class DesktopAppBar extends StatelessWidget implements PreferredSizeWidget {
         children: [
           Text(
             title,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w600,
+              fontSize: 18,
+            ),
           ),
           const Spacer(),
           if (notificationBadge != null) ...[
@@ -258,7 +272,7 @@ class DesktopAppBar extends StatelessWidget implements PreferredSizeWidget {
   }
 }
 
-/// Card responsivo que se adapta ao tamanho da tela.
+/// Card responsivo otimizado para desktop.
 class ResponsiveCard extends StatelessWidget {
   final Widget child;
   final VoidCallback? onTap;
@@ -274,6 +288,7 @@ class ResponsiveCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDesktop = context.isDesktop;
+    final theme = Theme.of(context);
     final effectivePadding = padding ??
         EdgeInsets.all(isDesktop ? 16 : 20);
 
@@ -285,16 +300,16 @@ class ResponsiveCard extends StatelessWidget {
           duration: const Duration(milliseconds: 200),
           padding: effectivePadding,
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: BorderRadius.circular(16),
+            color: theme.colorScheme.surface,
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: Theme.of(context).dividerColor,
+              color: theme.dividerColor.withValues(alpha: 0.5),
               width: 1,
             ),
             boxShadow: onTap != null && isDesktop
                 ? [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.05),
+                      color: Colors.black.withValues(alpha: 0.06),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
