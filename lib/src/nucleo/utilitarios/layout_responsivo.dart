@@ -99,38 +99,33 @@ class DesktopSidebar extends StatelessWidget {
         color: theme.colorScheme.surface,
         border: Border(
           right: BorderSide(
-            color: theme.dividerColor.withValues(alpha: 0.5),
+            color: theme.dividerColor.withValues(alpha: 0.3),
             width: 1,
           ),
         ),
       ),
       child: Column(
         children: [
-          const SizedBox(height: 20),
-          // Logo
+          const SizedBox(height: 16),
+          // Logo minimalista
           Container(
-            width: 40,
-            height: 40,
+            width: 36,
+            height: 36,
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  theme.colorScheme.primary,
-                  theme.colorScheme.primaryContainer,
-                ],
-              ),
-              borderRadius: BorderRadius.circular(10),
+              color: theme.colorScheme.primary,
+              borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
               Icons.church,
               color: theme.colorScheme.onPrimary,
-              size: 24,
+              size: 22,
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
           // Items de navegação
           Expanded(
             child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 10),
               itemCount: items.length,
               itemBuilder: (context, index) {
                 final item = items[index];
@@ -179,14 +174,14 @@ class _SidebarItem extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          margin: const EdgeInsets.symmetric(vertical: 4),
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+          duration: const Duration(milliseconds: 150),
+          margin: const EdgeInsets.symmetric(vertical: 2),
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
           decoration: BoxDecoration(
             color: isSelected
-                ? theme.colorScheme.primaryContainer.withValues(alpha: 0.5)
+                ? theme.colorScheme.primaryContainer.withValues(alpha: 0.4)
                 : null,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(8),
           ),
           child: Row(
             children: [
@@ -194,18 +189,18 @@ class _SidebarItem extends StatelessWidget {
                 icon,
                 color: isSelected
                     ? theme.colorScheme.primary
-                    : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
-                size: 22,
+                    : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                size: 20,
               ),
               if (isSelected) ...[
-                const SizedBox(width: 10),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     label,
                     style: TextStyle(
                       color: theme.colorScheme.primary,
                       fontWeight: FontWeight.w600,
-                      fontSize: 13,
+                      fontSize: 12,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -241,12 +236,12 @@ class DesktopAppBar extends StatelessWidget implements PreferredSizeWidget {
     
     return Container(
       height: preferredSize.height,
-      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         border: Border(
           bottom: BorderSide(
-            color: theme.dividerColor.withValues(alpha: 0.5),
+            color: theme.dividerColor.withValues(alpha: 0.3),
             width: 1,
           ),
         ),
@@ -255,15 +250,16 @@ class DesktopAppBar extends StatelessWidget implements PreferredSizeWidget {
         children: [
           Text(
             title,
-            style: theme.textTheme.titleLarge?.copyWith(
+            style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w600,
-              fontSize: 18,
+              fontSize: 16,
+              letterSpacing: -0.2,
             ),
           ),
           const Spacer(),
           if (notificationBadge != null) ...[
             notificationBadge!,
-            const SizedBox(width: 16),
+            const SizedBox(width: 12),
           ],
           ...?actions,
         ],
