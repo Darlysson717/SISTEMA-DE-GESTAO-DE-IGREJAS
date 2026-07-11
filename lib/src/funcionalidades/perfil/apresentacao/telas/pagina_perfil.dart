@@ -60,7 +60,6 @@ class ProfilePage extends ConsumerWidget {
     final titleFontSize = isSmallScreen ? 24.0 : (isMediumScreen ? 28.0 : 32.0);
     final subtitleFontSize = isSmallScreen ? 16.0 : 18.0;
     final sectionTitleFontSize = isSmallScreen ? 18.0 : 20.0;
-    final hasValidChipOffset = chipsScrollOffset >= 0;
 
     final isAdmin = ref
         .watch(isCurrentUserAdminProvider)
@@ -420,50 +419,3 @@ class _AppVersionBadge extends ConsumerWidget {
   }
 }
 
-class _NavigationChip extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _NavigationChip({
-    required this.label,
-    required this.icon,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return FilterChip(
-      label: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            size: 20,
-            color: isSelected ? Colors.white : const Color(0xFF6366F1),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            label,
-            style: TextStyle(
-              color: isSelected ? Colors.white : const Color(0xFF6366F1),
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-      selected: isSelected,
-      onSelected: (_) => onTap(),
-      backgroundColor: Colors.white,
-      selectedColor: const Color(0xFF6366F1),
-      checkmarkColor: Colors.white,
-      side: BorderSide(
-        color: isSelected ? const Color(0xFF6366F1) : const Color(0xFFE2E8F0),
-      ),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-    );
-  }
-}
