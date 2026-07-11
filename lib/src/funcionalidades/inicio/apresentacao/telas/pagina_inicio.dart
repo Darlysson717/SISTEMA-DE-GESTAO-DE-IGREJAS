@@ -494,7 +494,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                   );
                 }
 
-                return SliverPadding(
+                    return SliverPadding(
                   padding: contentPadding,
                   sliver: SliverList(
                     delegate: SliverChildBuilderDelegate((context, index) {
@@ -503,7 +503,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                         padding: EdgeInsets.only(
                           bottom: index == events.length - 1
                               ? 0
-                              : (isSmallScreen ? 16 : 20),
+                              : (isSmallScreen ? 12 : 16),
                         ),
                         child: EventFeedCard(
                           event: event,
