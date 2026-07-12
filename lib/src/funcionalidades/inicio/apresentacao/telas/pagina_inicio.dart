@@ -216,8 +216,66 @@ class _HomePageState extends ConsumerState<HomePage> {
   Widget build(BuildContext context) {
     final eventsAsync = ref.watch(publishedEventsProvider);
     final updateAsync = ref.watch(appUpdateProvider);
-    final isDesktop = MediaQuery.of(context).size.width >= 900;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isPhone = screenWidth < 600;
+    final isWide = screenWidth >= 600;
 
+    // MOBILE (telefone): 100% fiel ao Android APK
+    if (isPhone) {
+      return PopScope(
+        canPop: _currentIndex == 0,
+        onPopInvokedWithResult: (didPop, result) {
+          if (!didPop && _currentIndex > 0) {
+            setState(() => _currentIndex--);
+          }
+        },
+        child: Scaffold(
+          body: Stack(
+            children: [
+              IndexedStack(
+                index: _currentIndex,
+                children: [
+                  _buildInicioTab(context, eventsAsync, updateAsync),
+                  _buildAgendamentosTab(context),
+                  _buildPerfilTab(context),
+                ],
+              ),
+              updateAsync.when(
+                data: (updateInfo) {
+                  if (updateInfo == null) return const SizedBox.shrink();
+                  return _buildUpdateOverlay(context, updateInfo);
+                },
+                loading: () => const SizedBox.shrink(),
+                error: (_, __) => const SizedBox.shrink(),
+              ),
+            ],
+          ),
+          bottomNavigationBar: NavigationBar(
+            selectedIndex: _currentIndex,
+            onDestinationSelected: _setCurrentIndex,
+            destinations: const [
+              NavigationDestination(
+                icon: Icon(Icons.home_outlined),
+                selectedIcon: Icon(Icons.home),
+                label: 'Início',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.event_note_outlined),
+                selectedIcon: Icon(Icons.event_note),
+                label: 'Agendamentos',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.person_outline),
+                selectedIcon: Icon(Icons.person),
+                label: 'Perfil',
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // DESKTOP/TABLET: layout web com sidebar e chips de navegação
     return PopScope(
       canPop: _currentIndex == 0,
       onPopInvokedWithResult: (didPop, result) {
@@ -251,9 +309,9 @@ class _HomePageState extends ConsumerState<HomePage> {
               ),
             ),
             // Sidebar de perfil no desktop
-            if (isDesktop)
+            if (isWide)
               Container(
-                width: 320,
+                width: screenWidth < 900 ? 280 : 320,
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.surface,
                   border: Border(
@@ -405,7 +463,7 @@ class _HomePageState extends ConsumerState<HomePage> {
               ),
             ),
 
-            _buildNavigationChips(0),
+            if (!isSmallScreen) _buildNavigationChips(0),
 
             // O overlay de atualização obrigatória está no build() acima,
             // bloqueando toda a interface quando há uma nova versão.
@@ -950,7 +1008,7 @@ class _HomePageState extends ConsumerState<HomePage> {
               ),
             ),
 
-            _buildNavigationChips(1),
+            if (!isSmallScreen) _buildNavigationChips(1),
 
             // Conteúdo dos agendamentos
             SliverPadding(
