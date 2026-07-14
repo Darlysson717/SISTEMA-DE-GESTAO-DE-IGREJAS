@@ -6,6 +6,7 @@ import 'package:centro_social_app/src/funcionalidades/eventos/apresentacao/prove
 import 'package:centro_social_app/src/funcionalidades/eventos/apresentacao/componentes/card_feed_evento.dart';
 import 'package:centro_social_app/src/nucleo/navegacao/observador_rotas.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -103,9 +104,14 @@ class _MyEventsPageState extends ConsumerState<MyEventsPage> with RouteAware {
                           itemBuilder: (context, index) {
                             final event = filteredEvents[index];
                             final screenWidth = MediaQuery.of(context).size.width;
-                            final isWideScreen = screenWidth >= 600;
+                            final isSmallScreen = screenWidth < 600;
 
-                            if (isWideScreen) {
+                            final isAndroidNative = !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+                            final isPwaMobile = kIsWeb && isSmallScreen;
+                            // Show registrations below the event card only on Android native and PWA mobile
+                            final showRegistrationsBelow = isSmallScreen && (isAndroidNative || isPwaMobile);
+
+                            if (!showRegistrationsBelow) {
                               return IntrinsicHeight(
                                 child: Row(
                                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -404,7 +410,6 @@ class _MyEventsPageState extends ConsumerState<MyEventsPage> with RouteAware {
 
         return Container(
           width: double.infinity,
-          height: double.infinity,
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: const Color(0xFFF8FAFC),
@@ -414,21 +419,17 @@ class _MyEventsPageState extends ConsumerState<MyEventsPage> with RouteAware {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: _buildNamesGroup(
-                  title: 'Quem vai participar (${participantes.length})',
-                  people: participantes,
-                  emptyLabel: 'Nenhum participante ainda.',
-                ),
+              _buildNamesGroup(
+                title: 'Quem vai participar (${participantes.length})',
+                people: participantes,
+                emptyLabel: 'Nenhum participante ainda.',
               ),
               if (event.permitirVoluntarios) ...[
                 const SizedBox(height: 10),
-                Expanded(
-                  child: _buildNamesGroup(
-                    title: 'Quem quer ser voluntário (${voluntarios.length})',
-                    people: voluntarios,
-                    emptyLabel: 'Nenhum voluntário ainda.',
-                  ),
+                _buildNamesGroup(
+                  title: 'Quem quer ser voluntário (${voluntarios.length})',
+                  people: voluntarios,
+                  emptyLabel: 'Nenhum voluntário ainda.',
                 ),
               ],
             ],
