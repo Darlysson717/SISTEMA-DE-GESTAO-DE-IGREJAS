@@ -357,8 +357,8 @@ class _HomePageState extends ConsumerState<HomePage> {
               ),
             ),
 
-            // Chips de navegação (abaixo do banner) — somente PWA mobile e Android
-            if (showChipsUnderBanner)
+            // Chips de navegação (abaixo do banner) — somente PWA mobile, Android e PWA desktop
+            if (showChipsUnderBanner || (kIsWeb && !isSmallScreen))
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -388,13 +388,15 @@ class _HomePageState extends ConsumerState<HomePage> {
                             isSelected: _currentIndex == 1,
                             onTap: () => _setCurrentIndex(1),
                           ),
-                          const SizedBox(width: 12),
-                          _NavigationChip(
-                            label: 'Perfil',
-                            icon: Icons.person_outline,
-                            isSelected: _currentIndex == 2,
-                            onTap: () => _setCurrentIndex(2),
-                          ),
+                          if (!(kIsWeb && !isSmallScreen)) ...[
+                            const SizedBox(width: 12),
+                            _NavigationChip(
+                              label: 'Perfil',
+                              icon: Icons.person_outline,
+                              isSelected: _currentIndex == 2,
+                              onTap: () => _setCurrentIndex(2),
+                            ),
+                          ],
                           const SizedBox(width: 8),
                         ],
                       ),
@@ -974,8 +976,8 @@ class _HomePageState extends ConsumerState<HomePage> {
             ),
 
             // Conteúdo dos agendamentos
-            // Chips de navegação (abaixo do banner) — somente PWA mobile e Android
-            if (showChipsUnderBanner)
+            // Chips de navegação (abaixo do banner) — somente PWA mobile, Android e PWA desktop
+            if (showChipsUnderBanner || (kIsWeb && !isSmallScreen))
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -1005,13 +1007,15 @@ class _HomePageState extends ConsumerState<HomePage> {
                             isSelected: _currentIndex == 1,
                             onTap: () => _setCurrentIndex(1),
                           ),
-                          const SizedBox(width: 12),
-                          _NavigationChip(
-                            label: 'Perfil',
-                            icon: Icons.person_outline,
-                            isSelected: _currentIndex == 2,
-                            onTap: () => _setCurrentIndex(2),
-                          ),
+                          if (!(kIsWeb && !isSmallScreen)) ...[
+                            const SizedBox(width: 12),
+                            _NavigationChip(
+                              label: 'Perfil',
+                              icon: Icons.person_outline,
+                              isSelected: _currentIndex == 2,
+                              onTap: () => _setCurrentIndex(2),
+                            ),
+                          ],
                           const SizedBox(width: 8),
                         ],
                       ),
