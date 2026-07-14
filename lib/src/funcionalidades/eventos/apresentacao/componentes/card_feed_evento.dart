@@ -9,6 +9,8 @@ class EventFeedCard extends StatelessWidget {
   final VoidCallback? onVolunteerAction;
   final String primaryActionLabel;
   final String volunteerActionLabel;
+  final double? fixedImageHeight;
+  final bool compact;
 
   const EventFeedCard({
     super.key,
@@ -18,140 +20,211 @@ class EventFeedCard extends StatelessWidget {
     this.onVolunteerAction,
     this.primaryActionLabel = 'Participar',
     this.volunteerActionLabel = 'Quero ser voluntario',
+    this.fixedImageHeight,
+    this.compact = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final isWideScreen = MediaQuery.of(context).size.width >= 600;
+    final useCompact = compact || isWideScreen;
+
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Material(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         child: InkWell(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
           onTap: onCardTap,
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Stack(
-                  children: [
-                    AdaptiveEventImage(
-                      imageUrl: event.imagemCapaUrlVersionada,
-                      defaultAspectRatio: 16 / 9,
-                    ),
-                    Positioned.fill(
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.transparent,
-                              Colors.black.withValues(alpha: 0.28),
+                fixedImageHeight != null
+                    ? ClipRRect(
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(16),
+                          topRight: Radius.circular(16),
+                        ),
+                        child: SizedBox(
+                          height: fixedImageHeight,
+                          width: double.infinity,
+                          child: Stack(
+                            children: [
+                              SizedBox(
+                                height: fixedImageHeight,
+                                width: double.infinity,
+                                child: Image.network(
+                                  event.imagemCapaUrlVersionada?.trim() ?? '',
+                                  fit: BoxFit.cover,
+                                  width: double.infinity,
+                                  height: fixedImageHeight,
+                                  errorBuilder: (_, __, ___) => Container(
+                                    color: const Color(0xFFF1F5F9),
+                                    alignment: Alignment.center,
+                                    child: const Icon(
+                                      Icons.image_not_supported_outlined,
+                                      color: Color(0xFF94A3B8),
+                                      size: 36,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              Positioned.fill(
+                                child: DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                      colors: [
+                                        Colors.transparent,
+                                        Colors.black.withValues(alpha: 0.25),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                top: 10,
+                                left: 10,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: _getCategoryColor(event.categoria),
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: Text(
+                                    event.categoria,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ],
                           ),
                         ),
-                      ),
-                    ),
-                    Positioned(
-                      top: 12,
-                      left: 12,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: _getCategoryColor(event.categoria),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          event.categoria,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
+                      )
+                    : Stack(
+                        children: [
+                          AdaptiveEventImage(
+                            imageUrl: event.imagemCapaUrlVersionada,
+                            defaultAspectRatio: useCompact ? 16 / 10 : 16 / 9,
                           ),
-                        ),
+                          Positioned.fill(
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    Colors.transparent,
+                                    Colors.black.withValues(alpha: 0.25),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            top: 10,
+                            left: 10,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: _getCategoryColor(event.categoria),
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Text(
+                                event.categoria,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
-                ),
                 Padding(
-                  padding: const EdgeInsets.all(14),
+                  padding: EdgeInsets.all(useCompact ? 10 : 14),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         event.nome,
-                        style: const TextStyle(
-                          fontSize: 18,
+                        style: TextStyle(
+                          fontSize: useCompact ? 15 : 17,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF1E293B),
-                          height: 1.3,
+                          color: const Color(0xFF1E293B),
+                          height: 1.25,
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 8),
+                      SizedBox(height: useCompact ? 5 : 8),
                       Text(
                         event.resumoCurto,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Color(0xFF64748B),
-                          height: 1.45,
+                        style: TextStyle(
+                          fontSize: useCompact ? 12 : 13,
+                          color: const Color(0xFF64748B),
+                          height: 1.4,
                         ),
-                        maxLines: 2,
+                        maxLines: useCompact ? 1 : 2,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
+                      SizedBox(height: useCompact ? 8 : 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.schedule,
+                              size: 14,
+                              color: Color(0xFF6366F1),
                             ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF1F5F9),
-                              borderRadius: BorderRadius.circular(12),
+                            const SizedBox(width: 5),
+                            Text(
+                              event.dataTexto,
+                              style: TextStyle(
+                                fontSize: useCompact ? 11 : 12,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF475569),
+                              ),
                             ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.schedule,
-                                  size: 16,
-                                  color: Color(0xFF6366F1),
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  event.dataTexto,
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF475569),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                       if (onPrimaryAction != null) ...[
-                        const SizedBox(height: 12),
+                        SizedBox(height: useCompact ? 8 : 12),
                         if (!event.permitirVoluntarios)
                           SizedBox(
                             width: double.infinity,
@@ -160,8 +233,11 @@ class EventFeedCard extends StatelessWidget {
                               style: FilledButton.styleFrom(
                                 backgroundColor: const Color(0xFF6366F1),
                                 foregroundColor: Colors.white,
+                                padding: EdgeInsets.symmetric(
+                                  vertical: useCompact ? 8 : 10,
+                                ),
                               ),
-                              icon: const Icon(Icons.arrow_forward, size: 16),
+                              icon: Icon(Icons.arrow_forward, size: useCompact ? 14 : 16),
                               label: Text(primaryActionLabel),
                             ),
                           )
@@ -174,24 +250,24 @@ class EventFeedCard extends StatelessWidget {
                                   style: FilledButton.styleFrom(
                                     backgroundColor: const Color(0xFF6366F1),
                                     foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 10,
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: useCompact ? 8 : 10,
                                     ),
-                                    textStyle: const TextStyle(fontSize: 12),
+                                    textStyle: TextStyle(fontSize: useCompact ? 11 : 12),
                                   ),
-                                  icon: const Icon(
+                                  icon: Icon(
                                     Icons.arrow_forward,
-                                    size: 14,
+                                    size: useCompact ? 12 : 14,
                                   ),
-                                  label: const Text(
+                                  label: Text(
                                     'Participar',
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                               ),
-                              const SizedBox(width: 8),
+                              const SizedBox(width: 6),
                               Expanded(
                                 child: OutlinedButton.icon(
                                   onPressed:
@@ -211,17 +287,17 @@ class EventFeedCard extends StatelessWidget {
                                         );
                                       },
                                   style: OutlinedButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 10,
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: useCompact ? 8 : 10,
                                     ),
-                                    textStyle: const TextStyle(fontSize: 12),
+                                    textStyle: TextStyle(fontSize: useCompact ? 11 : 12),
                                   ),
-                                  icon: const Icon(
+                                  icon: Icon(
                                     Icons.volunteer_activism_outlined,
-                                    size: 14,
+                                    size: useCompact ? 12 : 14,
                                   ),
-                                  label: const Text(
+                                  label: Text(
                                     'Ser voluntario',
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,

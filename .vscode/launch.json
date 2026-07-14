@@ -11,6 +11,18 @@
         "--dart-define=SUPABASE_ANON_KEY=sb_publishable_9QiR4QbOFYojwurQ_RSi5w_dhLBsQyW",
         "--dart-define=SUPABASE_REDIRECT_URL=com.igreja.centro_social_app://login-callback/"
       ]
+    },
+    {
+      "name": "Flutter Web Local (Supabase)",
+      "request": "launch",
+      "type": "dart",
+      "deviceId": "chrome",
+      "toolArgs": [
+        "--web-port=8080",
+        "--dart-define=SUPABASE_URL=https://gtxamoukdklnudhxgjhc.supabase.co",
+        "--dart-define=SUPABASE_ANON_KEY=sb_publishable_9QiR4QbOFYojwurQ_RSi5w_dhLBsQyW",
+        "--dart-define=SUPABASE_REDIRECT_URL=http://localhost:8080/"
+      ]
     }
   ]
 }

@@ -465,9 +465,6 @@ class _HomePageState extends ConsumerState<HomePage> {
 
             if (!isSmallScreen) _buildNavigationChips(0),
 
-            // O overlay de atualização obrigatória está no build() acima,
-            // bloqueando toda a interface quando há uma nova versão.
-
             // Seção de Eventos
             SliverToBoxAdapter(
               child: Padding(
@@ -533,48 +530,74 @@ class _HomePageState extends ConsumerState<HomePage> {
                   );
                 }
 
-                // Desktop: lista horizontal de cards compactos
+                // Desktop: linhas horizontais com ate 4 cards cada
                 if (!isSmallScreen) {
-                  return SliverToBoxAdapter(
-                    child: SizedBox(
-                      height: 320,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        padding: contentPadding,
-                        itemCount: events.length,
-                        itemBuilder: (context, index) {
-                          final event = events[index];
-                          return Container(
-                            width: 280,
-                            margin: EdgeInsets.only(
-                              right: index < events.length - 1 ? 16 : 0,
-                            ),
-                            child: EventFeedCard(
-                              event: event,
-                              onCardTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => EventDetailsPage(event: event),
+                  const cardWidth = 320.0;
+                  const cardHeight = 480.0;
+                  const chunkSize = 4;
+                  final chunks = <List<AppEvent>>[];
+                  for (var i = 0; i < events.length; i += chunkSize) {
+                    chunks.add(events.sublist(
+                      i,
+                      i + chunkSize > events.length ? events.length : i + chunkSize,
+                    ));
+                  }
+                  return SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, rowIndex) {
+                        final rowEvents = chunks[rowIndex];
+                        return Padding(
+                          padding: rowIndex < chunks.length - 1
+                              ? const EdgeInsets.only(bottom: 16)
+                              : EdgeInsets.zero,
+                          child: SizedBox(
+                            height: cardHeight,
+                            child: ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              padding: contentPadding,
+                              itemCount: rowEvents.length,
+                              itemBuilder: (context, index) {
+                                final event = rowEvents[index];
+                                return Container(
+                                  width: cardWidth,
+                                  height: cardHeight,
+                                  margin: EdgeInsets.only(
+                                    right: index < rowEvents.length - 1 ? 16 : 0,
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(20),
+                                    child: EventFeedCard(
+                                      event: event,
+                                      fixedImageHeight: 240,
+                                      onCardTap: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => EventDetailsPage(event: event),
+                                          ),
+                                        );
+                                      },
+                                      onPrimaryAction: () => _registerEventInterest(
+                                        context,
+                                        event,
+                                        EventInterestType.participante,
+                                      ),
+                                      onVolunteerAction: event.permitirVoluntarios
+                                          ? () => _registerEventInterest(
+                                              context,
+                                              event,
+                                              EventInterestType.voluntario,
+                                            )
+                                          : null,
+                                    ),
                                   ),
                                 );
                               },
-                              onPrimaryAction: () => _registerEventInterest(
-                                context,
-                                event,
-                                EventInterestType.participante,
-                              ),
-                              onVolunteerAction: event.permitirVoluntarios
-                                  ? () => _registerEventInterest(
-                                      context,
-                                      event,
-                                      EventInterestType.voluntario,
-                                    )
-                                  : null,
                             ),
-                          );
-                        },
-                      ),
+                          ),
+                        );
+                      },
+                      childCount: chunks.length,
                     ),
                   );
                 }
@@ -1151,27 +1174,51 @@ class _HomePageState extends ConsumerState<HomePage> {
                         );
                       }
 
-                      // Desktop: lista horizontal de cards compactos
+                      // Desktop: linhas horizontais com ate 4 cards cada
                       if (!isSmallScreen) {
-                        return SizedBox(
-                          height: 380,
-                          child: ListView.builder(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: services.length,
-                            itemBuilder: (context, index) {
-                              final service = services[index];
-                              return Container(
-                                width: 300,
-                                margin: EdgeInsets.only(
-                                  right: index < services.length - 1 ? 16 : 0,
+                        const cardWidth = 320.0;
+                        const cardHeight = 420.0;
+                        const chunkSize = 4;
+                        final chunks = <List<Service>>[];
+                        for (var i = 0; i < services.length; i += chunkSize) {
+                          chunks.add(services.sublist(
+                            i,
+                            i + chunkSize > services.length ? services.length : i + chunkSize,
+                          ));
+                        }
+                        return Column(
+                          children: List.generate(chunks.length, (rowIndex) {
+                            final rowServices = chunks[rowIndex];
+                            return Padding(
+                              padding: rowIndex < chunks.length - 1
+                                  ? const EdgeInsets.only(bottom: 16)
+                                  : EdgeInsets.zero,
+                              child: SizedBox(
+                                height: cardHeight,
+                                child: ListView.builder(
+                                  scrollDirection: Axis.horizontal,
+                                  itemCount: rowServices.length,
+                                  itemBuilder: (context, index) {
+                                    final service = rowServices[index];
+                                    return Container(
+                                      width: cardWidth,
+                                      height: cardHeight,
+                                      margin: EdgeInsets.only(
+                                        right: index < rowServices.length - 1 ? 16 : 0,
+                                      ),
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(20),
+                                        child: _ServiceCard(
+                                          service: service,
+                                          onShowDetails: _showServiceDetails,
+                                        ),
+                                      ),
+                                    );
+                                  },
                                 ),
-                                child: _ServiceCard(
-                                  service: service,
-                                  onShowDetails: _showServiceDetails,
-                                ),
-                              );
-                            },
-                          ),
+                              ),
+                            );
+                          }),
                         );
                       }
 
@@ -1249,7 +1296,7 @@ class _HomePageState extends ConsumerState<HomePage> {
 
                   // Espaço final
                   SizedBox(
-                    height: (isSmallScreen ? 32 : 48) + bottomPadding + 80,
+                    height: (isSmallScreen ? 32 : 48) + bottomPadding,
                   ),
                 ]),
               ),
@@ -1311,6 +1358,7 @@ class _ServiceCard extends StatelessWidget {
           padding: EdgeInsets.all(isSmallScreen ? 20 : 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Row(
                 children: [

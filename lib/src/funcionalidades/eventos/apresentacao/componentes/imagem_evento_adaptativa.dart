@@ -61,11 +61,14 @@ class _AdaptiveEventImageState extends State<AdaptiveEventImage> {
         child: Container(
           color: const Color(0xFFF8FAFC),
           alignment: Alignment.center,
-          child: Image.network(
-            imageUrl,
-            fit: BoxFit.contain,
-            width: double.infinity,
-            errorBuilder: (_, __, ___) => _buildFallback(),
+          child: ClipRect(
+            child: Image.network(
+              imageUrl,
+              fit: BoxFit.cover,
+              width: double.infinity,
+              height: double.infinity,
+              errorBuilder: (_, __, ___) => _buildFallback(),
+            ),
           ),
         ),
       ),

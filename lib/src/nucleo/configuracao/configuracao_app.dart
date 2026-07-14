@@ -1,16 +1,17 @@
-/// Configurações do aplicativo Centro Social da Igreja.
-///
-/// Centraliza todas as constantes de configuração do sistema, incluindo:
-/// - URL e chave anônima do Supabase
-/// - URL de redirect para autenticação OAuth
-///
-/// As configurações podem ser sobrescritas via variáveis de ambiente
-/// do compilador usando `--dart-define` no momento do build.
-///
-/// Exemplo de uso:
-/// ```dart
-/// flutter run --dart-define=SUPABASE_URL=nova_url
-/// ```
+// Configurações do aplicativo Centro Social da Igreja.
+//
+// Centraliza todas as constantes de configuração do sistema, incluindo:
+// - URL e chave anônima do Supabase
+// - URL de redirect para autenticação OAuth
+//
+// As configurações podem ser sobrescritas via variáveis de ambiente
+// do compilador usando `--dart-define` no momento do build.
+//
+// Exemplo de uso:
+// flutter run --dart-define=SUPABASE_URL=nova_url
+
+import 'package:flutter/foundation.dart';
+
 class AppConfig {
   /// URL padrão do projeto Supabase.
   static const String _defaultSupabaseUrl =
@@ -34,14 +35,25 @@ class AppConfig {
 
   /// URL de callback para o fluxo de autenticação OAuth (PKCE).
   ///
-  /// Deve corresponder ao esquema configurado no Supabase Dashboard
-  /// em Authentication > URL Configuration > Redirect URLs.
-  ///
-  /// No build web o CI sobrescreve com a URL do site (GitHub Pages).
-  static const String oauthRedirectUrl = String.fromEnvironment(
-    'SUPABASE_REDIRECT_URL',
-    defaultValue: 'io.supabase.flutter://login-callback',
-  );
+  /// Pode ser sobrescrita com `--dart-define=SUPABASE_REDIRECT_URL=...`.
+  /// Na web, quando não houver override, usa a origem atual do navegador.
+  /// Em mobile, mantém o deep link padrão do app.
+  static String get oauthRedirectUrl {
+    const override = String.fromEnvironment(
+      'SUPABASE_REDIRECT_URL',
+      defaultValue: '',
+    );
+
+    if (override.isNotEmpty) {
+      return override;
+    }
+
+    if (kIsWeb) {
+      return Uri.base.origin;
+    }
+
+    return 'io.supabase.flutter://login-callback';
+  }
 
   /// Chave pública VAPID (Web Push certificates) do Firebase Cloud Messaging.
   ///

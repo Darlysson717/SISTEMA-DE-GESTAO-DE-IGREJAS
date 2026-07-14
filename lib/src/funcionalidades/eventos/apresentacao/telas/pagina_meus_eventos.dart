@@ -102,6 +102,98 @@ class _MyEventsPageState extends ConsumerState<MyEventsPage> with RouteAware {
                           separatorBuilder: (_, __) => const SizedBox(height: 16),
                           itemBuilder: (context, index) {
                             final event = filteredEvents[index];
+                            final screenWidth = MediaQuery.of(context).size.width;
+                            final isWideScreen = screenWidth >= 600;
+
+                            if (isWideScreen) {
+                              return IntrinsicHeight(
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: [
+                                    Expanded(
+                                      flex: 3,
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          EventFeedCard(
+                                            event: event,
+                                            compact: true,
+                                            fixedImageHeight: 120,
+                                            onCardTap: () {
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (_) =>
+                                                      EventDetailsPage(event: event),
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                          const SizedBox(height: 10),
+                                          Row(
+                                            children: [
+                                              Chip(
+                                                avatar: const Icon(Icons.circle, size: 10),
+                                                label: Text(_statusLabel(event.status)),
+                                                visualDensity: VisualDensity.compact,
+                                              ),
+                                              const Spacer(),
+                                              OutlinedButton.icon(
+                                                onPressed: () async {
+                                                  await Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute(
+                                                      builder: (_) => AnnounceEventPage(
+                                                        initialEvent: event,
+                                                      ),
+                                                    ),
+                                                  );
+
+                                                  if (!mounted) return;
+                                                  _refreshEventFeeds();
+                                                },
+                                                icon: const Icon(Icons.edit_outlined),
+                                                label: const Text('Editar'),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              FilledButton.icon(
+                                                onPressed: _deletingEventId == event.id
+                                                    ? null
+                                                    : () => _onDeleteEvent(event),
+                                                style: FilledButton.styleFrom(
+                                                  backgroundColor: const Color(0xFFDC2626),
+                                                  foregroundColor: Colors.white,
+                                                ),
+                                                icon: _deletingEventId == event.id
+                                                    ? const SizedBox(
+                                                        height: 16,
+                                                        width: 16,
+                                                        child: CircularProgressIndicator(
+                                                          strokeWidth: 2,
+                                                        ),
+                                                      )
+                                                    : const Icon(Icons.delete_outline),
+                                                label: Text(
+                                                      _deletingEventId == event.id
+                                                          ? 'Excluindo...'
+                                                          : 'Excluir',
+                                                    ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      flex: 5,
+                                      child: _buildRegistrationsNamesSection(event),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }
+
                             return Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -312,6 +404,7 @@ class _MyEventsPageState extends ConsumerState<MyEventsPage> with RouteAware {
 
         return Container(
           width: double.infinity,
+          height: double.infinity,
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: const Color(0xFFF8FAFC),
@@ -321,17 +414,21 @@ class _MyEventsPageState extends ConsumerState<MyEventsPage> with RouteAware {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildNamesGroup(
-                title: 'Quem vai participar (${participantes.length})',
-                people: participantes,
-                emptyLabel: 'Nenhum participante ainda.',
+              Expanded(
+                child: _buildNamesGroup(
+                  title: 'Quem vai participar (${participantes.length})',
+                  people: participantes,
+                  emptyLabel: 'Nenhum participante ainda.',
+                ),
               ),
               if (event.permitirVoluntarios) ...[
                 const SizedBox(height: 10),
-                _buildNamesGroup(
-                  title: 'Quem quer ser voluntário (${voluntarios.length})',
-                  people: voluntarios,
-                  emptyLabel: 'Nenhum voluntário ainda.',
+                Expanded(
+                  child: _buildNamesGroup(
+                    title: 'Quem quer ser voluntário (${voluntarios.length})',
+                    people: voluntarios,
+                    emptyLabel: 'Nenhum voluntário ainda.',
+                  ),
                 ),
               ],
             ],

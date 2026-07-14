@@ -740,47 +740,97 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
             ),
 
             SliverToBoxAdapter(
-              child: Stack(
-                children: [
-                  AdaptiveEventImage(
-                    imageUrl: service.imagemProfissional,
-                    defaultAspectRatio: isSmallScreen ? 4 / 3 : 16 / 9,
-                  ),
-                  Positioned(
-                    left: 16,
-                    right: 16,
-                    bottom: isSmallScreen ? 14 : 18,
-                    child: Center(
-                      child: Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: isSmallScreen ? 20 : 24,
-                          vertical: isSmallScreen ? 12 : 16,
+              child: isSmallScreen
+                  ? Stack(
+                      children: [
+                        AdaptiveEventImage(
+                          imageUrl: service.imagemProfissional,
+                          defaultAspectRatio: 4 / 3,
                         ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF059669),
-                          borderRadius: BorderRadius.circular(25),
-                        ),
-                        child: Text(
-                          service.nomeProfissional,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: isSmallScreen ? 20 : 24,
-                            fontWeight: FontWeight.w600,
-                            shadows: [
-                              Shadow(
-                                color: Colors.black.withValues(alpha: 0.3),
-                                offset: const Offset(0, 2),
-                                blurRadius: 4,
+                        Positioned(
+                          left: 16,
+                          right: 16,
+                          bottom: 14,
+                          child: Center(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 12,
                               ),
-                            ],
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF059669),
+                                borderRadius: BorderRadius.circular(25),
+                              ),
+                              child: Text(
+                                service.nomeProfissional,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w600,
+                                  shadows: [
+                                    Shadow(
+                                      color: Colors.black54,
+                                      offset: Offset(0, 2),
+                                      blurRadius: 4,
+                                    ),
+                                  ],
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
                           ),
-                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    )
+                  : Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(
+                          maxHeight: 300,
+                          maxWidth: 500,
+                        ),
+                        child: Stack(
+                          children: [
+                            AdaptiveEventImage(
+                              imageUrl: service.imagemProfissional,
+                              defaultAspectRatio: 16 / 10,
+                            ),
+                            Positioned(
+                              left: 16,
+                              right: 16,
+                              bottom: 18,
+                              child: Center(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 24,
+                                    vertical: 16,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF059669),
+                                    borderRadius: BorderRadius.circular(25),
+                                  ),
+                                  child: Text(
+                                    service.nomeProfissional,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.w600,
+                                      shadows: [
+                                        Shadow(
+                                          color: Colors.black54,
+                                          offset: Offset(0, 2),
+                                          blurRadius: 4,
+                                        ),
+                                      ],
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                  ),
-                ],
-              ),
             ),
 
             // Conteúdo principal

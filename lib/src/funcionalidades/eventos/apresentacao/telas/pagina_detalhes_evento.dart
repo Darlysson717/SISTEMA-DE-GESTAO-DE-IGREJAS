@@ -24,6 +24,8 @@ class _EventDetailsPageState extends ConsumerState<EventDetailsPage> {
     final repository = ref.watch(eventsRepositoryProvider);
     final registrationsAsync = ref.watch(eventRegistrationsProvider(event.id));
     final bottomPadding = MediaQuery.of(context).padding.bottom;
+    final screenSize = MediaQuery.of(context).size;
+    final isSmallScreen = screenSize.width < 600;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Detalhes do Evento')),
@@ -39,10 +41,23 @@ class _EventDetailsPageState extends ConsumerState<EventDetailsPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              AdaptiveEventImage(
-                imageUrl: event.imagemCapaUrlVersionada,
-                defaultAspectRatio: 16 / 9,
-              ),
+              isSmallScreen
+                  ? AdaptiveEventImage(
+                      imageUrl: event.imagemCapaUrlVersionada,
+                      defaultAspectRatio: 16 / 9,
+                    )
+                  : Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(
+                          maxHeight: 300,
+                          maxWidth: 500,
+                        ),
+                        child: AdaptiveEventImage(
+                          imageUrl: event.imagemCapaUrlVersionada,
+                          defaultAspectRatio: 16 / 10,
+                        ),
+                      ),
+                    ),
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
