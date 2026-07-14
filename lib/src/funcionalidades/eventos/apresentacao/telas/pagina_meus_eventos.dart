@@ -102,176 +102,166 @@ class _MyEventsPageState extends ConsumerState<MyEventsPage> with RouteAware {
                           itemCount: filteredEvents.length,
                           separatorBuilder: (_, __) => const SizedBox(height: 16),
                           itemBuilder: (context, index) {
-                            final event = filteredEvents[index];
-                            final screenWidth = MediaQuery.of(context).size.width;
-                            final isSmallScreen = screenWidth < 600;
+                              final event = filteredEvents[index];
+                              final screenWidth = MediaQuery.of(context).size.width;
+                              final isSmallScreen = screenWidth < 600;
 
-                            final isAndroidNative = !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
-                            final isPwaMobile = kIsWeb && isSmallScreen;
-                            // Show registrations below the event card only on Android native and PWA mobile
-                            final showRegistrationsBelow = isSmallScreen && (isAndroidNative || isPwaMobile);
+                              final isAndroidNative = !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+                              final isPwaMobile = kIsWeb && isSmallScreen;
+                              // Show registrations below the event card only on Android native and PWA mobile
+                              final showRegistrationsBelow = isSmallScreen && (isAndroidNative || isPwaMobile);
 
-                            if (!showRegistrationsBelow) {
-                              return IntrinsicHeight(
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                                  children: [
-                                    Expanded(
-                                      flex: 3,
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          EventFeedCard(
-                                            event: event,
-                                            compact: true,
-                                            fixedImageHeight: 120,
-                                            onCardTap: () {
-                                              Navigator.push(
-                                                context,
-                                                MaterialPageRoute(
-                                                  builder: (_) =>
-                                                      EventDetailsPage(event: event),
-                                                ),
-                                              );
-                                            },
-                                          ),
-                                          const SizedBox(height: 10),
-                                          Row(
-                                            children: [
-                                              Chip(
-                                                avatar: const Icon(Icons.circle, size: 10),
-                                                label: Text(_statusLabel(event.status)),
-                                                visualDensity: VisualDensity.compact,
-                                              ),
-                                              const Spacer(),
-                                              OutlinedButton.icon(
-                                                onPressed: () async {
-                                                  await Navigator.push(
-                                                    context,
-                                                    MaterialPageRoute(
-                                                      builder: (_) => AnnounceEventPage(
-                                                        initialEvent: event,
-                                                      ),
-                                                    ),
-                                                  );
-
-                                                  if (!mounted) return;
-                                                  _refreshEventFeeds();
-                                                },
-                                                icon: const Icon(Icons.edit_outlined),
-                                                label: const Text('Editar'),
-                                              ),
-                                              const SizedBox(width: 8),
-                                              FilledButton.icon(
-                                                onPressed: _deletingEventId == event.id
-                                                    ? null
-                                                    : () => _onDeleteEvent(event),
-                                                style: FilledButton.styleFrom(
-                                                  backgroundColor: const Color(0xFFDC2626),
-                                                  foregroundColor: Colors.white,
-                                                ),
-                                                icon: _deletingEventId == event.id
-                                                    ? const SizedBox(
-                                                        height: 16,
-                                                        width: 16,
-                                                        child: CircularProgressIndicator(
-                                                          strokeWidth: 2,
-                                                        ),
-                                                      )
-                                                    : const Icon(Icons.delete_outline),
-                                                label: Text(
-                                                      _deletingEventId == event.id
-                                                          ? 'Excluindo...'
-                                                          : 'Excluir',
-                                                    ),
-                                              ),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    const SizedBox(width: 16),
-                                    Expanded(
-                                      flex: 5,
-                                      child: _buildRegistrationsNamesSection(event),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }
-
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                EventFeedCard(
-                                  event: event,
-                                  onCardTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) =>
-                                            EventDetailsPage(event: event),
-                                      ),
-                                    );
-                                  },
-                                ),
-                                const SizedBox(height: 10),
-                                Row(
-                                  children: [
-                                    Chip(
-                                      avatar: const Icon(Icons.circle, size: 10),
-                                      label: Text(_statusLabel(event.status)),
-                                      visualDensity: VisualDensity.compact,
-                                    ),
-                                    const Spacer(),
-                                    OutlinedButton.icon(
-                                      onPressed: () async {
-                                        await Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (_) => AnnounceEventPage(
-                                              initialEvent: event,
+                              if (!showRegistrationsBelow) {
+                                return IntrinsicHeight(
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                                    children: [
+                                      Expanded(
+                                        flex: 3,
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            EventFeedCard(
+                                              event: event,
+                                              compact: true,
+                                              fixedImageHeight: 120,
+                                              onCardTap: () {
+                                                Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder: (_) => EventDetailsPage(event: event),
+                                                  ),
+                                                );
+                                              },
                                             ),
-                                          ),
-                                        );
+                                            const SizedBox(height: 10),
+                                            Row(
+                                              children: [
+                                                Chip(
+                                                  avatar: const Icon(Icons.circle, size: 10),
+                                                  label: Text(_statusLabel(event.status)),
+                                                  visualDensity: VisualDensity.compact,
+                                                ),
+                                                const Spacer(),
+                                                OutlinedButton.icon(
+                                                  onPressed: () async {
+                                                    await Navigator.push(
+                                                      context,
+                                                      MaterialPageRoute(
+                                                        builder: (_) => AnnounceEventPage(
+                                                          initialEvent: event,
+                                                        ),
+                                                      ),
+                                                    );
 
-                                        if (!mounted) return;
-                                        _refreshEventFeeds();
-                                      },
-                                      icon: const Icon(Icons.edit_outlined),
-                                      label: const Text('Editar'),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    FilledButton.icon(
-                                      onPressed: _deletingEventId == event.id
-                                          ? null
-                                          : () => _onDeleteEvent(event),
-                                      style: FilledButton.styleFrom(
-                                        backgroundColor: const Color(0xFFDC2626),
-                                        foregroundColor: Colors.white,
+                                                    if (!mounted) return;
+                                                    _refreshEventFeeds();
+                                                  },
+                                                  icon: const Icon(Icons.edit_outlined),
+                                                  label: const Text('Editar'),
+                                                ),
+                                                const SizedBox(width: 8),
+                                                FilledButton.icon(
+                                                  onPressed: _deletingEventId == event.id
+                                                      ? null
+                                                      : () => _onDeleteEvent(event),
+                                                  style: FilledButton.styleFrom(
+                                                    backgroundColor: const Color(0xFFDC2626),
+                                                    foregroundColor: Colors.white,
+                                                  ),
+                                                  icon: _deletingEventId == event.id
+                                                      ? const SizedBox(
+                                                          height: 16,
+                                                          width: 16,
+                                                          child: CircularProgressIndicator(
+                                                            strokeWidth: 2,
+                                                          ),
+                                                        )
+                                                      : const Icon(Icons.delete_outline),
+                                                  label: Text(
+                                                    _deletingEventId == event.id ? 'Excluindo...' : 'Excluir',
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
                                       ),
-                                      icon: _deletingEventId == event.id
-                                          ? const SizedBox(
-                                              height: 16,
-                                              width: 16,
-                                              child: CircularProgressIndicator(
-                                                strokeWidth: 2,
+                                      const SizedBox(width: 16),
+                                      Expanded(
+                                        flex: 5,
+                                        child: _buildRegistrationsNamesSection(event),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }
+
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  EventFeedCard(
+                                    event: event,
+                                    onCardTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => EventDetailsPage(event: event),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Row(
+                                    children: [
+                                      Chip(
+                                        avatar: const Icon(Icons.circle, size: 10),
+                                        label: Text(_statusLabel(event.status)),
+                                        visualDensity: VisualDensity.compact,
+                                      ),
+                                      const Spacer(),
+                                      OutlinedButton.icon(
+                                        onPressed: () async {
+                                          await Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) => AnnounceEventPage(
+                                                initialEvent: event,
                                               ),
-                                            )
-                                          : const Icon(Icons.delete_outline),
-                                      label: Text(
-                                        _deletingEventId == event.id
-                                            ? 'Excluindo...'
-                                            : 'Excluir',
+                                            ),
+                                          );
+
+                                          if (!mounted) return;
+                                          _refreshEventFeeds();
+                                        },
+                                        icon: const Icon(Icons.edit_outlined),
+                                        label: const Text('Editar'),
                                       ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 12),
-                                _buildRegistrationsNamesSection(event),
-                              ],
-                            );
-                          },
+                                      const SizedBox(width: 8),
+                                      FilledButton.icon(
+                                        onPressed: _deletingEventId == event.id ? null : () => _onDeleteEvent(event),
+                                        style: FilledButton.styleFrom(
+                                          backgroundColor: const Color(0xFFDC2626),
+                                          foregroundColor: Colors.white,
+                                        ),
+                                        icon: _deletingEventId == event.id
+                                            ? const SizedBox(
+                                                height: 16,
+                                                width: 16,
+                                                child: CircularProgressIndicator(
+                                                  strokeWidth: 2,
+                                                ),
+                                              )
+                                            : const Icon(Icons.delete_outline),
+                                        label: Text(_deletingEventId == event.id ? 'Excluindo...' : 'Excluir'),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 12),
+                                  _buildRegistrationsNamesSection(event),
+                                ],
+                              );
+                            },
                         ),
                 ),
               ],
