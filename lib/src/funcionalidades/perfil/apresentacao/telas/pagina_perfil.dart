@@ -49,13 +49,17 @@ class ProfilePage extends ConsumerWidget {
     final isSmallScreen = screenSize.width < 600;
     final isMediumScreen = screenSize.width >= 600 && screenSize.width < 1200;
 
+    final topInset = MediaQuery.of(context).padding.top;
     final headerPadding = isSmallScreen
-        ? const EdgeInsets.fromLTRB(16, 12, 16, 16)
-        : const EdgeInsets.fromLTRB(24, 16, 24, 20);
+      ? EdgeInsets.fromLTRB(20, topInset + 20, 20, 32)
+      : EdgeInsets.fromLTRB(32, topInset + 32, 32, 48);
 
     final contentPadding = isSmallScreen
         ? const EdgeInsets.symmetric(horizontal: 16)
         : const EdgeInsets.symmetric(horizontal: 24);
+
+    final extraBottomGap = showNavigationChips ? 16.0 : 0.0;
+    final bottomSpacing = bottomPadding + (isSmallScreen ? extraBottomGap : 0.0);
 
     final titleFontSize = isSmallScreen ? 20.0 : (isMediumScreen ? 22.0 : 24.0);
     final subtitleFontSize = isSmallScreen ? 14.0 : 16.0;
@@ -150,7 +154,36 @@ class ProfilePage extends ConsumerWidget {
                 ),
               ),
 
-              // Chips de navegação removidos - agora usa sidebar no desktop
+                // Chips de navegação (aparecem em PWA mobile e Android)
+                if (showNavigationChips)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                      child: SizedBox(
+                        height: 56,
+                        child: NotificationListener<ScrollNotification>(
+                          onNotification: (notification) {
+                            if (notification.metrics.axis == Axis.horizontal) {
+                              onChipsScroll?.call(notification.metrics.pixels);
+                            }
+                            return false;
+                          },
+                          child: ListView(
+                            controller: chipsScrollController,
+                            scrollDirection: Axis.horizontal,
+                            children: [
+                              _buildNavChip('Início', Icons.home_outlined),
+                              const SizedBox(width: 12),
+                              _buildNavChip('Agendamentos', Icons.event_note_outlined),
+                              const SizedBox(width: 12),
+                              _buildNavChip('Perfil', Icons.person_outline),
+                              const SizedBox(width: 8),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
 
               SliverPadding(
                 padding: contentPadding,
@@ -269,7 +302,7 @@ class ProfilePage extends ConsumerWidget {
                     ),
 
                     SizedBox(
-                      height: (isSmallScreen ? 32 : 48) + bottomPadding + 80,
+                      height: (isSmallScreen ? 32 : 48) + bottomSpacing + 80,
                     ),
                   ]),
                 ),
@@ -351,6 +384,48 @@ class ProfilePage extends ConsumerWidget {
     }
 
     return actions;
+  }
+
+  Widget _buildNavChip(String label, IconData icon) {
+    final isSelected = currentIndex == (label == 'Início' ? 0 : label == 'Agendamentos' ? 1 : 2);
+    return FilterChip(
+      label: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 20,
+            color: isSelected ? Colors.white : const Color(0xFF6366F1),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: TextStyle(
+              color: isSelected ? Colors.white : const Color(0xFF6366F1),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+      selected: isSelected,
+      onSelected: (_) {
+        if (label == 'Início') {
+          onNavigateToInicio?.call();
+        } else if (label == 'Agendamentos') {
+          onNavigateToAgendamentos?.call();
+        } else if (label == 'Perfil') {
+          onNavigateToPerfil?.call();
+        }
+      },
+      backgroundColor: Colors.white,
+      selectedColor: const Color(0xFF6366F1),
+      checkmarkColor: Colors.white,
+      side: BorderSide(
+        color: isSelected ? const Color(0xFF6366F1) : const Color(0xFFE2E8F0),
+      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+    );
   }
 }
 

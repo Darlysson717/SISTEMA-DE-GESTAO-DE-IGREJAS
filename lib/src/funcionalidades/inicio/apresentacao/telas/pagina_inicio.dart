@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:centro_social_app/src/funcionalidades/autenticacao/dominio/entidades/usuario_app.dart';
 import 'package:centro_social_app/src/funcionalidades/autenticacao/apresentacao/provedores/provedores_autenticacao.dart';
@@ -79,6 +80,17 @@ class _HomePageState extends ConsumerState<HomePage> {
     });
   }
 
+  void _broadcastChipsOffset(double offset) {
+    _chipsScrollOffset = offset;
+    for (var i = 0; i < _chipsControllers.length; i++) {
+      final controller = _chipsControllers[i];
+      if (!controller.hasClients) continue;
+      final target = _chipsScrollOffset.clamp(0.0, controller.position.maxScrollExtent);
+      if ((controller.offset - target).abs() < 1) continue;
+      controller.jumpTo(target);
+    }
+  }
+
   String? _resolveCurrentUserPhotoUrl() {
     final authUser = ref.watch(supabaseClientProvider).auth.currentUser;
     final metadata = authUser?.userMetadata;
@@ -111,106 +123,14 @@ class _HomePageState extends ConsumerState<HomePage> {
     await Future<void>.delayed(const Duration(milliseconds: 200));
   }
 
-  SliverToBoxAdapter _buildNavigationChips(int selectedIndex) {
-    final controller = _chipsControllers[selectedIndex];
-
-    return SliverToBoxAdapter(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            NotificationListener<ScrollNotification>(
-              onNotification: (notification) {
-                if (notification.metrics.axis == Axis.horizontal) {
-                  _chipsScrollOffset = notification.metrics.pixels;
-                }
-                return false;
-              },
-              child: SingleChildScrollView(
-                controller: controller,
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                child: Row(
-                  children: [
-                    _NavigationChip(
-                      label: 'Inicio',
-                      icon: Icons.home_outlined,
-                      isSelected: _currentIndex == 0,
-                      onTap: () => _setCurrentIndex(0),
-                    ),
-                    const SizedBox(width: 12),
-                    _NavigationChip(
-                      label: 'Agendamentos',
-                      icon: Icons.event_note_outlined,
-                      isSelected: _currentIndex == 1,
-                      onTap: () => _setCurrentIndex(1),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            Positioned(
-              left: -12,
-              top: 0,
-              bottom: 0,
-              child: Container(
-                width: 24,
-                alignment: Alignment.centerLeft,
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.9),
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
-                        blurRadius: 4,
-                        offset: const Offset(1, 1),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.chevron_left,
-                    size: 16,
-                    color: Color(0xFF6366F1),
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              right: -12,
-              top: 0,
-              bottom: 0,
-              child: Container(
-                width: 24,
-                alignment: Alignment.centerRight,
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.9),
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
-                        blurRadius: 4,
-                        offset: const Offset(1, 1),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.chevron_right,
-                    size: 16,
-                    color: Color(0xFF6366F1),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+  bool _shouldShowChipsBelowBanner(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 600;
+    final isAndroidNative = !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+    final isPwaMobile = kIsWeb && isSmallScreen;
+    return isSmallScreen && (isAndroidNative || isPwaMobile);
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -218,6 +138,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     final updateAsync = ref.watch(appUpdateProvider);
     final screenWidth = MediaQuery.of(context).size.width;
     final isPhone = screenWidth < 600;
+    final showChipsUnderBanner = _shouldShowChipsBelowBanner(context);
     final isWide = screenWidth >= 600;
 
     // MOBILE (telefone): chips de navegação iguais ao desktop
@@ -230,38 +151,20 @@ class _HomePageState extends ConsumerState<HomePage> {
           }
         },
         child: Scaffold(
-          body: Column(
+          body: IndexedStack(
+            index: _currentIndex,
             children: [
-              _buildNavigationChips(_currentIndex),
-              Expanded(
-                child: Stack(
-                  children: [
-                    IndexedStack(
-                      index: _currentIndex,
-                      children: [
-                        _buildInicioTab(context, eventsAsync, updateAsync),
-                        _buildAgendamentosTab(context),
-                        _buildPerfilTab(context),
-                      ],
-                    ),
-                    updateAsync.when(
-                      data: (updateInfo) {
-                        if (updateInfo == null) return const SizedBox.shrink();
-                        return _buildUpdateOverlay(context, updateInfo);
-                      },
-                      loading: () => const SizedBox.shrink(),
-                      error: (_, __) => const SizedBox.shrink(),
-                    ),
-                  ],
-                ),
-              ),
+              _buildInicioTab(context, eventsAsync, updateAsync),
+              _buildAgendamentosTab(context),
+              _buildPerfilTab(context),
             ],
           ),
+          bottomNavigationBar: showChipsUnderBanner ? null : _buildMobileNavigationBar(),
         ),
       );
     }
 
-    // DESKTOP/TABLET: layout web com sidebar e chips de navegação
+    // DESKTOP/TABLET: layout web com sidebar de perfil
     return PopScope(
       canPop: _currentIndex == 0,
       onPopInvokedWithResult: (didPop, result) {
@@ -281,6 +184,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                     children: [
                       _buildInicioTab(context, eventsAsync, updateAsync),
                       _buildAgendamentosTab(context),
+                      _buildPerfilTab(context),
                     ],
                   ),
                   updateAsync.when(
@@ -321,14 +225,18 @@ class _HomePageState extends ConsumerState<HomePage> {
     AsyncValue<AppUpdateInfo?> updateAsync,
   ) {
     final screenSize = MediaQuery.of(context).size;
-    final bottomPadding = MediaQuery.of(context).padding.bottom;
     final isSmallScreen = screenSize.width < 600;
     final isMediumScreen = screenSize.width >= 600 && screenSize.width < 1200;
+    final showChipsUnderBanner = _shouldShowChipsBelowBanner(context);
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+    final extraBottomGap = 16.0;
+    final bottomSpacing = bottomPadding + (isSmallScreen ? extraBottomGap : 0.0);
 
     // Ajustes responsivos
+    final topInset = MediaQuery.of(context).padding.top;
     final headerPadding = isSmallScreen
-        ? const EdgeInsets.fromLTRB(20, 20, 20, 32)
-        : const EdgeInsets.fromLTRB(32, 32, 32, 48);
+      ? EdgeInsets.fromLTRB(20, topInset + 20, 20, 32)
+      : EdgeInsets.fromLTRB(32, topInset + 32, 32, 48);
 
     final contentPadding = isSmallScreen
         ? const EdgeInsets.symmetric(horizontal: 20)
@@ -448,6 +356,52 @@ class _HomePageState extends ConsumerState<HomePage> {
                 ),
               ),
             ),
+
+            // Chips de navegação (abaixo do banner) — somente PWA mobile e Android
+            if (showChipsUnderBanner)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  child: SizedBox(
+                    height: 56,
+                    child: NotificationListener<ScrollNotification>(
+                      onNotification: (notification) {
+                        if (notification.metrics.axis == Axis.horizontal) {
+                          _broadcastChipsOffset(notification.metrics.pixels);
+                        }
+                        return false;
+                      },
+                      child: ListView(
+                        controller: _chipsControllers[0],
+                        scrollDirection: Axis.horizontal,
+                        children: [
+                          _NavigationChip(
+                            label: 'Início',
+                            icon: Icons.home_outlined,
+                            isSelected: _currentIndex == 0,
+                            onTap: () => _setCurrentIndex(0),
+                          ),
+                          const SizedBox(width: 12),
+                          _NavigationChip(
+                            label: 'Agendamentos',
+                            icon: Icons.event_note_outlined,
+                            isSelected: _currentIndex == 1,
+                            onTap: () => _setCurrentIndex(1),
+                          ),
+                          const SizedBox(width: 12),
+                          _NavigationChip(
+                            label: 'Perfil',
+                            icon: Icons.person_outline,
+                            isSelected: _currentIndex == 2,
+                            onTap: () => _setCurrentIndex(2),
+                          ),
+                          const SizedBox(width: 8),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
 
             // Seção de Eventos
             SliverToBoxAdapter(
@@ -650,9 +604,9 @@ class _HomePageState extends ConsumerState<HomePage> {
               ),
             ),
 
-            // Espaço final considerando bottom padding
+            // Espaço final considerando bottom padding + gap para nav bar
             SliverToBoxAdapter(
-              child: SizedBox(height: (isSmallScreen ? 32 : 48) + bottomPadding),
+              child: SizedBox(height: (isSmallScreen ? 32 : 48) + bottomSpacing),
             ),
           ],
         ),
@@ -887,14 +841,18 @@ class _HomePageState extends ConsumerState<HomePage> {
   Widget _buildAgendamentosTab(BuildContext context) {
     final servicesAsync = ref.watch(publishedServicesProvider);
     final screenSize = MediaQuery.of(context).size;
+    final showChipsUnderBanner = _shouldShowChipsBelowBanner(context);
     final bottomPadding = MediaQuery.of(context).padding.bottom;
     final isSmallScreen = screenSize.width < 600;
     final isMediumScreen = screenSize.width >= 600 && screenSize.width < 1200;
 
     // Ajustes responsivos
+    final topInset = MediaQuery.of(context).padding.top;
     final headerPadding = isSmallScreen
-        ? const EdgeInsets.fromLTRB(20, 20, 20, 32)
-        : const EdgeInsets.fromLTRB(32, 32, 32, 48);
+      ? EdgeInsets.fromLTRB(20, topInset + 20, 20, 32)
+      : EdgeInsets.fromLTRB(32, topInset + 32, 32, 48);
+    final extraBottomGap = showChipsUnderBanner ? 16.0 : 16.0;
+    final bottomSpacing = bottomPadding + (isSmallScreen ? extraBottomGap : 0.0);
 
     final contentPadding = isSmallScreen
         ? const EdgeInsets.symmetric(horizontal: 20)
@@ -1016,6 +974,51 @@ class _HomePageState extends ConsumerState<HomePage> {
             ),
 
             // Conteúdo dos agendamentos
+            // Chips de navegação (abaixo do banner) — somente PWA mobile e Android
+            if (showChipsUnderBanner)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  child: SizedBox(
+                    height: 56,
+                    child: NotificationListener<ScrollNotification>(
+                      onNotification: (notification) {
+                        if (notification.metrics.axis == Axis.horizontal) {
+                          _broadcastChipsOffset(notification.metrics.pixels);
+                        }
+                        return false;
+                      },
+                      child: ListView(
+                        controller: _chipsControllers[1],
+                        scrollDirection: Axis.horizontal,
+                        children: [
+                          _NavigationChip(
+                            label: 'Início',
+                            icon: Icons.home_outlined,
+                            isSelected: _currentIndex == 0,
+                            onTap: () => _setCurrentIndex(0),
+                          ),
+                          const SizedBox(width: 12),
+                          _NavigationChip(
+                            label: 'Agendamentos',
+                            icon: Icons.event_note_outlined,
+                            isSelected: _currentIndex == 1,
+                            onTap: () => _setCurrentIndex(1),
+                          ),
+                          const SizedBox(width: 12),
+                          _NavigationChip(
+                            label: 'Perfil',
+                            icon: Icons.person_outline,
+                            isSelected: _currentIndex == 2,
+                            onTap: () => _setCurrentIndex(2),
+                          ),
+                          const SizedBox(width: 8),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             SliverPadding(
               padding: contentPadding,
               sliver: SliverList(
@@ -1278,7 +1281,7 @@ class _HomePageState extends ConsumerState<HomePage> {
 
                   // Espaço final
                   SizedBox(
-                    height: (isSmallScreen ? 32 : 48) + bottomPadding,
+                    height: (isSmallScreen ? 32 : 48) + bottomSpacing,
                   ),
                 ]),
               ),
@@ -1289,21 +1292,66 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
+  Widget _buildMobileNavigationBar() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 12,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            children: [
+              _NavigationChip(
+                label: 'Início',
+                icon: Icons.home_outlined,
+                isSelected: _currentIndex == 0,
+                onTap: () => _setCurrentIndex(0),
+              ),
+              const SizedBox(width: 12),
+              _NavigationChip(
+                label: 'Agendamentos',
+                icon: Icons.event_note_outlined,
+                isSelected: _currentIndex == 1,
+                onTap: () => _setCurrentIndex(1),
+              ),
+              const SizedBox(width: 12),
+              _NavigationChip(
+                label: 'Perfil',
+                icon: Icons.person_outline,
+                isSelected: _currentIndex == 2,
+                onTap: () => _setCurrentIndex(2),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildPerfilTab(BuildContext context) {
     ref.watch(authStateChangesProvider);
+    final showChipsUnderBanner = _shouldShowChipsBelowBanner(context);
 
     return ProfilePage(
       user: widget.currentUser,
       commitmentsCount: 3,
       photoUrl: _resolveCurrentUserPhotoUrl(),
-      showNavigationChips: true,
+      showNavigationChips: showChipsUnderBanner,
       onNavigateToInicio: () => _setCurrentIndex(0),
       onNavigateToAgendamentos: () => _setCurrentIndex(1),
       onNavigateToPerfil: () => _setCurrentIndex(2),
       onLogout: () => ref.read(authControllerProvider.notifier).logout(),
       currentIndex: _currentIndex,
       chipsScrollController: _chipsControllers[2],
-      onChipsScroll: (offset) => _chipsScrollOffset = offset,
+      onChipsScroll: (offset) => _broadcastChipsOffset(offset),
       chipsScrollOffset: _chipsScrollOffset,
     );
   }
