@@ -220,7 +220,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     final isPhone = screenWidth < 600;
     final isWide = screenWidth >= 600;
 
-    // MOBILE (telefone): 100% fiel ao Android APK
+    // MOBILE (telefone): chips de navegação iguais ao desktop
     if (isPhone) {
       return PopScope(
         canPop: _currentIndex == 0,
@@ -230,44 +230,30 @@ class _HomePageState extends ConsumerState<HomePage> {
           }
         },
         child: Scaffold(
-          body: Stack(
+          body: Column(
             children: [
-              IndexedStack(
-                index: _currentIndex,
-                children: [
-                  _buildInicioTab(context, eventsAsync, updateAsync),
-                  _buildAgendamentosTab(context),
-                  _buildPerfilTab(context),
-                ],
-              ),
-              updateAsync.when(
-                data: (updateInfo) {
-                  if (updateInfo == null) return const SizedBox.shrink();
-                  return _buildUpdateOverlay(context, updateInfo);
-                },
-                loading: () => const SizedBox.shrink(),
-                error: (_, __) => const SizedBox.shrink(),
-              ),
-            ],
-          ),
-          bottomNavigationBar: NavigationBar(
-            selectedIndex: _currentIndex,
-            onDestinationSelected: _setCurrentIndex,
-            destinations: const [
-              NavigationDestination(
-                icon: Icon(Icons.home_outlined),
-                selectedIcon: Icon(Icons.home),
-                label: 'Início',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.event_note_outlined),
-                selectedIcon: Icon(Icons.event_note),
-                label: 'Agendamentos',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.person_outline),
-                selectedIcon: Icon(Icons.person),
-                label: 'Perfil',
+              _buildNavigationChips(_currentIndex),
+              Expanded(
+                child: Stack(
+                  children: [
+                    IndexedStack(
+                      index: _currentIndex,
+                      children: [
+                        _buildInicioTab(context, eventsAsync, updateAsync),
+                        _buildAgendamentosTab(context),
+                        _buildPerfilTab(context),
+                      ],
+                    ),
+                    updateAsync.when(
+                      data: (updateInfo) {
+                        if (updateInfo == null) return const SizedBox.shrink();
+                        return _buildUpdateOverlay(context, updateInfo);
+                      },
+                      loading: () => const SizedBox.shrink(),
+                      error: (_, __) => const SizedBox.shrink(),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -462,8 +448,6 @@ class _HomePageState extends ConsumerState<HomePage> {
                 ),
               ),
             ),
-
-            if (!isSmallScreen) _buildNavigationChips(0),
 
             // Seção de Eventos
             SliverToBoxAdapter(
@@ -1030,8 +1014,6 @@ class _HomePageState extends ConsumerState<HomePage> {
                 ),
               ),
             ),
-
-            if (!isSmallScreen) _buildNavigationChips(1),
 
             // Conteúdo dos agendamentos
             SliverPadding(
