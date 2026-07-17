@@ -469,6 +469,117 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
         false;
   }
 
+  Future<void> _pickSpecificDate(
+    List<DateTime> availableDates,
+    List<_TimeSlot> timeSlots,
+  ) async {
+    final today = DateTime.now();
+    final firstDay = DateTime(today.year, today.month, today.day);
+    final lastDay = DateTime(today.year + 1, 12, 31);
+    final availableSet = availableDates
+        .map((d) => DateTime(d.year, d.month, d.day))
+        .toSet();
+
+    await showDialog<void>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Escolha uma data'),
+          content: SizedBox(
+            width: 360,
+            child: TableCalendar(
+              locale: 'pt_BR',
+              firstDay: firstDay,
+              lastDay: lastDay,
+              focusedDay: _focusedDay,
+              startingDayOfWeek: StartingDayOfWeek.monday,
+              headerStyle: const HeaderStyle(
+                formatButtonVisible: false,
+                titleCentered: true,
+              ),
+              daysOfWeekHeight: 32,
+              daysOfWeekStyle: DaysOfWeekStyle(
+                dowTextFormatter: (day, locale) {
+                  switch (day.weekday) {
+                    case DateTime.monday:
+                      return 'Seg';
+                    case DateTime.tuesday:
+                      return 'Ter';
+                    case DateTime.wednesday:
+                      return 'Qua';
+                    case DateTime.thursday:
+                      return 'Qui';
+                    case DateTime.friday:
+                      return 'Sex';
+                    case DateTime.saturday:
+                      return 'Sab';
+                    case DateTime.sunday:
+                      return 'Dom';
+                  }
+                  return '';
+                },
+              ),
+              enabledDayPredicate: (day) {
+                final normalized = DateTime(day.year, day.month, day.day);
+                return availableSet.contains(normalized);
+              },
+              selectedDayPredicate: (day) {
+                return _selectedDate != null && isSameDay(_selectedDate, day);
+              },
+              calendarStyle: CalendarStyle(
+                defaultTextStyle: const TextStyle(color: Colors.white),
+                weekendTextStyle: const TextStyle(color: Colors.white),
+                disabledTextStyle: const TextStyle(color: Color(0xFF94A3B8)),
+                todayDecoration: BoxDecoration(
+                  color: const Color(0xFF059669).withValues(alpha: 0.35),
+                  shape: BoxShape.circle,
+                ),
+                selectedDecoration: const BoxDecoration(
+                  color: Color(0xFF0D9488),
+                  shape: BoxShape.circle,
+                ),
+                defaultDecoration: const BoxDecoration(
+                  color: Color(0xFF059669),
+                  shape: BoxShape.circle,
+                ),
+                weekendDecoration: const BoxDecoration(
+                  color: Color(0xFF059669),
+                  shape: BoxShape.circle,
+                ),
+              ),
+              onDaySelected: (selectedDay, focusedDay) {
+                final normalized = DateTime(
+                  selectedDay.year,
+                  selectedDay.month,
+                  selectedDay.day,
+                );
+                if (!availableSet.contains(normalized)) {
+                  return;
+                }
+                setState(() {
+                  _selectedDate = selectedDay;
+                  _selectedSlot = null;
+                  _focusedDay = focusedDay;
+                });
+                Navigator.of(context).pop();
+                _showAvailableTimes(selectedDay, timeSlots);
+              },
+              onPageChanged: (focusedDay) {
+                _focusedDay = focusedDay;
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancelar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<void> _pickAvailableDate(
     List<int> availableWeekdays,
     List<_TimeSlot> timeSlots,
@@ -710,6 +821,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
         .toSet()
         .toList();
     final effectiveWeekdays = weekdays;
+    final hasSpecificDates = service.datasEspecificas != null && service.datasEspecificas!.isNotEmpty;
     final timeSlots = _buildTimeSlots(
       service.horarios,
       service.duracaoAtendimento,
@@ -1040,7 +1152,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
 
                   SizedBox(height: isSmallScreen ? 20 : 24),
 
-                  // Dias disponíveis
+                  // Dias disponíveis / Datas específicas
                   Container(
                     padding: EdgeInsets.all(isSmallScreen ? 20 : 24),
                     decoration: BoxDecoration(
@@ -1068,14 +1180,18 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Icon(
-                                Icons.calendar_view_week,
+                                hasSpecificDates
+                                    ? Icons.calendar_today
+                                    : Icons.calendar_view_week,
                                 color: const Color(0xFF8B5CF6),
                                 size: isSmallScreen ? 20 : 24,
                               ),
                             ),
                             SizedBox(width: isSmallScreen ? 12 : 16),
                             Text(
-                              'Dias Disponíveis',
+                              hasSpecificDates
+                                  ? 'Datas Específicas'
+                                  : 'Dias Disponíveis',
                               style: TextStyle(
                                 fontSize: isSmallScreen ? 18 : 20,
                                 fontWeight: FontWeight.w600,
@@ -1085,37 +1201,70 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                           ],
                         ),
                         SizedBox(height: isSmallScreen ? 16 : 20),
-                        Wrap(
-                          spacing: isSmallScreen ? 8 : 12,
-                          runSpacing: isSmallScreen ? 8 : 12,
-                          children: service.diasDisponiveis.map((dia) {
-                            return Container(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: isSmallScreen ? 12 : 16,
-                                vertical: isSmallScreen ? 8 : 10,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(
-                                  0xFF8B5CF6,
-                                ).withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
+                        if (hasSpecificDates)
+                          Wrap(
+                            spacing: isSmallScreen ? 8 : 12,
+                            runSpacing: isSmallScreen ? 8 : 12,
+                            children: service.datasEspecificas!.map((data) {
+                              return Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: isSmallScreen ? 12 : 16,
+                                  vertical: isSmallScreen ? 8 : 10,
+                                ),
+                                decoration: BoxDecoration(
                                   color: const Color(
                                     0xFF8B5CF6,
-                                  ).withValues(alpha: 0.2),
+                                  ).withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: const Color(
+                                      0xFF8B5CF6,
+                                    ).withValues(alpha: 0.2),
+                                  ),
                                 ),
-                              ),
-                              child: Text(
-                                dia,
-                                style: TextStyle(
-                                  fontSize: isSmallScreen ? 14 : 16,
-                                  color: const Color(0xFF8B5CF6),
-                                  fontWeight: FontWeight.w500,
+                                child: Text(
+                                  DateFormat('dd/MM/yyyy').format(data),
+                                  style: TextStyle(
+                                    fontSize: isSmallScreen ? 14 : 16,
+                                    color: const Color(0xFF8B5CF6),
+                                    fontWeight: FontWeight.w500,
+                                  ),
                                 ),
-                              ),
-                            );
-                          }).toList(),
-                        ),
+                              );
+                            }).toList(),
+                          )
+                        else
+                          Wrap(
+                            spacing: isSmallScreen ? 8 : 12,
+                            runSpacing: isSmallScreen ? 8 : 12,
+                            children: service.diasDisponiveis.map((dia) {
+                              return Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: isSmallScreen ? 12 : 16,
+                                  vertical: isSmallScreen ? 8 : 10,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(
+                                    0xFF8B5CF6,
+                                  ).withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: const Color(
+                                      0xFF8B5CF6,
+                                    ).withValues(alpha: 0.2),
+                                  ),
+                                ),
+                                child: Text(
+                                  dia,
+                                  style: TextStyle(
+                                    fontSize: isSmallScreen ? 14 : 16,
+                                    color: const Color(0xFF8B5CF6),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ),
                       ],
                     ),
                   ),
@@ -1294,20 +1443,37 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                       onPressed: _isBooking
                           ? null
                           : () async {
-                              if (effectiveWeekdays.isEmpty) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'Nao ha dias disponiveis cadastrados.',
+                              if (hasSpecificDates) {
+                                if (service.datasEspecificas!.isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Nao ha datas especificas cadastradas.',
+                                      ),
                                     ),
-                                  ),
+                                  );
+                                  return;
+                                }
+                                await _pickSpecificDate(
+                                  service.datasEspecificas!,
+                                  _timeSlotsCache,
                                 );
-                                return;
+                              } else {
+                                if (effectiveWeekdays.isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Nao ha dias disponiveis cadastrados.',
+                                      ),
+                                    ),
+                                  );
+                                  return;
+                                }
+                                await _pickAvailableDate(
+                                  effectiveWeekdays,
+                                  _timeSlotsCache,
+                                );
                               }
-                              await _pickAvailableDate(
-                                effectiveWeekdays,
-                                _timeSlotsCache,
-                              );
                             },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.transparent,

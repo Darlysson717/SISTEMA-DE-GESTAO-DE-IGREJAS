@@ -470,11 +470,11 @@ class _HomePageState extends ConsumerState<HomePage> {
                   );
                 }
 
-                // Desktop: linhas horizontais com ate 4 cards cada
+                // Desktop: linhas horizontais com ate 3 cards cada
                 if (!isSmallScreen) {
                   const cardWidth = 320.0;
                   const cardHeight = 480.0;
-                  const chunkSize = 4;
+                  const chunkSize = 3;
                   final chunks = <List<AppEvent>>[];
                   for (var i = 0; i < events.length; i += chunkSize) {
                     chunks.add(events.sublist(
@@ -1163,11 +1163,11 @@ class _HomePageState extends ConsumerState<HomePage> {
                         );
                       }
 
-                      // Desktop: linhas horizontais com ate 4 cards cada
+                      // Desktop: linhas horizontais com ate 3 cards cada
                       if (!isSmallScreen) {
                         const cardWidth = 320.0;
                         const cardHeight = 420.0;
-                        const chunkSize = 4;
+                        const chunkSize = 3;
                         final chunks = <List<Service>>[];
                         for (var i = 0; i < services.length; i += chunkSize) {
                           chunks.add(services.sublist(

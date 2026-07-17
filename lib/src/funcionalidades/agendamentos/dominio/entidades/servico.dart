@@ -28,6 +28,10 @@ class Service {
   /// Dias da semana disponíveis (ex: ["segunda", "quarta"]).
   final List<String> diasDisponiveis;
 
+  /// Datas específicas disponíveis (ex: [2026-07-20, 2026-07-25]).
+  /// Usado quando o profissional quer definir dias específicos ao invés de dias da semana fixos.
+  final List<DateTime>? datasEspecificas;
+
   /// Horários disponíveis no formato 'HH:mm' (ex: ["08:00", "09:00"]).
   final List<String> horarios;
 
@@ -59,6 +63,7 @@ class Service {
     this.imagemProfissional,
     required this.descricao,
     required this.diasDisponiveis,
+    this.datasEspecificas,
     required this.horarios,
     this.duracaoAtendimento,
     required this.tipoAtendimento,
@@ -81,6 +86,11 @@ class Service {
       imagemProfissional: json['imagem_profissional'] as String?,
       descricao: json['descricao'] as String,
       diasDisponiveis: List<String>.from(json['dias_disponiveis'] as List),
+      datasEspecificas: json['datas_especificas'] != null
+          ? (json['datas_especificas'] as List<dynamic>)
+              .map((e) => DateTime.parse(e as String))
+              .toList()
+          : null,
       horarios: List<String>.from(json['horarios'] as List),
       duracaoAtendimento: json['duracao_atendimento'] as int?,
       tipoAtendimento: json['tipo_atendimento'] as String,

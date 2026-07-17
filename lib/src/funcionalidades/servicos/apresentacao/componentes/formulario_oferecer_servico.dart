@@ -7,6 +7,7 @@ import 'package:centro_social_app/src/nucleo/utilitarios/imagem_selecionada.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class OfferServiceForm extends ConsumerStatefulWidget {
@@ -45,6 +46,7 @@ class _OfferServiceFormState extends ConsumerState<OfferServiceForm> {
   ];
   final List<int> _duracoesPossiveis = <int>[15, 30, 45, 60, 90, 120];
   final List<bool> _diasSelecionados = List<bool>.filled(7, false);
+  final List<DateTime> _datasEspecificas = <DateTime>[];
 
   int _currentStep = 0;
   final int _totalSteps = 3;
@@ -54,6 +56,9 @@ class _OfferServiceFormState extends ConsumerState<OfferServiceForm> {
   String? _existingImageUrl;
   late final bool _isEditing;
   final ImagePicker _picker = ImagePicker();
+
+  /// 'dias_semana' ou 'datas_especificas'
+  String _tipoDisponibilidade = 'dias_semana';
 
   @override
   void initState() {
@@ -92,10 +97,19 @@ class _OfferServiceFormState extends ConsumerState<OfferServiceForm> {
       ..addAll(service.horarios);
     _existingImageUrl = service.imagemProfissional;
 
+    // Carregar dias da semana
     final selected = service.diasDisponiveis.map(_normalizeDay).toSet();
     for (var i = 0; i < _diasSemana.length; i++) {
       final day = _normalizeDay(_diasSemana[i]);
       _diasSelecionados[i] = selected.contains(day);
+    }
+
+    // Carregar datas específicas se existirem
+    if (service.datasEspecificas != null && service.datasEspecificas!.isNotEmpty) {
+      _tipoDisponibilidade = 'datas_especificas';
+      _datasEspecificas
+        ..clear()
+        ..addAll(service.datasEspecificas!);
     }
   }
 
@@ -116,12 +130,21 @@ class _OfferServiceFormState extends ConsumerState<OfferServiceForm> {
     if (_currentStep == 0) {
       isValid = _formKeyStep1.currentState?.validate() ?? false;
     } else if (_currentStep == 1) {
-      final hasSelectedDay = _diasSelecionados.any((selected) => selected);
-      if (_horariosDisponiveis.isEmpty || !hasSelectedDay) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Selecione pelo menos um dia e adicione pelo menos um horário disponível.')),
-        );
-        return;
+      if (_tipoDisponibilidade == 'dias_semana') {
+        final hasSelectedDay = _diasSelecionados.any((selected) => selected);
+        if (_horariosDisponiveis.isEmpty || !hasSelectedDay) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Selecione pelo menos um dia e adicione pelo menos um horário disponível.')),
+          );
+          return;
+        }
+      } else {
+        if (_datasEspecificas.isEmpty || _horariosDisponiveis.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Adicione pelo menos uma data específica e um horário disponível.')),
+          );
+          return;
+        }
       }
 
       isValid = _formKeyStep2.currentState?.validate() ?? false;
@@ -245,6 +268,43 @@ class _OfferServiceFormState extends ConsumerState<OfferServiceForm> {
     });
   }
 
+  Future<void> _adicionarDataEspecifica() async {
+    final date = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+      helpText: 'Selecione uma data disponível',
+    );
+
+    if (date == null) return;
+
+    // Verificar se a data já foi adicionada
+    final alreadyAdded = _datasEspecificas.any((d) =>
+        d.year == date.year && d.month == date.month && d.day == date.day);
+
+    if (alreadyAdded) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Esta data já foi adicionada.')),
+        );
+      }
+      return;
+    }
+
+    setState(() {
+      _datasEspecificas.add(date);
+      // Ordenar as datas
+      _datasEspecificas.sort((a, b) => a.compareTo(b));
+    });
+  }
+
+  void _removerDataEspecifica(int index) {
+    setState(() {
+      _datasEspecificas.removeAt(index);
+    });
+  }
+
   String? _extractStoragePathFromPublicUrl(String? imageUrl) {
     if (imageUrl == null || imageUrl.trim().isEmpty) {
       return null;
@@ -306,6 +366,11 @@ class _OfferServiceFormState extends ConsumerState<OfferServiceForm> {
         .map((entry) => entry.value)
         .toList();
 
+    // Formatar datas específicas como strings ISO (YYYY-MM-DD)
+    final datasEspecificasStr = _datasEspecificas
+        .map((d) => DateFormat('yyyy-MM-dd').format(d))
+        .toList();
+
     String? imageUrl = previousImageUrl;
     String? uploadedImagePath;
     bool persisted = false;
@@ -338,6 +403,8 @@ class _OfferServiceFormState extends ConsumerState<OfferServiceForm> {
         'imagem_profissional': imageUrl,
         'descricao': _descricaoController.text.trim(),
         'dias_disponiveis': diasSelecionados,
+        'datas_especificas':
+            _tipoDisponibilidade == 'datas_especificas' ? datasEspecificasStr : null,
         'horarios': _horariosDisponiveis,
         'duracao_atendimento': _duracaoAtendimento,
         'tipo_atendimento': _tipoAtendimento,
@@ -517,16 +584,68 @@ class _OfferServiceFormState extends ConsumerState<OfferServiceForm> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Dias disponíveis', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+              // Seletor de tipo de disponibilidade
+              const Text('Tipo de disponibilidade', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
-              ...List.generate(_diasSemana.length, (index) {
-                return CheckboxListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(_diasSemana[index]),
-                  value: _diasSelecionados[index],
-                  onChanged: (value) => setState(() => _diasSelecionados[index] = value ?? false),
-                );
-              }),
+              SegmentedButton<String>(
+                segments: const [
+                  ButtonSegment(
+                    value: 'dias_semana',
+                    label: Text('Dias da semana'),
+                    icon: Icon(Icons.calendar_view_week),
+                  ),
+                  ButtonSegment(
+                    value: 'datas_especificas',
+                    label: Text('Datas específicas'),
+                    icon: Icon(Icons.calendar_today),
+                  ),
+                ],
+                selected: {_tipoDisponibilidade},
+                onSelectionChanged: (selected) {
+                  setState(() => _tipoDisponibilidade = selected.first);
+                },
+              ),
+              const SizedBox(height: 16),
+
+              // Conteúdo baseado no tipo selecionado
+              if (_tipoDisponibilidade == 'dias_semana') ...[
+                const Text('Dias disponíveis', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 8),
+                ...List.generate(_diasSemana.length, (index) {
+                  return CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(_diasSemana[index]),
+                    value: _diasSelecionados[index],
+                    onChanged: (value) => setState(() => _diasSelecionados[index] = value ?? false),
+                  );
+                }),
+              ] else ...[
+                const Text('Datas específicas', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 8),
+                if (_datasEspecificas.isEmpty)
+                  const Text('Nenhuma data adicionada.', style: TextStyle(color: Color(0xFF64748B)))
+                else
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: _datasEspecificas.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final date = entry.value;
+                      return Chip(
+                        label: Text(DateFormat('dd/MM/yyyy').format(date)),
+                        onDeleted: () => _removerDataEspecifica(index),
+                        deleteIcon: const Icon(Icons.close, size: 18),
+                      );
+                    }).toList(),
+                  ),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: _adicionarDataEspecifica,
+                  icon: const Icon(Icons.add),
+                  label: const Text('Adicionar data'),
+                ),
+              ],
+
               const SizedBox(height: 16),
               const Text('Horários disponíveis', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
