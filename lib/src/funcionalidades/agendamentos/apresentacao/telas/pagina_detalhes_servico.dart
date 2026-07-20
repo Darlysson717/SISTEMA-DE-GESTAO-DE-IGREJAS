@@ -699,6 +699,23 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
       return;
     }
 
+    // Buscar agendamentos diretamente do repositório para garantir dados atualizados
+    List<Appointment> bookedAppointments = [];
+    try {
+      final allAppointments = await repository.listCommunityAppointments();
+      bookedAppointments = allAppointments.where((appointment) {
+        return appointment.serviceId == widget.service.id &&
+            appointment.status == AppointmentStatus.scheduled;
+      }).toList();
+    } catch (e) {
+      print('Erro ao buscar agendamentos: $e');
+      // Fallback para o cache se houver erro
+      bookedAppointments = _appointmentsCache.where((appointment) {
+        return appointment.serviceId == widget.service.id &&
+            appointment.status == AppointmentStatus.scheduled;
+      }).toList();
+    }
+
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -707,10 +724,6 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
         final isSmallScreen = MediaQuery.of(context).size.width < 600;
         final maxHeight = MediaQuery.of(context).size.height * 0.78;
         final now = DateTime.now();
-        final bookedAppointments = _appointmentsCache.where((appointment) {
-          return appointment.serviceId == widget.service.id &&
-              appointment.status == AppointmentStatus.scheduled;
-        }).toList();
 
         return SafeArea(
           child: ConstrainedBox(
@@ -760,6 +773,11 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                                         ),
                                   ) ||
                                   bookedTimesFromBackend.contains(slotTimeKey);
+                              
+                              // Debug para verificar se está detectando corretamente
+                              if (isBooked) {
+                                print('DEBUG: Horário $slotTimeKey bloqueado - agendamentos: ${bookedAppointments.length}, backend: ${bookedTimesFromBackend.length}');
+                              }
                             }
                             final isDisabled =
                                 !slot.isValid || isPast || isBooked;

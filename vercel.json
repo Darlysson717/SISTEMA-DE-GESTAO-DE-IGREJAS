@@ -2,6 +2,11 @@
   "buildCommand": "flutter build web --release --base-href /",
   "outputDirectory": "build/web",
   "devCommand": "flutter run -d web --web-port=3000",
-  "framework": "flutter",
-  "installCommand": "flutter pub get"
+  "installCommand": "flutter pub get",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
 }

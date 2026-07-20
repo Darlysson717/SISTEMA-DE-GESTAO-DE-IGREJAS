@@ -593,6 +593,7 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
 
     List<dynamic> rows;
     try {
+      // Tenta usar o RPC primeiro (security definer - funciona entre usuários)
       final result = await _client
           .rpc(
             'get_service_booked_times',
@@ -603,12 +604,23 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
           );
       rows = result as List<dynamic>;
     } catch (_) {
-      rows = await _client
-          .from('appointments')
-          .select('scheduled_time')
-          .eq('service_id', serviceId)
-          .eq('scheduled_date', dateValue)
-          .inFilter('status', ['agendado']);
+      try {
+        // Fallback 1: consulta direta (pode ser limitada por RLS)
+        rows = await _client
+            .from('appointments')
+            .select('scheduled_time')
+            .eq('service_id', serviceId)
+            .eq('scheduled_date', dateValue)
+            .inFilter('status', ['agendado']);
+      } catch (_) {
+        // Fallback 2: usa o usuário atual para buscar agendamentos do mesmo serviço
+        rows = await _client
+            .from('appointments')
+            .select('scheduled_time')
+            .eq('service_id', serviceId)
+            .eq('scheduled_date', dateValue)
+            .neq('status', 'cancelado');
+      }
     }
 
     final bookedTimes = <String>{};
