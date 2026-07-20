@@ -470,74 +470,51 @@ class _HomePageState extends ConsumerState<HomePage> {
                   );
                 }
 
-                // Desktop: linhas horizontais com ate 3 cards cada
+                // Desktop/Tablet: grid com exatamente 3 cards por linha
                 if (!isSmallScreen) {
-                  const cardWidth = 320.0;
-                  const cardHeight = 480.0;
-                  const chunkSize = 3;
-                  final chunks = <List<AppEvent>>[];
-                  for (var i = 0; i < events.length; i += chunkSize) {
-                    chunks.add(events.sublist(
-                      i,
-                      i + chunkSize > events.length ? events.length : i + chunkSize,
-                    ));
-                  }
-                  return SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, rowIndex) {
-                        final rowEvents = chunks[rowIndex];
-                        return Padding(
-                          padding: rowIndex < chunks.length - 1
-                              ? const EdgeInsets.only(bottom: 16)
-                              : EdgeInsets.zero,
-                          child: SizedBox(
-                            height: cardHeight,
-                            child: ListView.builder(
-                              scrollDirection: Axis.horizontal,
-                              padding: contentPadding,
-                              itemCount: rowEvents.length,
-                              itemBuilder: (context, index) {
-                                final event = rowEvents[index];
-                                return Container(
-                                  width: cardWidth,
-                                  height: cardHeight,
-                                  margin: EdgeInsets.only(
-                                    right: index < rowEvents.length - 1 ? 16 : 0,
-                                  ),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(20),
-                                    child: EventFeedCard(
-                                      event: event,
-                                      fixedImageHeight: 240,
-                                      onCardTap: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (_) => EventDetailsPage(event: event),
-                                          ),
-                                        );
-                                      },
-                                      onPrimaryAction: () => _registerEventInterest(
-                                        context,
-                                        event,
-                                        EventInterestType.participante,
-                                      ),
-                                      onVolunteerAction: event.permitirVoluntarios
-                                          ? () => _registerEventInterest(
-                                              context,
-                                              event,
-                                              EventInterestType.voluntario,
-                                            )
-                                          : null,
-                                    ),
+                  final crossAxisCount = 3;
+                  return SliverPadding(
+                    padding: contentPadding,
+                    sliver: SliverGrid(
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: crossAxisCount,
+                        mainAxisSpacing: 16,
+                        crossAxisSpacing: 16,
+                        childAspectRatio: 320 / 480,
+                      ),
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          final event = events[index];
+                          return ClipRRect(
+                            borderRadius: BorderRadius.circular(20),
+                            child: EventFeedCard(
+                              event: event,
+                              fixedImageHeight: 240,
+                              onCardTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => EventDetailsPage(event: event),
                                   ),
                                 );
                               },
+                              onPrimaryAction: () => _registerEventInterest(
+                                context,
+                                event,
+                                EventInterestType.participante,
+                              ),
+                              onVolunteerAction: event.permitirVoluntarios
+                                  ? () => _registerEventInterest(
+                                      context,
+                                      event,
+                                      EventInterestType.voluntario,
+                                    )
+                                  : null,
                             ),
-                          ),
-                        );
-                      },
-                      childCount: chunks.length,
+                          );
+                        },
+                        childCount: events.length,
+                      ),
                     ),
                   );
                 }

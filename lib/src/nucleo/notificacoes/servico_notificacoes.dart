@@ -1,8 +1,10 @@
+import 'dart:convert';
 import 'package:centro_social_app/src/nucleo/configuracao/configuracao_app.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:web/web.dart' as web;
 
 /// Canal de notificações para Android
 const AndroidNotificationChannel channel = AndroidNotificationChannel(
@@ -379,16 +381,55 @@ class ServicoNotificacoes {
       print('   Dados: ${mensagem.data}');
     }
 
-    // Na web o navegador não exibe notificações com a aba em foco e o
-    // plugin de notificações locais é no-op — apenas registra no log.
-    if (kIsWeb) return;
+    final titulo = mensagem.notification?.title ?? 'Nova notificação';
+    final corpo = mensagem.notification?.body ?? '';
 
-    // Exibe notificação local mesmo em foreground
+    if (kIsWeb) {
+      // Na web, usa a API nativa de Notification do navegador
+      // para exibir mesmo em foreground
+      try {
+        if (await _messaging.getNotificationSettings().then(
+              (settings) => settings.authorizationStatus == AuthorizationStatus.authorized,
+            )) {
+          // Cria notificação via JS interop (funciona em PWAs instalados)
+          _exibirNotificacaoWeb(titulo, corpo, mensagem.data);
+        }
+      } catch (_) {}
+      return;
+    }
+
+    // Exibe notificação local mesmo em foreground (Android/iOS)
     await _exibirNotificacaoLocal(
-      titulo: mensagem.notification?.title ?? 'Nova notificação',
-      corpo: mensagem.notification?.body ?? '',
+      titulo: titulo,
+      corpo: corpo,
       dados: mensagem.data,
     );
+  }
+
+  /// Exibe notificação via Web Notification API (funciona em PWAs)
+  void _exibirNotificacaoWeb(
+    String titulo,
+    String corpo,
+    Map<String, dynamic>? dados,
+  ) {
+    // Usa a Web Notification API nativa do navegador via package:web
+    // Isso funciona mesmo com o app em foreground no PWA
+    try {
+      if (!kIsWeb) return;
+
+      final notificationOptions = web.NotificationOptions(
+        body: corpo,
+        icon: 'icons/Icon-192.png',
+        badge: 'icons/Icon-192.png',
+        tag: dados?['tipo']?.toString() ?? 'default',
+      );
+
+      web.Notification(titulo, notificationOptions);
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Erro ao exibir notificação web: $e');
+      }
+    }
   }
 
   /// Exibe uma notificação local

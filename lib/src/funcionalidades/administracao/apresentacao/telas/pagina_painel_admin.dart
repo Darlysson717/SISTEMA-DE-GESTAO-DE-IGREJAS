@@ -163,10 +163,17 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage> {
                       Expanded(
                         child: _AdminStatCard(
                           label: 'Pedidos pendentes',
-                          value: pendingRequestsAsync.maybeWhen(
-                            data: (requests) => requests.length.toString(),
-                            orElse: () => '...',
-                          ),
+                          value: () {
+                            final serviceCount = pendingRequestsAsync.maybeWhen(
+                              data: (requests) => requests.length,
+                              orElse: () => 0,
+                            );
+                            final eventCount = pendingEventRequestsAsync.maybeWhen(
+                              data: (requests) => requests.length,
+                              orElse: () => 0,
+                            );
+                            return (serviceCount + eventCount).toString();
+                          }(),
                           icon: Icons.pending_actions_outlined,
                           accentColor: const Color(0xFFEA580C),
                         ),
