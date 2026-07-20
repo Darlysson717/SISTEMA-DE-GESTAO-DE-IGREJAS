@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:centro_social_app/src/nucleo/configuracao/configuracao_app.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
