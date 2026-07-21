@@ -8,6 +8,8 @@ import 'package:centro_social_app/src/funcionalidades/perfil/apresentacao/compon
 import 'package:centro_social_app/src/funcionalidades/servicos/apresentacao/telas/pagina_meus_servicos.dart';
 import 'package:centro_social_app/src/funcionalidades/servicos/apresentacao/telas/pagina_acesso_publicar_servico.dart';
 import 'package:centro_social_app/src/funcionalidades/inicio/apresentacao/provedores/provedores_atualizacao.dart';
+import 'package:centro_social_app/src/funcionalidades/perfil/apresentacao/telas/pagina_termos_servico.dart';
+import 'package:centro_social_app/src/funcionalidades/perfil/apresentacao/telas/pagina_politica_privacidade.dart';
 import 'package:centro_social_app/src/nucleo/utilitarios/layout_responsivo.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -357,6 +359,27 @@ class ProfilePage extends ConsumerWidget {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const MyServicesPage()),
+          );
+        },
+      ),
+      // ===== LGPD SECTION =====
+      ProfileActionTile(
+        icon: Icons.description_outlined,
+        label: 'Termos de Uso',
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const TermsOfServicePage()),
+          );
+        },
+      ),
+      ProfileActionTile(
+        icon: Icons.privacy_tip_outlined,
+        label: 'Política de Privacidade',
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const PrivacyPolicyPage()),
           );
         },
       ),

@@ -1,14 +1,21 @@
 import 'package:centro_social_app/src/funcionalidades/autenticacao/apresentacao/telas/tela_login.dart';
 import 'package:centro_social_app/src/funcionalidades/autenticacao/apresentacao/provedores/provedores_autenticacao.dart';
 import 'package:centro_social_app/src/funcionalidades/inicio/apresentacao/telas/pagina_inicio.dart';
+import 'package:centro_social_app/src/funcionalidades/perfil/apresentacao/telas/pagina_consentimento.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-class AuthGatePage extends ConsumerWidget {
+class AuthGatePage extends ConsumerStatefulWidget {
   const AuthGatePage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AuthGatePage> createState() => _AuthGatePageState();
+}
+
+class _AuthGatePageState extends ConsumerState<AuthGatePage> {
+  @override
+  Widget build(BuildContext context) {
     final authState = ref.watch(authStateChangesProvider);
 
     return authState.when(
@@ -23,7 +30,23 @@ class AuthGatePage extends ConsumerWidget {
             if (user == null) {
               return const LoginScreen();
             }
-            return HomePage(currentUser: user);
+            return FutureBuilder<bool>(
+              future: _checkConsent(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const _LoadingView(message: 'Carregando...');
+                }
+                final hasConsented = snapshot.data ?? false;
+                if (!hasConsented) {
+                  return FirstTimeConsentPage(
+                    onAccepted: () {
+                      setState(() {});
+                    },
+                  );
+                }
+                return HomePage(currentUser: user);
+              },
+            );
           },
           loading: () => const _LoadingView(message: 'Carregando perfil...'),
           error: (error, _) =>
@@ -36,6 +59,31 @@ class AuthGatePage extends ConsumerWidget {
     );
   }
 
+  /// Verifica se o usuário já aceitou os termos na versão atual.
+  /// Retorna false nos casos:
+  /// 1. Nunca aceitou (consent_accepted = false ou null)
+  /// 2. Aceitou em uma versão anterior (consent_terms_version != kCurrentTermsVersion)
+  Future<bool> _checkConsent() async {
+    try {
+      final userId = Supabase.instance.client.auth.currentUser?.id;
+      if (userId == null) return false;
+
+      final response = await Supabase.instance.client
+          .from('profiles')
+          .select('consent_accepted, consent_terms_version')
+          .eq('id', userId)
+          .maybeSingle();
+
+      if (response == null) return false;
+      if (response['consent_accepted'] != true) return false;
+
+      // Verifica se a versão aceita é a mesma da versão atual dos termos
+      final acceptedVersion = response['consent_terms_version'] as String?;
+      return acceptedVersion == kCurrentTermsVersion;
+    } catch (_) {
+      return false;
+    }
+  }
 }
 
 class _LoadingView extends StatelessWidget {
