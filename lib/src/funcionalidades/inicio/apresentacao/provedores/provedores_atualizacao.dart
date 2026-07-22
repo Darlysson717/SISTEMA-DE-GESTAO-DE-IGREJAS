@@ -166,6 +166,7 @@ class AppVersion implements Comparable<AppVersion> {
 
   @override
   int compareTo(AppVersion other) {
+    // Compara apenas a parte semântica (major.minor.patch), ignorando build
     for (var index = 0;
         index < parts.length && index < other.parts.length;
         index++) {
@@ -174,12 +175,6 @@ class AppVersion implements Comparable<AppVersion> {
         return comparison;
       }
     }
-
-    final buildComparison = build.compareTo(other.build);
-    if (buildComparison != 0) {
-      return buildComparison;
-    }
-
     return parts.length.compareTo(other.parts.length);
   }
 
