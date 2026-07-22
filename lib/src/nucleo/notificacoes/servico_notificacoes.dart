@@ -3,7 +3,6 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:web/web.dart' as web;
 
 /// Canal de notificações para Android
 const AndroidNotificationChannel channel = AndroidNotificationChannel(
@@ -267,7 +266,7 @@ class ServicoNotificacoes {
       );
 
       // Inicializa o plugin
-      await _localNotifications.initialize(initializationSettings);
+      await _localNotifications.initialize(settings: initializationSettings);
 
       // Cria o canal de notificações para Android
       if (defaultTargetPlatform == TargetPlatform.android) {
@@ -406,29 +405,16 @@ class ServicoNotificacoes {
   }
 
   /// Exibe notificação via Web Notification API (funciona em PWAs)
+  /// Nota: Em web, o Firebase Messaging já exibe notificações nativas do
+  /// navegador, então essa função é um extra para foreground.
   void _exibirNotificacaoWeb(
     String titulo,
     String corpo,
     Map<String, dynamic>? dados,
   ) {
-    // Usa a Web Notification API nativa do navegador via package:web
-    // Isso funciona mesmo com o app em foreground no PWA
-    try {
-      if (!kIsWeb) return;
-
-      final notificationOptions = web.NotificationOptions(
-        body: corpo,
-        icon: 'icons/Icon-192.png',
-        badge: 'icons/Icon-192.png',
-        tag: dados?['tipo']?.toString() ?? 'default',
-      );
-
-      web.Notification(titulo, notificationOptions);
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ Erro ao exibir notificação web: $e');
-      }
-    }
+    // Na web, o Firebase Messaging já lida com exibição de notificações.
+    // Esta funcionalidade está desabilitada temporariamente para compatibilidade.
+    // Use package:web (versão 2.x+) para reativar.
   }
 
   /// Exibe uma notificação local
@@ -460,10 +446,10 @@ class ServicoNotificacoes {
       );
 
       await _localNotifications.show(
-        DateTime.now().millisecondsSinceEpoch ~/ 1000,
-        titulo,
-        corpo,
-        platformChannelSpecifics,
+        id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        title: titulo,
+        body: corpo,
+        notificationDetails: platformChannelSpecifics,
         payload: dados?.toString(),
       );
 
