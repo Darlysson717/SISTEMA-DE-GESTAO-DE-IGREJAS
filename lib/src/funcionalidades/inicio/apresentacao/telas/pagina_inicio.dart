@@ -151,12 +151,25 @@ class _HomePageState extends ConsumerState<HomePage> {
           }
         },
         child: Scaffold(
-          body: IndexedStack(
-            index: _currentIndex,
+          body: Stack(
             children: [
-              _buildInicioTab(context, eventsAsync, updateAsync),
-              _buildAgendamentosTab(context),
-              _buildPerfilTab(context),
+              IndexedStack(
+                index: _currentIndex,
+                children: [
+                  _buildInicioTab(context, eventsAsync, updateAsync),
+                  _buildAgendamentosTab(context),
+                  _buildPerfilTab(context),
+                ],
+              ),
+              // Overlay de atualização no mobile também
+              updateAsync.when(
+                data: (updateInfo) {
+                  if (updateInfo == null) return const SizedBox.shrink();
+                  return _buildUpdateOverlay(context, updateInfo);
+                },
+                loading: () => const SizedBox.shrink(),
+                error: (_, __) => const SizedBox.shrink(),
+              ),
             ],
           ),
           bottomNavigationBar: showChipsUnderBanner ? null : _buildMobileNavigationBar(),
