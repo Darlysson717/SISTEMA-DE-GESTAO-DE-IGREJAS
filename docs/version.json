@@ -1,0 +1,8 @@
+{
+  "version": "1.0.7",
+  "downloadUrl": "https://github.com/Darlysson717/SISTEMA-DE-GESTAO-DE-IGREJAS/releases/latest",
+  "changelog": "## O que há de novo?\n\n- Sistema de atualização mais robusto\n- Logs de debug para facilitar troubleshooting\n- Fallback automático via GitHub Pages\n\n### Como atualizar\n\n1. Baixe o APK da release mais recente\n2. Instale o arquivo APK no seu dispositivo Android\n3. Aceite as permissões de instalação",
+  "apkUrl": "https://github.com/Darlysson717/SISTEMA-DE-GESTAO-DE-IGREJAS/releases/latest",
+  "minVersion": "1.0.0",
+  "forceUpdate": false
+}
