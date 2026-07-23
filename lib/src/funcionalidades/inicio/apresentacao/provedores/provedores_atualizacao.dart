@@ -1,10 +1,16 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 
 const _githubApiLatestRelease =
     'https://api.github.com/repos/Darlysson717/SISTEMA-DE-GESTAO-DE-IGREJAS/releases/latest';
+
+/// URL de fallback para buscar informações de versão (arquivo JSON simples)
+/// Hospedado no GitHub Pages
+const _fallbackVersionUrl =
+    'https://darlysson717.github.io/SISTEMA-DE-GESTAO-DE-IGREJAS/version.json';
 
 /// Provider que retorna null se a versão local já é a mais recente,
 /// ou [AppUpdateInfo] com os dados da atualização disponível.
@@ -13,17 +19,34 @@ final appUpdateProvider = FutureProvider<AppUpdateInfo?>((ref) async {
     final packageInfo = await PackageInfo.fromPlatform();
     final localVersionStr = '${packageInfo.version}+${packageInfo.buildNumber}';
     final localVersion = AppVersion.parse(localVersionStr);
+    
+    if (kDebugMode) {
+      print('🔍 Verificando atualização...');
+      print('   Versão local: $localVersionStr');
+    }
+    
     final latestRelease = await _fetchLatestReleaseInfo();
 
     if (latestRelease == null) {
+      if (kDebugMode) {
+        print('❌ Nenhuma release encontrada');
+      }
       return null;
     }
 
-    final remoteVersion = AppVersion.parse(
-      latestRelease['tag_name'] as String? ?? '',
-    );
+    final tagName = latestRelease['tag_name'] as String? ?? '';
+    final remoteVersion = AppVersion.parse(tagName);
+
+    if (kDebugMode) {
+      print('   Tag da release: $tagName');
+      print('   Versão remota: ${remoteVersion.toString()}');
+      print('   Comparação local vs remota: ${localVersion.compareTo(remoteVersion)}');
+    }
 
     if (localVersion.compareTo(remoteVersion) >= 0) {
+      if (kDebugMode) {
+        print('✅ App já está atualizado');
+      }
       return null;
     }
 
@@ -37,16 +60,28 @@ final appUpdateProvider = FutureProvider<AppUpdateInfo?>((ref) async {
       if (name.endsWith('.apk')) {
         apkUrl = asset['browser_download_url'] as String?;
         apkName = asset['name'] as String?;
+        if (kDebugMode) {
+          print('   APK encontrado: $apkName');
+        }
         break;
       }
     }
 
     // Se não encontrou APK, usa a página da release como fallback
-    apkUrl ??= latestRelease['html_url'] as String? ?? '';
+    if (apkUrl == null) {
+      apkUrl = latestRelease['html_url'] as String? ?? '';
+      if (kDebugMode) {
+        print('⚠️ APK não encontrado, usando página da release');
+      }
+    }
 
     // Extrai o body/changelog da release e limpa markdown básico
     final body = latestRelease['body'] as String? ?? '';
     final changelog = _parseChangelog(body);
+
+    if (kDebugMode) {
+      print('✅ Atualização disponível: ${remoteVersion.toString()}');
+    }
 
     return AppUpdateInfo(
       version: remoteVersion,
@@ -54,7 +89,10 @@ final appUpdateProvider = FutureProvider<AppUpdateInfo?>((ref) async {
       apkFileName: apkName,
       changelog: changelog,
     );
-  } catch (_) {
+  } catch (e) {
+    if (kDebugMode) {
+      print('❌ Erro ao verificar atualização: $e');
+    }
     return null;
   }
 });
@@ -187,17 +225,84 @@ class AppVersion implements Comparable<AppVersion> {
 
 /// Busca as informações da última release do GitHub
 Future<Map<String, dynamic>?> _fetchLatestReleaseInfo() async {
-  final response = await http.get(
-    Uri.parse(_githubApiLatestRelease),
-    headers: {
-      'Accept': 'application/vnd.github.v3+json',
-      'User-Agent': 'centro-social-app',
-    },
-  );
+  // Tenta primeiro a API do GitHub
+  try {
+    final response = await http.get(
+      Uri.parse(_githubApiLatestRelease),
+      headers: {
+        'Accept': 'application/vnd.github.v3+json',
+        'User-Agent': 'centro-social-app',
+      },
+    );
 
-  if (response.statusCode != 200) {
-    return null;
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>?;
+      if (kDebugMode) {
+        print('✅ Release encontrada: ${data?['tag_name']}');
+      }
+      return data;
+    }
+
+    if (kDebugMode) {
+      print('⚠️ GitHub API retornou status: ${response.statusCode}');
+    }
+  } catch (e) {
+    if (kDebugMode) {
+      print('⚠️ Erro ao buscar release do GitHub: $e');
+    }
   }
 
-  return jsonDecode(response.body) as Map<String, dynamic>?;
+  // Fallback: tenta buscar de um JSON simples no GitHub Pages
+  return _fetchFallbackVersionInfo();
+}
+
+/// Busca informações de versão de um JSON simples (fallback via GitHub Pages)
+Future<Map<String, dynamic>?> _fetchFallbackVersionInfo() async {
+  try {
+    if (kDebugMode) {
+      print('🔍 Tentando fallback (GitHub Pages): $_fallbackVersionUrl');
+    }
+
+    final response = await http.get(
+      Uri.parse(_fallbackVersionUrl),
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'centro-social-app',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>?;
+      if (kDebugMode) {
+        print('✅ Versão obtida do fallback: ${data?['version']}');
+      }
+      
+      // Converte o formato simples para o formato esperado
+      if (data != null && data.containsKey('version')) {
+        return {
+          'tag_name': data['version'] as String? ?? '',
+          'html_url': data['downloadUrl'] as String? ?? 'https://github.com/Darlysson717/SISTEMA-DE-GESTAO-DE-IGREJAS/releases',
+          'body': data['changelog'] as String? ?? '',
+          'assets': data['apkUrl'] != null
+              ? [
+                  {
+                    'name': 'app-release.apk',
+                    'browser_download_url': data['apkUrl'] as String? ?? '',
+                  }
+                ]
+              : [],
+        };
+      }
+    }
+
+    if (kDebugMode) {
+      print('⚠️ Fallback retornou status: ${response.statusCode}');
+    }
+  } catch (e) {
+    if (kDebugMode) {
+      print('⚠️ Erro ao buscar fallback: $e');
+    }
+  }
+
+  return null;
 }
