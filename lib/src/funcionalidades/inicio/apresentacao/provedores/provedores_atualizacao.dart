@@ -23,6 +23,7 @@ final appUpdateProvider = FutureProvider<AppUpdateInfo?>((ref) async {
       latestRelease['tag_name'] as String? ?? '',
     );
 
+    // Verifica se a versão remota é mais recente que a local
     if (localVersion.compareTo(remoteVersion) >= 0) {
       return null;
     }
@@ -41,8 +42,10 @@ final appUpdateProvider = FutureProvider<AppUpdateInfo?>((ref) async {
       }
     }
 
-    // Se não encontrou APK, usa a página da release como fallback
-    apkUrl ??= latestRelease['html_url'] as String? ?? '';
+    // Se não encontrou APK, não retorna atualização (apenas releases com APK)
+    if (apkUrl == null || apkUrl.isEmpty) {
+      return null;
+    }
 
     // Extrai o body/changelog da release e limpa markdown básico
     final body = latestRelease['body'] as String? ?? '';
