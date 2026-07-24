@@ -10,7 +10,6 @@ import 'package:centro_social_app/src/funcionalidades/servicos/apresentacao/tela
 import 'package:centro_social_app/src/funcionalidades/inicio/apresentacao/provedores/provedores_atualizacao.dart';
 import 'package:centro_social_app/src/nucleo/utilitarios/layout_responsivo.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 

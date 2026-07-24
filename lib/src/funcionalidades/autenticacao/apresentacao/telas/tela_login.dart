@@ -405,7 +405,6 @@ class _TermsCheckboxState extends State<_TermsCheckbox> {
 
   @override
   Widget build(BuildContext context) {
-    const corTextoPrincipal = Color(0xFF17394A);
     const corTextoSecundario = Color(0xFF5E6A63);
     const corBotaoPrincipal = Color(0xFF13475E);
 
