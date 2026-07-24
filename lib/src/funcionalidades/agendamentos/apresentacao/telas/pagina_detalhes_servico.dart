@@ -833,12 +833,16 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
     final screenSize = MediaQuery.of(context).size;
     final isSmallScreen = screenSize.width < 600;
     final service = widget.service;
-    final weekdays = service.diasDisponiveis
-        .map(_weekdayFromLabel)
-        .whereType<int>()
-        .toSet()
-        .toList();
-    final effectiveWeekdays = weekdays;
+  final weekdays = service.diasDisponiveis
+      .map(_weekdayFromLabel)
+      .whereType<int>()
+      .toSet()
+      .toList();
+  
+  // Se não há dias configurados, permite todos os dias da semana (seg-sex)
+  final effectiveWeekdays = weekdays.isEmpty 
+      ? [DateTime.monday, DateTime.tuesday, DateTime.wednesday, DateTime.thursday, DateTime.friday]
+      : weekdays;
     final hasSpecificDates = service.datasEspecificas != null && service.datasEspecificas!.isNotEmpty;
     final timeSlots = _buildTimeSlots(
       service.horarios,
