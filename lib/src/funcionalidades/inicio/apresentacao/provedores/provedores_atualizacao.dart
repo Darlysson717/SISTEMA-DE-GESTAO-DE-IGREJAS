@@ -1,10 +1,7 @@
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
-
-const _githubApiLatestRelease =
-    'https://api.github.com/repos/Darlysson717/SISTEMA-DE-GESTAO-DE-IGREJAS/releases/latest';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Provider que retorna null se a versão local já é a mais recente,
 /// ou [AppUpdateInfo] com os dados da atualização disponível.
@@ -13,14 +10,14 @@ final appUpdateProvider = FutureProvider<AppUpdateInfo?>((ref) async {
     final packageInfo = await PackageInfo.fromPlatform();
     final localVersionStr = '${packageInfo.version}+${packageInfo.buildNumber}';
     final localVersion = AppVersion.parse(localVersionStr);
-    final latestRelease = await _fetchLatestReleaseInfo();
+    final latestVersion = await _fetchLatestVersionFromSupabase();
 
-    if (latestRelease == null) {
+    if (latestVersion == null) {
       return null;
     }
 
     final remoteVersion = AppVersion.parse(
-      latestRelease['tag_name'] as String? ?? '',
+      latestVersion['version_full'] as String? ?? '',
     );
 
     // Verifica se a versão remota é mais recente que a local
@@ -28,34 +25,16 @@ final appUpdateProvider = FutureProvider<AppUpdateInfo?>((ref) async {
       return null;
     }
 
-    // Procura o primeiro APK nos assets da release
-    final assets = latestRelease['assets'] as List<dynamic>? ?? [];
-    String? apkUrl;
-    String? apkName;
-
-    for (final asset in assets) {
-      final name = (asset['name'] as String? ?? '').toLowerCase();
-      if (name.endsWith('.apk')) {
-        apkUrl = asset['browser_download_url'] as String?;
-        apkName = asset['name'] as String?;
-        break;
-      }
-    }
-
-    // Se não encontrou APK, não retorna atualização (apenas releases com APK)
-    if (apkUrl == null || apkUrl.isEmpty) {
-      return null;
-    }
-
-    // Extrai o body/changelog da release e limpa markdown básico
-    final body = latestRelease['body'] as String? ?? '';
-    final changelog = _parseChangelog(body);
+    // Extrai o changelog
+    final changelog = latestVersion['changelog'] as String? ?? '';
+    final parsedChangelog = _parseChangelog(changelog);
 
     return AppUpdateInfo(
       version: remoteVersion,
-      apkDownloadUrl: apkUrl,
-      apkFileName: apkName,
-      changelog: changelog,
+      apkDownloadUrl: latestVersion['apk_download_url'] as String? ?? '',
+      apkFileName: latestVersion['apk_file_name'] as String?,
+      changelog: parsedChangelog,
+      isMandatory: latestVersion['is_mandatory'] as bool? ?? false,
     );
   } catch (_) {
     return null;
@@ -119,12 +98,14 @@ class AppUpdateInfo {
     required this.apkDownloadUrl,
     this.apkFileName,
     this.changelog = '',
+    this.isMandatory = false,
   });
 
   final AppVersion version;
   final String apkDownloadUrl;
   final String? apkFileName;
   final String changelog;
+  final bool isMandatory;
 
   String get displayVersion => version.toString();
 
@@ -193,19 +174,21 @@ class AppVersion implements Comparable<AppVersion> {
   }
 }
 
-/// Busca as informações da última release do GitHub
-Future<Map<String, dynamic>?> _fetchLatestReleaseInfo() async {
-  final response = await http.get(
-    Uri.parse(_githubApiLatestRelease),
-    headers: {
-      'Accept': 'application/vnd.github.v3+json',
-      'User-Agent': 'centro-social-app',
-    },
-  );
+/// Busca a versão mais recente do Supabase
+Future<Map<String, dynamic>?> _fetchLatestVersionFromSupabase() async {
+  try {
+    final supabase = Supabase.instance.client;
+    
+    final response = await supabase
+        .from('app_versions')
+        .select()
+        .eq('is_active', true)
+        .order('released_at', ascending: false)
+        .limit(1)
+        .maybeSingle();
 
-  if (response.statusCode != 200) {
+    return response as Map<String, dynamic>?;
+  } catch (e) {
     return null;
   }
-
-  return jsonDecode(response.body) as Map<String, dynamic>?;
 }
