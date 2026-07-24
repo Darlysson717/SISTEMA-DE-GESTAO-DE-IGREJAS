@@ -562,7 +562,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                   _focusedDay = focusedDay;
                 });
                 Navigator.of(context).pop();
-                _showAvailableTimes(context, selectedDay, timeSlots);
+                _showAvailableTimes(selectedDay, timeSlots);
               },
               onPageChanged: (focusedDay) {
                 _focusedDay = focusedDay;
@@ -664,7 +664,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                   _focusedDay = focusedDay;
                 });
                 Navigator.of(context).pop();
-                _showAvailableTimes(context, selectedDay, timeSlots);
+                _showAvailableTimes(selectedDay, timeSlots);
               },
               onPageChanged: (focusedDay) {
                 _focusedDay = focusedDay;
@@ -683,7 +683,6 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
   }
 
   Future<void> _showAvailableTimes(
-    BuildContext sheetContext,
     DateTime date,
     List<_TimeSlot> timeSlots,
   ) async {
@@ -717,7 +716,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
     }
 
     showModalBottomSheet<void>(
-      context: sheetContext,
+      context: context,
       isScrollControlled: true,
       showDragHandle: true,
       builder: (context) {
