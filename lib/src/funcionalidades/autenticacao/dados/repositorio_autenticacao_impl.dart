@@ -62,6 +62,35 @@ class AuthRepositoryImpl implements AuthRepository {
     }
   }
 
+  @override
+  Future<void> acceptConsent() async {
+    final user = _client.auth.currentUser;
+    if (user == null) return;
+
+    await _client
+        .from('profiles')
+        .update({
+          'consent_accepted': true,
+          'consent_accepted_at': DateTime.now().toUtc().toIso8601String(),
+          'consent_terms_version': '1.0',
+        })
+        .eq('id', user.id);
+  }
+
+  @override
+  Future<bool> hasAcceptedConsent() async {
+    final user = _client.auth.currentUser;
+    if (user == null) return false;
+
+    final response = await _client
+        .from('profiles')
+        .select('consent_accepted')
+        .eq('id', user.id)
+        .maybeSingle();
+
+    return response?['consent_accepted'] == true;
+  }
+
   Future<Map<String, dynamic>> _upsertAndReadProfile(User user) async {
     final fullName =
         user.userMetadata?['full_name'] as String? ??

@@ -1,13 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:centro_social_app/src/funcionalidades/autenticacao/apresentacao/provedores/provedores_autenticacao.dart';
 
-class LoginScreen extends ConsumerWidget {
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends ConsumerState<LoginScreen> {
+  bool acceptedTerms = false;
+
+  @override
+  Widget build(BuildContext context) {
     final authState = ref.watch(authControllerProvider);
     final loading = authState.isLoading;
     final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
@@ -133,6 +141,15 @@ class LoginScreen extends ConsumerWidget {
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 22),
+                      _TermsCheckbox(
+                        acceptedTerms: acceptedTerms,
+                        onTermsChanged: (value) {
+                          setState(() {
+                            acceptedTerms = value;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 14),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 20),
                         child: ElevatedButton(
@@ -146,9 +163,9 @@ class LoginScreen extends ConsumerWidget {
                             shape: const StadiumBorder(),
                             side: const BorderSide(color: Color(0xFFE8E1D2), width: 1.3),
                           ),
-                          onPressed: loading
+                          onPressed: (loading || !acceptedTerms)
                               ? null
-                              : () => ref.read(authControllerProvider.notifier).loginWithGoogle(),
+                              : () => ref.read(authControllerProvider.notifier).loginWithTermsAccepted(),
                           child: loading
                               ? const SizedBox(
                                   width: 24,
@@ -223,6 +240,309 @@ class LoginScreen extends ConsumerWidget {
     );
   }
 }
+
+class _TermsCheckbox extends StatefulWidget {
+  final bool acceptedTerms;
+  final ValueChanged<bool> onTermsChanged;
+
+  const _TermsCheckbox({
+    required this.acceptedTerms,
+    required this.onTermsChanged,
+  });
+
+  @override
+  State<_TermsCheckbox> createState() => _TermsCheckboxState();
+}
+
+class _TermsCheckboxState extends State<_TermsCheckbox> {
+  void _abrirTermos(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: const Color(0xFFF6F3EB),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Termos de Uso',
+                        style: GoogleFonts.playfairDisplay(
+                          textStyle: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF17394A),
+                          ),
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                      color: const Color(0xFF17394A),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
+                ),
+                const Divider(),
+                Flexible(
+                  fit: FlexFit.loose,
+                  child: SingleChildScrollView(
+                    child: Text(
+                      _termosTexto,
+                      style: GoogleFonts.montserrat(
+                        textStyle: const TextStyle(
+                          fontSize: 13,
+                          height: 1.6,
+                          color: Color(0xFF5E6A63),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF13475E),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                  ),
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Fechar'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _abrirPrivacidade(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: const Color(0xFFF6F3EB),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Política de Privacidade',
+                        style: GoogleFonts.playfairDisplay(
+                          textStyle: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF17394A),
+                          ),
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                      color: const Color(0xFF17394A),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
+                ),
+                const Divider(),
+                Flexible(
+                  fit: FlexFit.loose,
+                  child: SingleChildScrollView(
+                    child: Text(
+                      _privacidadeTexto,
+                      style: GoogleFonts.montserrat(
+                        textStyle: const TextStyle(
+                          fontSize: 13,
+                          height: 1.6,
+                          color: Color(0xFF5E6A63),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF13475E),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                  ),
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Fechar'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const corTextoPrincipal = Color(0xFF17394A);
+    const corTextoSecundario = Color(0xFF5E6A63);
+    const corBotaoPrincipal = Color(0xFF13475E);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Checkbox(
+                value: widget.acceptedTerms,
+                onChanged: (value) {
+                  widget.onTermsChanged(value ?? false);
+                },
+                activeColor: corBotaoPrincipal,
+                checkColor: Colors.white,
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: RichText(
+                    text: TextSpan(
+                      style: GoogleFonts.montserrat(
+                        textStyle: TextStyle(
+                          color: corTextoSecundario,
+                          fontSize: 12,
+                          height: 1.5,
+                        ),
+                      ),
+                      children: [
+                        const TextSpan(
+                          text: 'Declaro que tenho pelo menos 18 anos de idade e aceito os ',
+                        ),
+                        TextSpan(
+                          text: 'Termos de Uso',
+                          style: TextStyle(
+                            color: corBotaoPrincipal,
+                            fontWeight: FontWeight.w600,
+                            decoration: TextDecoration.underline,
+                          ),
+                          recognizer: TapGestureRecognizer()
+                            ..onTap = () => _abrirTermos(context),
+                        ),
+                        const TextSpan(text: ' e a '),
+                        TextSpan(
+                          text: 'Política de Privacidade',
+                          style: TextStyle(
+                            color: corBotaoPrincipal,
+                            fontWeight: FontWeight.w600,
+                            decoration: TextDecoration.underline,
+                          ),
+                          recognizer: TapGestureRecognizer()
+                            ..onTap = () => _abrirPrivacidade(context),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          if (!widget.acceptedTerms)
+            Padding(
+              padding: const EdgeInsets.only(left: 40),
+              child: Text(
+                'Você deve aceitar os termos para continuar',
+                style: GoogleFonts.montserrat(
+                  textStyle: TextStyle(
+                    color: Colors.red[700],
+                    fontSize: 11,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+const String _termosTexto = '''
+TERMOS DE USO
+
+1. Aceitação dos Termos
+Ao acessar e usar este aplicativo, você concorda em cumprir estes termos de uso.
+
+2. Elegibilidade
+Você deve ter pelo menos 18 anos de idade para usar este aplicativo. Menores de 18 anos não estão autorizados a usar este serviço.
+
+3. Conta de Usuário
+Você é responsável por manter a confidencialidade de sua conta e por todas as atividades realizadas nela.
+
+4. Uso Aceitável
+Você concorda em usar o aplicativo apenas para fins legítimos e respeitar os direitos de outros usuários.
+
+5. Privacidade
+Sua privacidade é importante. Consulte nossa Política de Privacidade para mais informações.
+
+6. Modificações
+Podemos modificar ou descontinuar o serviço a qualquer momento.
+
+7. Limitação de Responsabilidade
+O serviço é fornecido "como está" sem garantias.
+
+8. Lei Aplicável
+Estes termos são regidos pelas leis brasileiras.
+''';
+
+const String _privacidadeTexto = '''
+POLÍTICA DE PRIVACIDADE
+
+1. Informações Coletadas
+Coletamos nome, e-mail, foto de perfil e informações de agendamento necessárias para o funcionamento do serviço.
+
+2. Uso das Informações
+Utilizamos seus dados para fornecer e melhorar nossos serviços, processar agendamentos e enviar notificações.
+
+3. Compartilhamento
+NÃO vendemos suas informações pessoais. Compartilhamos apenas com seu consentimento ou para cumprir obrigações legais.
+
+4. Segurança
+Seus dados são armazenados em servidores seguros com criptografia.
+
+5. Seus Direitos
+Você pode acessar, corrigir ou solicitar a exclusão de seus dados a qualquer momento.
+
+6. Privacidade de Menores
+Este aplicativo é destinado a maiores de 18 anos. Não coletamos dados de menores intencionalmente.
+
+7. Retenção de Dados
+Mantemos seus dados enquanto sua conta estiver ativa. Após exclusão, removemos em até 30 dias.
+
+8. Contato
+Para questões sobre privacidade, entre em contato através do aplicativo.
+''';
 
 class _LoginEmblem extends StatelessWidget {
   const _LoginEmblem();

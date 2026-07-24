@@ -3,7 +3,6 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:web/web.dart' as web;
 
 /// Canal de notificações para Android
 const AndroidNotificationChannel channel = AndroidNotificationChannel(
@@ -411,23 +410,10 @@ class ServicoNotificacoes {
     String corpo,
     Map<String, dynamic>? dados,
   ) {
-    // Usa a Web Notification API nativa do navegador via package:web
-    // Isso funciona mesmo com o app em foreground no PWA
-    try {
-      if (!kIsWeb) return;
-
-      final notificationOptions = web.NotificationOptions(
-        body: corpo,
-        icon: 'icons/Icon-192.png',
-        badge: 'icons/Icon-192.png',
-        tag: dados?['tipo']?.toString() ?? 'default',
-      );
-
-      web.Notification(titulo, notificationOptions);
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ Erro ao exibir notificação web: $e');
-      }
+    // Notificações web são gerenciadas pelo Firebase Messaging
+    // Não é necessário usar a API nativa do navegador
+    if (kDebugMode) {
+      print('🔔 Notificação web recebida: $titulo - $corpo');
     }
   }
 

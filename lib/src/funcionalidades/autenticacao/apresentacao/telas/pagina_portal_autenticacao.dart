@@ -11,6 +11,15 @@ class AuthGatePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authStateChangesProvider);
 
+    // Escuta mudanças no auth state para salvar termos pendentes
+    ref.listen(authStateChangesProvider, (_, next) {
+      next.whenOrNull(data: (state) {
+        if (state.session != null) {
+          ref.read(authControllerProvider.notifier).onAuthStateChanged(state);
+        }
+      });
+    });
+
     return authState.when(
       data: (state) {
         if (state.session == null) {

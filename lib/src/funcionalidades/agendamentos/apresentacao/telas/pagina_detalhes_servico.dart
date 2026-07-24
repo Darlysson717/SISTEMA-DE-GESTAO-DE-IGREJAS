@@ -562,7 +562,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                   _focusedDay = focusedDay;
                 });
                 Navigator.of(context).pop();
-                _showAvailableTimes(selectedDay, timeSlots);
+                _showAvailableTimes(context, selectedDay, timeSlots);
               },
               onPageChanged: (focusedDay) {
                 _focusedDay = focusedDay;
@@ -664,7 +664,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                   _focusedDay = focusedDay;
                 });
                 Navigator.of(context).pop();
-                _showAvailableTimes(selectedDay, timeSlots);
+                _showAvailableTimes(context, selectedDay, timeSlots);
               },
               onPageChanged: (focusedDay) {
                 _focusedDay = focusedDay;
@@ -683,6 +683,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
   }
 
   Future<void> _showAvailableTimes(
+    BuildContext sheetContext,
     DateTime date,
     List<_TimeSlot> timeSlots,
   ) async {
@@ -708,7 +709,6 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
             appointment.status == AppointmentStatus.scheduled;
       }).toList();
     } catch (e) {
-      print('Erro ao buscar agendamentos: $e');
       // Fallback para o cache se houver erro
       bookedAppointments = _appointmentsCache.where((appointment) {
         return appointment.serviceId == widget.service.id &&
@@ -717,7 +717,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
     }
 
     showModalBottomSheet<void>(
-      context: context,
+      context: sheetContext,
       isScrollControlled: true,
       showDragHandle: true,
       builder: (context) {
@@ -776,7 +776,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                               
                               // Debug para verificar se está detectando corretamente
                               if (isBooked) {
-                                print('DEBUG: Horário $slotTimeKey bloqueado - agendamentos: ${bookedAppointments.length}, backend: ${bookedTimesFromBackend.length}');
+                                // Debug removido em produção
                               }
                             }
                             final isDisabled =

@@ -9,7 +9,7 @@ import '../../../eventos/dominio/entidades/evento_app.dart';
 class AnnounceEventPage extends StatefulWidget {
   final dynamic initialEvent;
 
-  const AnnounceEventPage({Key? key, this.initialEvent}) : super(key: key);
+  const AnnounceEventPage({super.key, this.initialEvent});
 
   @override
   State<AnnounceEventPage> createState() => _AnnounceEventPageState();
@@ -50,7 +50,7 @@ class _AnnounceEventPageState extends State<AnnounceEventPage> {
   bool _necessitaInscricaoPrevia = false;
   final TextEditingController _limiteVagasController = TextEditingController();
   ImagemSelecionada? _capaImagem;
-  List<ImagemSelecionada> _imagensGaleria = [];
+  final List<ImagemSelecionada> _imagensGaleria = [];
   String? _capaImagemUrlExistente;
   List<String> _imagensGaleriaUrlsExistentes = [];
 
@@ -712,7 +712,7 @@ class _AnnounceEventPageState extends State<AnnounceEventPage> {
                     return FilterChip(
                       label: Text(publico),
                       selected: isSelected,
-                      selectedColor: const Color(0xFF536194).withOpacity(0.2),
+                      selectedColor: const Color(0xFF536194).withValues(alpha: 0.2),
                       checkmarkColor: const Color(0xFF536194),
                       onSelected: (selected) {
                         setState(() {
@@ -842,7 +842,7 @@ class _AnnounceEventPageState extends State<AnnounceEventPage> {
                       borderRadius: BorderRadius.circular(8),
                       constraints: BoxConstraints.expand(width: (constraints.maxWidth - 4) / 3, height: 40),
                       selectedColor: const Color(0xFF536194),
-                      fillColor: const Color(0xFF536194).withOpacity(0.1),
+                      fillColor: const Color(0xFF536194).withValues(alpha: 0.1),
                       children: const [Text('Presencial'), Text('Online'), Text('Híbrido')],
                     );
                   }
@@ -1126,7 +1126,7 @@ class _AnnounceEventPageState extends State<AnnounceEventPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -5)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, -5)),
         ],
       ),
       child: SafeArea(

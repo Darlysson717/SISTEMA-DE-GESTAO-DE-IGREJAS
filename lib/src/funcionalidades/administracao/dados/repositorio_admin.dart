@@ -892,7 +892,7 @@ class AdminRepository {
         titulo: 'Nova Solicitação de $tipo',
         corpo: '$solicitante solicitou permissão para publicar "$nome".',
         dados: {
-          'tipo': 'nova_solicitacao_${tipo}',
+          'tipo': 'nova_solicitacao_$tipo',
         },
       );
     } catch (e) {

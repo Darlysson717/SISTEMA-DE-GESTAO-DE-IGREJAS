@@ -10,7 +10,9 @@ import 'package:centro_social_app/src/funcionalidades/servicos/apresentacao/tela
 import 'package:centro_social_app/src/funcionalidades/inicio/apresentacao/provedores/provedores_atualizacao.dart';
 import 'package:centro_social_app/src/nucleo/utilitarios/layout_responsivo.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class ProfilePage extends ConsumerWidget {
   final AppUser user;
@@ -361,6 +363,16 @@ class ProfilePage extends ConsumerWidget {
         },
       ),
       ProfileActionTile(
+        icon: Icons.description_outlined,
+        label: 'Termos de Uso',
+        onTap: () => _abrirTermos(context),
+      ),
+      ProfileActionTile(
+        icon: Icons.privacy_tip_outlined,
+        label: 'Política de Privacidade',
+        onTap: () => _abrirPrivacidade(context),
+      ),
+      ProfileActionTile(
         icon: Icons.logout_outlined,
         label: 'Sair',
         onTap: onLogout ?? () {},
@@ -384,6 +396,88 @@ class ProfilePage extends ConsumerWidget {
     }
 
     return actions;
+  }
+
+  void _abrirTermos(BuildContext context) {
+    _exibirDialog(context, 'Termos de Uso', _termosTexto);
+  }
+
+  void _abrirPrivacidade(BuildContext context) {
+    _exibirDialog(context, 'Política de Privacidade', _privacidadeTexto);
+  }
+
+  void _exibirDialog(BuildContext context, String titulo, String texto) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: const Color(0xFFF6F3EB),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        titulo,
+                        style: GoogleFonts.playfairDisplay(
+                          textStyle: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF17394A),
+                          ),
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                      color: const Color(0xFF17394A),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
+                ),
+                const Divider(),
+                Flexible(
+                  fit: FlexFit.loose,
+                  child: SingleChildScrollView(
+                    child: Text(
+                      texto,
+                      style: GoogleFonts.montserrat(
+                        textStyle: const TextStyle(
+                          fontSize: 13,
+                          height: 1.6,
+                          color: Color(0xFF5E6A63),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF13475E),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                  ),
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Fechar'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildNavChip(String label, IconData icon) {
@@ -428,6 +522,62 @@ class ProfilePage extends ConsumerWidget {
     );
   }
 }
+
+const String _termosTexto = '''
+TERMOS DE USO
+
+1. Aceitação dos Termos
+Ao acessar e usar este aplicativo, você concorda em cumprir estes termos de uso.
+
+2. Elegibilidade
+Você deve ter pelo menos 18 anos de idade para usar este aplicativo. Menores de 18 anos não estão autorizados a usar este serviço.
+
+3. Conta de Usuário
+Você é responsável por manter a confidencialidade de sua conta e por todas as atividades realizadas nela.
+
+4. Uso Aceitável
+Você concorda em usar o aplicativo apenas para fins legítimos e respeitar os direitos de outros usuários.
+
+5. Privacidade
+Sua privacidade é importante. Consulte nossa Política de Privacidade para mais informações.
+
+6. Modificações
+Podemos modificar ou descontinuar o serviço a qualquer momento.
+
+7. Limitação de Responsabilidade
+O serviço é fornecido "como está" sem garantias.
+
+8. Lei Aplicável
+Estes termos são regidos pelas leis brasileiras.
+''';
+
+const String _privacidadeTexto = '''
+POLÍTICA DE PRIVACIDADE
+
+1. Informações Coletadas
+Coletamos nome, e-mail, foto de perfil e informações de agendamento necessárias para o funcionamento do serviço.
+
+2. Uso das Informações
+Utilizamos seus dados para fornecer e melhorar nossos serviços, processar agendamentos e enviar notificações.
+
+3. Compartilhamento
+NÃO vendemos suas informações pessoais. Compartilhamos apenas com seu consentimento ou para cumprir obrigações legais.
+
+4. Segurança
+Seus dados são armazenados em servidores seguros com criptografia.
+
+5. Seus Direitos
+Você pode acessar, corrigir ou solicitar a exclusão de seus dados a qualquer momento.
+
+6. Privacidade de Menores
+Este aplicativo é destinado a maiores de 18 anos. Não coletamos dados de menores intencionalmente.
+
+7. Retenção de Dados
+Mantemos seus dados enquanto sua conta estiver ativa. Após exclusão, removemos em até 30 dias.
+
+8. Contato
+Para questões sobre privacidade, entre em contato através do aplicativo.
+''';
 
 class _AppVersionBadge extends ConsumerWidget {
   const _AppVersionBadge();

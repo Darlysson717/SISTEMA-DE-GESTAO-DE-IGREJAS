@@ -6,4 +6,6 @@ abstract class AuthRepository {
   Future<void> signInWithGoogle();
   Future<void> signOut();
   Future<AppUser?> getCurrentAppUser();
+  Future<void> acceptConsent();
+  Future<bool> hasAcceptedConsent();
 }

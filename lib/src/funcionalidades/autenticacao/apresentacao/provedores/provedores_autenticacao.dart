@@ -39,5 +39,6 @@ final authControllerProvider =
       return AuthController(
         signInWithGoogle: SignInWithGoogle(repository),
         signOut: SignOut(repository),
+        authRepository: repository,
       );
     });

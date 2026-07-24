@@ -56,6 +56,9 @@ android {
             isMinifyEnabled = false
             isShrinkResources = false
         }
+        debug {
+            signingConfig = signingConfigs.getByName("debug")
+        }
     }
 
     // Configurar nome do APK

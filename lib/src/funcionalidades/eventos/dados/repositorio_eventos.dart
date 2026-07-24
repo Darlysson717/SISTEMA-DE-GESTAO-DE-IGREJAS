@@ -323,9 +323,7 @@ class EventsRepository {
           'event_id': eventId,
         },
       );
-    } catch (e) {
-      print('Erro ao enviar notificação de registro em evento: $e');
-    }
+    } catch (_) {}
   }
 
   Future<String> saveEvent({
