@@ -42,6 +42,17 @@ class _RepositorioAutenticacaoFalso implements AuthRepository {
     }
     return usuario;
   }
+
+  @override
+  Future<void> acceptConsent() async {
+    // Implementação mock para testes
+  }
+
+  @override
+  Future<bool> hasAcceptedConsent() async {
+    // Implementação mock para testes
+    return false;
+  }
 }
 
 void main() {
