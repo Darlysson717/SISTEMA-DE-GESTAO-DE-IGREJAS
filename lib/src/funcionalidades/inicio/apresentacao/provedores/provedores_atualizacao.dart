@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 const _githubApiLatestRelease =
     'https://api.github.com/repos/Darlysson717/SISTEMA-DE-GESTAO-DE-IGREJAS/releases/latest';
@@ -54,6 +55,36 @@ final appUpdateProvider = FutureProvider<AppUpdateInfo?>((ref) async {
       apkFileName: apkName,
       changelog: changelog,
     );
+  } catch (_) {
+    return null;
+  }
+});
+
+/// Provider que verifica se a versão mínima obrigatória foi atingida.
+/// Retorna a versão mínima exigida ou null se a versão local é compatível.
+final minVersionProvider = FutureProvider<String?>((ref) async {
+  try {
+    final response = await Supabase.instance.client
+        .from('app_config')
+        .select('min_version')
+        .eq('id', 1)
+        .maybeSingle();
+
+    final minVersionStr = response?['min_version'] as String?;
+    if (minVersionStr == null || minVersionStr.isEmpty) {
+      return null;
+    }
+
+    final packageInfo = await PackageInfo.fromPlatform();
+    final localVersionStr = '${packageInfo.version}+${packageInfo.buildNumber}';
+    final localVersion = AppVersion.parse(localVersionStr);
+    final minVersion = AppVersion.parse(minVersionStr);
+
+    if (localVersion.compareTo(minVersion) >= 0) {
+      return null; // Versão local é compatível
+    }
+
+    return minVersionStr; // Precisa atualizar
   } catch (_) {
     return null;
   }

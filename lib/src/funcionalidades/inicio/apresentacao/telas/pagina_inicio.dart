@@ -136,10 +136,17 @@ class _HomePageState extends ConsumerState<HomePage> {
   Widget build(BuildContext context) {
     final eventsAsync = ref.watch(publishedEventsProvider);
     final updateAsync = ref.watch(appUpdateProvider);
+    final minVersionAsync = ref.watch(minVersionProvider);
     final screenWidth = MediaQuery.of(context).size.width;
     final isPhone = screenWidth < 600;
     final showChipsUnderBanner = _shouldShowChipsBelowBanner(context);
     final isWide = screenWidth >= 600;
+
+    // Verifica se há versão mínima obrigatória (bloqueia o app)
+    final minVersion = minVersionAsync.valueOrNull;
+    if (minVersion != null) {
+      return _buildForcedUpdateScreen(context, minVersion);
+    }
 
     // MOBILE (telefone): chips de navegação iguais ao desktop
     if (isPhone) {
@@ -214,6 +221,104 @@ class _HomePageState extends ConsumerState<HomePage> {
                 child: _buildPerfilTab(context),
               ),
           ],
+        ),
+      ),
+    );
+  }
+
+  /// Tela de atualização forçada (bloqueia o app até o usuário atualizar)
+  Widget _buildForcedUpdateScreen(BuildContext context, String minVersion) {
+    return PopScope(
+      canPop: false,
+      child: Scaffold(
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Color(0xFF1E3A8A), Color(0xFF2563EB)],
+            ),
+          ),
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: const Icon(
+                      Icons.system_update_alt,
+                      color: Colors.white,
+                      size: 64,
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  const Text(
+                    'Atualização Obrigatória',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Sua versão do aplicativo está desatualizada. '
+                    'Para continuar usando, faça o download da versão mais recente.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.9),
+                      fontSize: 16,
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      'Versão necessária: $minVersion',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.8),
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: () {
+                        // Abre a página de releases do GitHub
+                        _openUpdateLink(
+                          'https://github.com/Darlysson717/SISTEMA-DE-GESTAO-DE-IGREJAS/releases/latest',
+                        );
+                      },
+                      icon: const Icon(Icons.download),
+                      label: const Text('Atualizar Agora'),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: const Color(0xFF1D4ED8),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        textStyle: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );

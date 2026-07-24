@@ -1,0 +1,45 @@
+name: Notificar Atualização via Push
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  notify-update:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Buscar dados da release
+        id: release
+        run: |
+          echo "versao=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+          echo "apk_url=$(echo '${{ toJSON(github.event.release.assets) }}' | jq -r '.[] | select(.name | endswith(".apk")) | .browser_download_url' | head -1)" >> $GITHUB_OUTPUT
+          echo "changelog=${{ github.event.release.body }}" >> $GITHUB_OUTPUT
+          
+      - name: Verificar se APK existe
+        id: check_apk
+        run: |
+          if [ -z "${{ steps.release.outputs.apk_url }}" ]; then
+            echo "⚠️ Nenhum APK encontrado nesta release. Usando URL da página."
+            echo "apk_url=${{ github.event.release.html_url }}" >> $GITHUB_OUTPUT
+          else
+            echo "apk_url=${{ steps.release.outputs.apk_url }}" >> $GITHUB_OUTPUT
+          fi
+          
+      - name: Notificar usuários via Supabase
+        id: notify
+        run: |
+          curl -X POST "${{ secrets.SUPABASE_FUNCTION_URL }}/notificar-atualizacao" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "versao": "${{ github.event.release.tag_name }}",
+              "apk_url": "${{ steps.check_apk.outputs.apk_url }}",
+              "changelog": "${{ github.event.release.body }}"
+            }'
+            
+      - name: Resultado
+        run: |
+          echo "✅ Notificação de atualização enviada!"
+          echo "   Versão: ${{ github.event.release.tag_name }}"
+          echo "   APK: ${{ steps.check_apk.outputs.apk_url }}"

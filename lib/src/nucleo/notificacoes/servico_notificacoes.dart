@@ -491,8 +491,23 @@ class ServicoNotificacoes {
       print('   Dados: ${mensagem.data}');
     }
 
-    // Aqui você pode navegar para uma tela específica baseada nos dados
-    // Exemplo: se dados['tipo'] == 'agendamento', navegar para detalhes
+    final tipo = mensagem.data['tipo'] as String?;
+    
+    if (tipo == 'atualizacao') {
+      _navegarParaAtualizacao(mensagem.data);
+    }
+  }
+
+  /// Navega para a tela de atualização quando o usuário toca na notificação
+  void _navegarParaAtualizacao(Map<String, dynamic> dados) {
+    if (kDebugMode) {
+      print('🔄 Navegando para tela de atualização...');
+    }
+    
+    // A navegação será feita pelo observador de rotas ou pelo widget
+    // que escuta o provedor de atualização. Aqui apenas logamos.
+    // O dialog de atualização aparece automaticamente via appUpdateProvider
+    // na página inicial.
   }
 
   /// Manipula mensagens recebidas quando o app está em background/terminated
