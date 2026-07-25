@@ -1,3 +1,4 @@
+import 'dart:js' as js;
 import 'package:centro_social_app/src/nucleo/configuracao/configuracao_app.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -404,16 +405,70 @@ class ServicoNotificacoes {
     );
   }
 
-  /// Exibe notificação via Web Notification API (funciona em PWAs)
+  /// Exibe notificação via Web Notification API nativa do navegador
+  /// Funciona em PWAs instalados e em qualquer navegador moderno
   void _exibirNotificacaoWeb(
     String titulo,
     String corpo,
     Map<String, dynamic>? dados,
   ) {
-    // Notificações web são gerenciadas pelo Firebase Messaging
-    // Não é necessário usar a API nativa do navegador
+    try {
+      // Acessa a API Notification do navegador via JS interop
+      final notificationApi = js.context['Notification'];
+      if (notificationApi == null) return;
+
+      final permission = notificationApi['permission'];
+      if (permission == 'granted') {
+        // Constrói as opções da notificação
+        final options = js.JsObject.jsify({
+          'body': corpo,
+          'icon': 'icons/Icon-192.png',
+          'tag': 'desiadet-notification',
+          'requireInteraction': true,
+        });
+
+        final notification = js.JsObject(notificationApi, [titulo, options]);
+
+        // Quando clicar, foca no PWA e fecha a notificação
+        notification['onclick'] = () {
+          js.context.callMethod('focus');
+          notification.callMethod('close');
+          _manipularAberturaNotificacaoWeb(dados);
+        };
+
+        if (kDebugMode) {
+          print('🔔 Notificação web exibida: $titulo - $corpo');
+        }
+      } else if (permission == 'default') {
+        // Permissão não solicitada ainda — solicita
+        notificationApi.callMethod('requestPermission').then((result) {
+          if (result == 'granted') {
+            _exibirNotificacaoWeb(titulo, corpo, dados);
+          }
+        });
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Erro ao exibir notificação web: $e');
+      }
+    }
+  }
+
+  /// Manipula clique em notificação web
+  void _manipularAberturaNotificacaoWeb(Map<String, dynamic>? dados) {
+    if (dados == null || dados.isEmpty) return;
+
     if (kDebugMode) {
-      print('🔔 Notificação web recebida: $titulo - $corpo');
+      print('🔔 Notificação web clicada com dados: $dados');
+    }
+
+    // Aqui você pode navegar para uma tela específica baseada nos dados
+    // Exemplo: se dados['tipo'] == 'agendamento', navegar para detalhes
+    final tipo = dados['tipo'] as String?;
+    if (tipo != null) {
+      if (kDebugMode) {
+        print('📱 Navegando para: $tipo');
+      }
     }
   }
 

@@ -15,6 +15,7 @@ import 'package:centro_social_app/src/funcionalidades/agendamentos/apresentacao/
 import 'package:centro_social_app/src/funcionalidades/agendamentos/apresentacao/provedores/provedores_agendamentos.dart';
 import 'package:centro_social_app/src/funcionalidades/agendamentos/dominio/entidades/servico.dart';
 import 'package:centro_social_app/src/funcionalidades/inicio/apresentacao/provedores/provedores_atualizacao.dart';
+import 'package:centro_social_app/src/funcionalidades/notificacoes/apresentacao/componentes/modal_notificacoes.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class HomePage extends ConsumerStatefulWidget {
@@ -318,6 +319,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                             ],
                           ),
                         ),
+                        const BotaoNotificacoes(),
                       ],
                     ),
                     SizedBox(height: isSmallScreen ? 24 : 32),
