@@ -189,7 +189,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                   ),
                   updateAsync.when(
                     data: (updateInfo) {
-                      if (updateInfo == null) return const SizedBox.shrink();
+                      if (updateInfo == null || kIsWeb) return const SizedBox.shrink();
                       return _buildUpdateOverlay(context, updateInfo);
                     },
                     loading: () => const SizedBox.shrink(),
@@ -405,10 +405,10 @@ class _HomePageState extends ConsumerState<HomePage> {
                 ),
               ),
 
-            // Card de atualização disponível (mobile)
+            // Card de atualização disponível (apenas Android nativo, não PWA)
             updateAsync.when(
               data: (updateInfo) {
-                if (updateInfo == null) return const SliverToBoxAdapter(child: SizedBox.shrink());
+                if (updateInfo == null || kIsWeb) return const SliverToBoxAdapter(child: SizedBox.shrink());
                 return SliverToBoxAdapter(
                   child: Padding(
                     padding: EdgeInsets.fromLTRB(
