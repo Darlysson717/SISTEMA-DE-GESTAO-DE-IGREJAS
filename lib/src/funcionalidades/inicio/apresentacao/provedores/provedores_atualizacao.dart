@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -187,7 +186,7 @@ Future<Map<String, dynamic>?> _fetchLatestVersionFromSupabase() async {
         .limit(1)
         .maybeSingle();
 
-    return response as Map<String, dynamic>?;
+    return response;
   } catch (e) {
     return null;
   }

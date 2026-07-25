@@ -12,7 +12,6 @@ import 'package:centro_social_app/src/nucleo/utilitarios/layout_responsivo.dart'
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class ProfilePage extends ConsumerWidget {
   final AppUser user;
