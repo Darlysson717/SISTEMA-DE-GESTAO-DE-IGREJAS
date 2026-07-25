@@ -12,6 +12,7 @@ import 'package:centro_social_app/src/nucleo/utilitarios/layout_responsivo.dart'
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ProfilePage extends ConsumerWidget {
   final AppUser user;
@@ -362,6 +363,13 @@ class ProfilePage extends ConsumerWidget {
         },
       ),
       ProfileActionTile(
+        icon: Icons.system_update_alt_outlined,
+        label: 'Verificar Atualizações',
+        onTap: () async {
+          await _verificarAtualizacaoManual(context, ref);
+        },
+      ),
+      ProfileActionTile(
         icon: Icons.description_outlined,
         label: 'Termos de Uso',
         onTap: () => _abrirTermos(context),
@@ -395,6 +403,96 @@ class ProfilePage extends ConsumerWidget {
     }
 
     return actions;
+  }
+
+  Future<void> _verificarAtualizacaoManual(BuildContext context, WidgetRef ref) async {
+    // Mostra indicador de carregamento
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ),
+              SizedBox(width: 16),
+              Text('Verificando atualizações...'),
+            ],
+          ),
+          backgroundColor: Color(0xFF6366F1),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+
+    // Invalida o provider para forçar nova verificação
+    ref.invalidate(appUpdateProvider);
+
+    // Aguarda um tempo para a verificação completar
+    await Future.delayed(const Duration(seconds: 2));
+
+    if (!context.mounted) return;
+
+    // Remove o SnackBar de carregamento
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+    // Verifica o resultado após a verificação
+    await Future.delayed(const Duration(milliseconds: 300));
+
+    final updateResult = ref.read(appUpdateProvider);
+
+    updateResult.when(
+      data: (updateInfo) {
+        if (updateInfo == null) {
+          // Não há atualizações disponíveis
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Você está usando a versão mais recente!'),
+              backgroundColor: Color(0xFF10B981),
+              duration: Duration(seconds: 3),
+            ),
+          );
+        } else {
+          // Há atualização disponível - o overlay será mostrado automaticamente
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Nova versão disponível: v${updateInfo.displayVersion}'),
+              backgroundColor: const Color(0xFF6366F1),
+              duration: const Duration(seconds: 4),
+              action: SnackBarAction(
+                label: 'Ver',
+                textColor: Colors.white,
+                onPressed: () {
+                  // O overlay já será exibido automaticamente
+                },
+              ),
+            ),
+          );
+        }
+      },
+      loading: () {
+        // Ainda carregando, aguarda mais um pouco
+        Future.delayed(const Duration(seconds: 1), () {
+          if (context.mounted) {
+            _verificarAtualizacaoManual(context, ref);
+          }
+        });
+      },
+      error: (error, _) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao verificar atualizações: $error'),
+            backgroundColor: const Color(0xFFDC2626),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      },
+    );
   }
 
   void _abrirTermos(BuildContext context) {

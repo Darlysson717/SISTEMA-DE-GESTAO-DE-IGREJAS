@@ -405,6 +405,26 @@ class _HomePageState extends ConsumerState<HomePage> {
                 ),
               ),
 
+            // Card de atualização disponível (mobile)
+            updateAsync.when(
+              data: (updateInfo) {
+                if (updateInfo == null) return const SliverToBoxAdapter(child: SizedBox.shrink());
+                return SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      contentPadding.left,
+                      isSmallScreen ? 24 : 32,
+                      contentPadding.right,
+                      isSmallScreen ? 16 : 20,
+                    ),
+                    child: _buildUpdateCard(context, updateInfo, isSmallScreen),
+                  ),
+                );
+              },
+              loading: () => const SliverToBoxAdapter(child: SizedBox.shrink()),
+              error: (_, __) => const SliverToBoxAdapter(child: SizedBox.shrink()),
+            ),
+
             // Seção de Eventos
             SliverToBoxAdapter(
               child: Padding(
