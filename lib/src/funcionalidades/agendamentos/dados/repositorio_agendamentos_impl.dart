@@ -548,11 +548,12 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
           ? scheduledTime.substring(0, 5)
           : scheduledTime;
 
-      // 🔒 NOTIFICAÇÃO PRIVADA 1: Profissional ← Novo agendamento
-      await _notificacoes.enviarParaUsuario(
-        userId: professionalId,
+      // 🔒 NOTIFICAÇÃO SINCRONIZADA: Profissional ← Novo agendamento
+      await _notificacoes.enviarNotificacaoSincronizada(
+        usuarioId: professionalId,
         titulo: 'Novo Agendamento',
         corpo: '$userName agendou $categoria para $dataFormatada às $horaFormatada',
+        tipo: 'agendamento',
         dados: {
           'tipo': 'novo_agendamento',
           'service_id': serviceId,
@@ -561,11 +562,12 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
         },
       );
 
-      // 🔒 NOTIFICAÇÃO PRIVADA 2: Usuário ← Confirmação do agendamento
-      await _notificacoes.enviarParaUsuario(
-        userId: communityUserId,
+      // 🔒 NOTIFICAÇÃO SINCRONIZADA: Usuário ← Confirmação do agendamento
+      await _notificacoes.enviarNotificacaoSincronizada(
+        usuarioId: communityUserId,
         titulo: 'Agendamento Confirmado',
         corpo: 'Seu agendamento de $categoria com $nomeProfissional foi confirmado para $dataFormatada às $horaFormatada.',
+        tipo: 'agendamento',
         dados: {
           'tipo': 'confirmacao_agendamento',
           'service_id': serviceId,
@@ -737,7 +739,7 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
       final cat = categoria ?? service['categoria'] as String? ?? '';
       final nomeProf = nomeProfissional ?? service['nome_profissional'] as String? ?? 'Profissional';
 
-      // 🔒 NOTIFICAÇÃO PRIVADA 3: Profissional ← Usuário cancelou
+      // 🔒 NOTIFICAÇÃO SINCRONIZADA: Profissional ← Usuário cancelou
       if (!cancelledByProfessional && communityUserId != null) {
         final communityProfile = await _client
             .from('profiles')
@@ -746,10 +748,11 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
             .maybeSingle();
         final userName = communityProfile?['full_name'] as String? ?? 'Um usuário';
 
-        await _notificacoes.enviarParaUsuario(
-          userId: professionalId,
+        await _notificacoes.enviarNotificacaoSincronizada(
+          usuarioId: professionalId,
           titulo: 'Agendamento Cancelado',
           corpo: '$userName cancelou o agendamento de $cat.',
+          tipo: 'agendamento',
           dados: {
             'tipo': 'cancelamento_agendamento',
             'appointment_id': appointmentId,
@@ -758,12 +761,13 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
         );
       }
 
-      // 🔒 NOTIFICAÇÃO PRIVADA 4: Usuário ← Profissional cancelou
+      // 🔒 NOTIFICAÇÃO SINCRONIZADA: Usuário ← Profissional cancelou
       if (cancelledByProfessional && communityUserId != null) {
-        await _notificacoes.enviarParaUsuario(
-          userId: communityUserId,
+        await _notificacoes.enviarNotificacaoSincronizada(
+          usuarioId: communityUserId,
           titulo: 'Agendamento Cancelado',
           corpo: 'O profissional $nomeProf cancelou seu agendamento de $cat.',
+          tipo: 'agendamento',
           dados: {
             'tipo': 'cancelado_pelo_profissional',
             'appointment_id': appointmentId,
@@ -806,23 +810,40 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
       try {
         final service = await _client
             .from('servicos')
-            .select('nome_profissional, categoria')
+            .select('user_id, nome_profissional, categoria')
             .eq('id', serviceId)
             .maybeSingle();
 
+        final professionalId = service?['user_id'] as String?;
         final nomeProf = service?['nome_profissional'] as String? ?? 'Profissional';
         final cat = service?['categoria'] as String? ?? '';
 
-        await _notificacoes.enviarParaUsuario(
-          userId: communityUserId,
+        // 🔒 NOTIFICAÇÃO SINCRONIZADA: Usuário ← Atendimento concluído
+        await _notificacoes.enviarNotificacaoSincronizada(
+          usuarioId: communityUserId,
           titulo: 'Atendimento Concluído',
           corpo: 'Seu atendimento de $cat com $nomeProf foi concluído com sucesso.',
+          tipo: 'agendamento',
           dados: {
             'tipo': 'atendimento_concluido',
             'appointment_id': appointmentId,
             'service_id': serviceId,
           },
         );
+
+        // 🔒 NOTIFICAÇÃO SINCRONIZADA: Profissional ← Atendimento concluído
+        if (professionalId != null && professionalId != communityUserId) {
+          await _notificacoes.enviarNotificacaoSincronizada(
+            usuarioId: professionalId,
+            titulo: 'Atendimento Concluído',
+            corpo: 'O atendimento de $cat foi concluído com sucesso.',
+            tipo: 'agendamento',
+            dados: {
+              'tipo': 'atendimento_concluido',
+              'appointment_id': appointmentId,
+            },
+          );
+        }
       } catch (e) {
         print('Erro ao notificar conclusão: $e');
       }
@@ -950,6 +971,18 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
           },
         );
 
+        // 📋 NOTIFICAÇÃO IN-APP: Usuário
+        await _notificacoes.criarNotificacaoInApp(
+          usuarioId: communityUserId,
+          titulo: 'Agendamento Reagendado',
+          corpo: 'Seu agendamento de $cat com $nomeProf foi alterado para $dataFormatada às $horaFormatada.',
+          tipo: 'agendamento',
+          dados: {
+            'tipo': 'reagendamento',
+            'appointment_id': appointmentId,
+          },
+        );
+
         // Notificar profissional sobre reagendamento
         if (professionalId != null && professionalId != communityUserId) {
           final communityProfile = await _client
@@ -968,6 +1001,18 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
               'appointment_id': appointmentId,
               'scheduled_date': dateValue,
               'scheduled_time': timeValue,
+            },
+          );
+
+          // 📋 NOTIFICAÇÃO IN-APP: Profissional
+          await _notificacoes.criarNotificacaoInApp(
+            usuarioId: professionalId,
+            titulo: 'Agendamento Reagendado',
+            corpo: '$userName reagendou $cat para $dataFormatada às $horaFormatada.',
+            tipo: 'agendamento',
+            dados: {
+              'tipo': 'reagendamento',
+              'appointment_id': appointmentId,
             },
           );
         }

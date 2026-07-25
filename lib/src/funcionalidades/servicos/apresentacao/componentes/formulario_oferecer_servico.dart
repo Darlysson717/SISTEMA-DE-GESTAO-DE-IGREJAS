@@ -452,11 +452,13 @@ class _OfferServiceFormState extends ConsumerState<OfferServiceForm> {
         });
         persisted = true;
 
-        await _notificacoes.enviarParaTodos(
-          titulo: 'Novo serviço disponível',
-          corpo: '${_nomeController.text.trim()} agora está disponível.',
+        // 🔒 NOTIFICAÇÃO SINCRONIZADA PARA TODOS: Novo serviço cadastrado
+        await _notificacoes.enviarNotificacaoSincronizadaParaTodos(
+          titulo: 'Novo Serviço',
+          corpo: 'Confira o serviço "${_nomeController.text.trim()}" que acabou de ser cadastrado!',
+          tipo: 'servico',
           dados: {
-            'tipo': 'service_published',
+            'tipo': 'novo_servico_geral',
             'service_name': _nomeController.text.trim(),
           },
         );

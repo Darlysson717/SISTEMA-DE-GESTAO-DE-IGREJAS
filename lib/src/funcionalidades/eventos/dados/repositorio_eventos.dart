@@ -298,12 +298,13 @@ class EventsRepository {
           ? '${dateParts[2]}/${dateParts[1]}/${dateParts[0]}'
           : dataInicio;
 
-      // 🔒 NOTIFICAÇÃO PRIVADA 6: Organizador ← Novo registro
+      // 🔒 NOTIFICAÇÃO SINCRONIZADA: Organizador ← Novo registro
       if (organizerId != null && organizerId != userId) {
-        await _notificacoes.enviarParaUsuario(
-          userId: organizerId,
+        await _notificacoes.enviarNotificacaoSincronizada(
+          usuarioId: organizerId,
           titulo: 'Novo $tipo no Evento',
           corpo: '$userName se registrou como $tipo em "$eventName".',
+          tipo: 'evento',
           dados: {
             'tipo': interestType == EventInterestType.voluntario
                 ? 'novo_voluntario_evento'
@@ -313,11 +314,12 @@ class EventsRepository {
         );
       }
 
-      // 🔒 NOTIFICAÇÃO PRIVADA 7: Usuário ← Confirmação de registro
-      await _notificacoes.enviarParaUsuario(
-        userId: userId,
+      // 🔒 NOTIFICAÇÃO SINCRONIZADA: Usuário ← Confirmação de registro
+      await _notificacoes.enviarNotificacaoSincronizada(
+        usuarioId: userId,
         titulo: 'Inscrição Confirmada',
         corpo: 'Sua inscrição como $tipo no evento "$eventName" foi confirmada para $dataFormatada${horaInicio != null ? ' às ${horaInicio.substring(0, 5)}' : ''}.',
+        tipo: 'evento',
         dados: {
           'tipo': 'confirmacao_inscricao_evento',
           'event_id': eventId,
@@ -473,6 +475,42 @@ class EventsRepository {
           corpo: 'Confira o novo evento "${input.nome}" que acaba de ser publicado!',
           dados: {
             'tipo': 'novo_evento',
+            'event_id': saved['id'] as String,
+          },
+        );
+
+        // 📋 NOTIFICAÇÃO IN-APP PARA TODOS: Novo evento cadastrado
+        await _notificacoes.enviarParaTodos(
+          titulo: 'Novo Evento',
+          corpo: 'Confira o evento "${input.nome}" que acabou de ser cadastrado!',
+          dados: {
+            'tipo': 'novo_evento_geral',
+            'event_id': saved['id'] as String,
+          },
+        );
+      }
+
+      // 📋 NOTIFICAÇÃO IN-APP: Notificar organizador que o evento foi salvo
+      if (existingEvent != null) {
+        await _notificacoes.criarNotificacaoInApp(
+          usuarioId: uid,
+          titulo: 'Evento Atualizado',
+          corpo: 'Seu evento "${input.nome}" foi atualizado com sucesso.',
+          tipo: 'evento',
+          dados: {
+            'tipo': 'evento_atualizado',
+            'event_id': saved['id'] as String,
+          },
+        );
+      }
+
+      // 🌐 NOTIFICAÇÃO IN-APP PARA TODOS: Evento atualizado
+      if (existingEvent != null) {
+        await _notificacoes.enviarParaTodos(
+          titulo: 'Evento Atualizado',
+          corpo: 'O evento "${input.nome}" foi atualizado. Confira as novidades!',
+          dados: {
+            'tipo': 'evento_atualizado_geral',
             'event_id': saved['id'] as String,
           },
         );

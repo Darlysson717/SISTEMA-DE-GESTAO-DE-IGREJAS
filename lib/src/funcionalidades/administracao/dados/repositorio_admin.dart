@@ -646,11 +646,12 @@ class AdminRepository {
       );
     }
 
-    // 🔒 NOTIFICAÇÃO PRIVADA: Usuário ← Permissão de evento revogada
-    await _notificacoes.enviarParaUsuario(
-      userId: userId,
+    // 🔒 NOTIFICAÇÃO SINCRONIZADA: Usuário ← Permissão de evento revogada
+    await _notificacoes.enviarNotificacaoSincronizada(
+      usuarioId: userId,
       titulo: 'Permissão Revogada',
       corpo: 'Sua permissão para publicar eventos foi revogada.',
+      tipo: 'sistema',
       dados: {
         'tipo': 'event_publish_revoked',
       },
@@ -702,12 +703,14 @@ class AdminRepository {
         }, onConflict: 'user_id');
       }
 
-      await _notificacoes.enviarParaUsuario(
-        userId: requestUserId,
+      // 🔒 NOTIFICAÇÃO SINCRONIZADA: Usuário ← Aprovação/Rejeição de evento
+      await _notificacoes.enviarNotificacaoSincronizada(
+        usuarioId: requestUserId,
         titulo: approved ? 'Evento aprovado' : 'Evento recusado',
         corpo: approved
             ? 'Sua solicitação para publicar evento foi aprovada.'
             : 'Sua solicitação para publicar evento foi recusada.',
+        tipo: 'sistema',
         dados: {
           'tipo': approved ? 'event_publish_approved' : 'event_publish_rejected',
           'request_id': requestId,
@@ -887,10 +890,11 @@ class AdminRepository {
 
       if (adminIds.isEmpty) return;
 
-      await _notificacoes.enviarParaUsuarios(
+      await _notificacoes.enviarNotificacaoSincronizadaParaUsuarios(
         userIds: adminIds,
         titulo: 'Nova Solicitação de $tipo',
         corpo: '$solicitante solicitou permissão para publicar "$nome".',
+        tipo: 'admin',
         dados: {
           'tipo': 'nova_solicitacao_$tipo',
         },
@@ -992,11 +996,12 @@ class AdminRepository {
         .eq('user_id', userId)
         .eq('is_active', true);
 
-    // 🔒 NOTIFICAÇÃO PRIVADA: Usuário ← Permissão de serviço revogada
-    await _notificacoes.enviarParaUsuario(
-      userId: userId,
+    // 🔒 NOTIFICAÇÃO SINCRONIZADA: Usuário ← Permissão de serviço revogada
+    await _notificacoes.enviarNotificacaoSincronizada(
+      usuarioId: userId,
       titulo: 'Permissão Revogada',
       corpo: 'Sua permissão para publicar serviços foi revogada.',
+      tipo: 'sistema',
       dados: {
         'tipo': 'service_publish_revoked',
       },
@@ -1047,12 +1052,14 @@ class AdminRepository {
       }, onConflict: 'user_id');
     }
 
-    await _notificacoes.enviarParaUsuario(
-      userId: requestUserId,
+    // 🔒 NOTIFICAÇÃO SINCRONIZADA: Usuário ← Aprovação/Rejeição de serviço
+    await _notificacoes.enviarNotificacaoSincronizada(
+      usuarioId: requestUserId,
       titulo: approved ? 'Serviço aprovado' : 'Serviço recusado',
       corpo: approved
           ? 'Sua solicitação para publicar serviço foi aprovada.'
           : 'Sua solicitação para publicar serviço foi recusada.',
+      tipo: 'sistema',
       dados: {
         'tipo': approved ? 'service_publish_approved' : 'service_publish_rejected',
         'request_id': requestId,

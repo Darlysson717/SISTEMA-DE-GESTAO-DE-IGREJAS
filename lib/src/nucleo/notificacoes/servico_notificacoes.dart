@@ -587,6 +587,174 @@ class ServicoNotificacoes {
     }
   }
 
+  /// Cria uma notificação in-app na tabela app_notifications
+  /// para que apareça no modal de notificações do usuário
+  Future<void> criarNotificacaoInApp({
+    required String usuarioId,
+    required String titulo,
+    required String corpo,
+    String? tipo,
+    Map<String, dynamic>? dados,
+  }) async {
+    try {
+      await Supabase.instance.client.from('app_notifications').insert({
+        'user_id': usuarioId,
+        'titulo': titulo,
+        'corpo': corpo,
+        'tipo': tipo,
+        if (dados != null) 'dados': dados.toString(),
+      });
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Erro ao criar notificação in-app: $e');
+      }
+    }
+  }
+
+  /// Envia notificação SINCRONIZADA (push + in-app) para um usuário
+  /// Garante que ambos os sistemas recebam a notificação
+  Future<void> enviarNotificacaoSincronizada({
+    required String usuarioId,
+    required String titulo,
+    required String corpo,
+    String? tipo,
+    Map<String, dynamic>? dados,
+  }) async {
+    try {
+      // 1. Envia push notification
+      await enviarParaUsuario(
+        userId: usuarioId,
+        titulo: titulo,
+        corpo: corpo,
+        dados: dados,
+      );
+
+      // 2. Cria notificação in-app
+      await criarNotificacaoInApp(
+        usuarioId: usuarioId,
+        titulo: titulo,
+        corpo: corpo,
+        tipo: tipo,
+        dados: dados,
+      );
+
+      if (kDebugMode) {
+        print('✅ Notificação sincronizada enviada para $usuarioId');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Erro ao enviar notificação sincronizada: $e');
+      }
+    }
+  }
+
+  /// Envia notificação SINCRONIZADA (push + in-app) para múltiplos usuários
+  Future<void> enviarNotificacaoSincronizadaParaUsuarios({
+    required Iterable<String> userIds,
+    required String titulo,
+    required String corpo,
+    String? tipo,
+    Map<String, dynamic>? dados,
+  }) async {
+    final ids = userIds.map((id) => id.trim()).where((id) => id.isNotEmpty).toSet().toList();
+    if (ids.isEmpty) return;
+
+    try {
+      // 1. Envia push notifications
+      await enviarParaUsuarios(
+        userIds: ids,
+        titulo: titulo,
+        corpo: corpo,
+        dados: dados,
+      );
+
+      // 2. Cria notificações in-app para cada usuário
+      for (final userId in ids) {
+        await criarNotificacaoInApp(
+          usuarioId: userId,
+          titulo: titulo,
+          corpo: corpo,
+          tipo: tipo,
+          dados: dados,
+        );
+      }
+
+      if (kDebugMode) {
+        print('✅ Notificação sincronizada enviada para ${ids.length} usuários');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Erro ao enviar notificação sincronizada: $e');
+      }
+    }
+  }
+
+  /// Envia notificação SINCRONIZADA (push + in-app) para TODOS
+  Future<void> enviarNotificacaoSincronizadaParaTodos({
+    required String titulo,
+    required String corpo,
+    String? tipo,
+    Map<String, dynamic>? dados,
+  }) async {
+    try {
+      // 1. Envia push para todos
+      await enviarParaTodos(
+        titulo: titulo,
+        corpo: corpo,
+        dados: dados,
+      );
+
+      // 2. Cria notificação in-app para todos
+      await criarNotificacaoInAppParaTodos(
+        titulo: titulo,
+        corpo: corpo,
+        tipo: tipo,
+        dados: dados,
+      );
+
+      if (kDebugMode) {
+        print('✅ Notificação sincronizada enviada para todos');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Erro ao enviar notificação sincronizada: $e');
+      }
+    }
+  }
+
+  /// Cria notificação in-app para TODOS os usuários
+  Future<void> criarNotificacaoInAppParaTodos({
+    required String titulo,
+    required String corpo,
+    String? tipo,
+    Map<String, dynamic>? dados,
+  }) async {
+    try {
+      final rows = await Supabase.instance.client
+          .from('profiles')
+          .select('id')
+          .not('fcm_token', 'is', null);
+
+      final profiles = (rows as List<dynamic>).cast<Map<String, dynamic>>();
+      for (final perfil in profiles) {
+        final userId = perfil['id'] as String?;
+        if (userId == null || userId.isEmpty) continue;
+
+        await criarNotificacaoInApp(
+          usuarioId: userId,
+          titulo: titulo,
+          corpo: corpo,
+          tipo: tipo,
+          dados: dados,
+        );
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Erro ao criar notificação in-app para todos: $e');
+      }
+    }
+  }
+
   /// Verifica se as notificações estão habilitadas.
   Future<bool> estaoHabilitadas() async {
     try {
