@@ -27,7 +27,7 @@ class BotaoNotificacoes extends ConsumerWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => const _ModalNotificacoes(),
+      builder: (_) => const ModalNotificacoes(),
     );
   }
 }
@@ -83,20 +83,32 @@ class _IconeNotificacao extends StatelessWidget {
   }
 }
 
-class _ModalNotificacoes extends ConsumerStatefulWidget {
-  const _ModalNotificacoes();
+class ModalNotificacoes extends ConsumerStatefulWidget {
+  const ModalNotificacoes();
 
   @override
-  ConsumerState<_ModalNotificacoes> createState() => _ModalNotificacoesState();
+  ConsumerState<ModalNotificacoes> createState() => ModalNotificacoesState();
 }
 
-class _ModalNotificacoesState extends ConsumerState<_ModalNotificacoes> {
+class ModalNotificacoesState extends ConsumerState<ModalNotificacoes> {
+  @override
+  void initState() {
+    super.initState();
+    // Marca todas as notificações como lidas ao abrir o modal
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.read(notificacoesControllerProvider).marcarTodasComoLidas();
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final notificacoesAsync = ref.watch(ultimasNotificacoesProvider);
     final naoLidasAsync = ref.watch(notificacoesNaoLidasProvider);
     final size = MediaQuery.of(context).size;
     final maxHeight = size.height * 0.75;
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
 
     return Container(
       constraints: BoxConstraints(maxHeight: maxHeight),
@@ -162,21 +174,26 @@ class _ModalNotificacoesState extends ConsumerState<_ModalNotificacoes> {
 
           const Divider(height: 1),
 
-          // Lista de notificações
+          // Lista de notificações (máximo 5)
           Flexible(
             child: notificacoesAsync.when(
               data: (notificacoes) {
                 if (notificacoes.isEmpty) {
                   return _buildEmptyState();
                 }
+                // Mostra no máximo as 5 últimas notificações
+                final ultimas5 = notificacoes.take(5).toList();
                 return ListView.separated(
                   shrinkWrap: true,
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  itemCount: notificacoes.length,
+                  padding: EdgeInsets.only(
+                    top: 8,
+                    bottom: 8 + bottomPadding,
+                  ),
+                  itemCount: ultimas5.length,
                   separatorBuilder: (_, __) =>
                       const Divider(height: 1, indent: 20, endIndent: 20),
                   itemBuilder: (context, index) {
-                    return _buildNotificacaoItem(notificacoes[index]);
+                    return _buildNotificacaoItem(ultimas5[index]);
                   },
                 );
               },

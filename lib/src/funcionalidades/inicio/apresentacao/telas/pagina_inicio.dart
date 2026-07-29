@@ -16,6 +16,7 @@ import 'package:centro_social_app/src/funcionalidades/agendamentos/apresentacao/
 import 'package:centro_social_app/src/funcionalidades/agendamentos/dominio/entidades/servico.dart';
 import 'package:centro_social_app/src/funcionalidades/inicio/apresentacao/provedores/provedores_atualizacao.dart';
 import 'package:centro_social_app/src/funcionalidades/notificacoes/apresentacao/componentes/modal_notificacoes.dart';
+import 'package:centro_social_app/src/funcionalidades/notificacoes/apresentacao/provedores/provedores_notificacoes.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class HomePage extends ConsumerStatefulWidget {
@@ -277,85 +278,87 @@ class _HomePageState extends ConsumerState<HomePage> {
                     bottomRight: Radius.circular(32),
                   ),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Icon(
-                            Icons.waving_hand,
-                            color: Colors.white,
-                            size: isSmallScreen ? 28 : 32,
-                          ),
-                        ),
-                        SizedBox(width: isSmallScreen ? 16 : 20),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Olá, seja bem-vindo!',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: titleFontSize,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                        Row(
+                          children: [
+                            Container(
+                              padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(16),
                               ),
-                              SizedBox(height: isSmallScreen ? 4 : 8),
-                              Text(
-                                'Comunidade IADET',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: subtitleFontSize,
-                                  fontWeight: FontWeight.w300,
+                              child: Icon(
+                                Icons.waving_hand,
+                                color: Colors.white,
+                                size: isSmallScreen ? 28 : 32,
+                              ),
+                            ),
+                            SizedBox(width: isSmallScreen ? 16 : 20),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Olá, seja bem-vindo!',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: titleFontSize,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  SizedBox(height: isSmallScreen ? 4 : 8),
+                                  Text(
+                                    'Comunidade IADET',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: subtitleFontSize,
+                                      fontWeight: FontWeight.w300,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: isSmallScreen ? 24 : 32),
+                        Container(
+                          padding: EdgeInsets.all(isSmallScreen ? 20 : 24),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.info_outline,
+                                color: Colors.white,
+                                size: isSmallScreen ? 24 : 28,
+                              ),
+                              SizedBox(width: isSmallScreen ? 16 : 20),
+                              Expanded(
+                                child: Text(
+                                  'Aqui você encontra eventos, atendimentos e serviços gratuitos da nossa comunidade.',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: isSmallScreen ? 14 : 16,
+                                    height: 1.4,
+                                  ),
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        const BotaoNotificacoes(),
+                        SizedBox(height: isSmallScreen ? 16 : 20),
+                        // Chip de notificações abaixo do card informativo
+                        _buildNotificacaoChip(isSmallScreen),
                       ],
                     ),
-                    SizedBox(height: isSmallScreen ? 24 : 32),
-                    Container(
-                      padding: EdgeInsets.all(isSmallScreen ? 20 : 24),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.2),
-                          width: 1,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.info_outline,
-                            color: Colors.white,
-                            size: isSmallScreen ? 24 : 28,
-                          ),
-                          SizedBox(width: isSmallScreen ? 16 : 20),
-                          Expanded(
-                            child: Text(
-                              'Aqui você encontra eventos, atendimentos e serviços gratuitos da nossa comunidade.',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: isSmallScreen ? 14 : 16,
-                                height: 1.4,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
               ),
             ),
 
@@ -612,6 +615,92 @@ class _HomePageState extends ConsumerState<HomePage> {
           ],
         ),
       ),
+    );
+  }
+
+  /// Chip de notificações posicionado no canto inferior esquerdo do banner roxo
+  Widget _buildNotificacaoChip(bool isSmallScreen) {
+    return Consumer(
+      builder: (context, ref, child) {
+        final naoLidasAsync = ref.watch(notificacoesNaoLidasProvider);
+        final quantidade = naoLidasAsync.when(
+          data: (qtd) => qtd,
+          loading: () => 0,
+          error: (_, __) => 0,
+        );
+
+        return GestureDetector(
+          onTap: () {
+            showModalBottomSheet(
+              context: context,
+              isScrollControlled: true,
+              backgroundColor: Colors.transparent,
+              builder: (_) => const ModalNotificacoes(),
+            );
+          },
+          child: Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: isSmallScreen ? 16 : 20,
+              vertical: isSmallScreen ? 10 : 12,
+            ),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFFF59E0B), Color(0xFFF97316)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFF59E0B).withValues(alpha: 0.4),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.notifications,
+                  color: Colors.white,
+                  size: 22,
+                ),
+                SizedBox(width: isSmallScreen ? 8 : 10),
+                Text(
+                  'Notificações',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: isSmallScreen ? 13 : 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                if (quantidade > 0) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      quantidade > 99 ? '99+' : quantidade.toString(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
