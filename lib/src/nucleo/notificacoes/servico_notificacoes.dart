@@ -1,6 +1,7 @@
 import 'dart:convert';
-import 'dart:js' as js;
 import 'package:centro_social_app/src/nucleo/configuracao/configuracao_app.dart';
+import 'package:centro_social_app/src/nucleo/notificacoes/servico_notificacoes_stub.dart'
+    if (dart.library.js) 'package:centro_social_app/src/nucleo/notificacoes/servico_notificacoes_web.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -413,46 +414,7 @@ class ServicoNotificacoes {
     String corpo,
     Map<String, dynamic>? dados,
   ) {
-    try {
-      // Acessa a API Notification do navegador via JS interop
-      final notificationApi = js.context['Notification'];
-      if (notificationApi == null) return;
-
-      final permission = notificationApi['permission'];
-      if (permission == 'granted') {
-        // Constrói as opções da notificação
-        final options = js.JsObject.jsify({
-          'body': corpo,
-          'icon': 'icons/Icon-192.png',
-          'tag': 'desiadet-notification',
-          'requireInteraction': true,
-        });
-
-        final notification = js.JsObject(notificationApi, [titulo, options]);
-
-        // Quando clicar, foca no PWA e fecha a notificação
-        notification['onclick'] = () {
-          js.context.callMethod('focus');
-          notification.callMethod('close');
-          _manipularAberturaNotificacaoWeb(dados);
-        };
-
-        if (kDebugMode) {
-          print('🔔 Notificação web exibida: $titulo - $corpo');
-        }
-      } else if (permission == 'default') {
-        // Permissão não solicitada ainda — solicita
-        notificationApi.callMethod('requestPermission').then((result) {
-          if (result == 'granted') {
-            _exibirNotificacaoWeb(titulo, corpo, dados);
-          }
-        });
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ Erro ao exibir notificação web: $e');
-      }
-    }
+    exibirNotificacaoWeb(titulo, corpo, dados, _manipularAberturaNotificacaoWeb);
   }
 
   /// Manipula clique em notificação web
