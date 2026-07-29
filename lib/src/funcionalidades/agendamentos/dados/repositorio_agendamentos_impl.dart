@@ -5,6 +5,7 @@ import 'package:centro_social_app/src/funcionalidades/agendamentos/dominio/entid
 import 'package:centro_social_app/src/funcionalidades/agendamentos/dominio/entidades/servico.dart';
 import 'package:centro_social_app/src/funcionalidades/agendamentos/dominio/repositorios/repositorio_agendamentos.dart';
 import 'package:centro_social_app/src/nucleo/notificacoes/servico_notificacoes.dart';
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SchedulingRepositoryImpl implements SchedulingRepository {
@@ -116,10 +117,11 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
 
     // Notificar usuários afetados (dados já foram consultados antes do delete)
     if (affectedUserIds.isNotEmpty) {
-      await _notificacoes.enviarParaUsuarios(
+      await _notificacoes.enviarNotificacaoSincronizadaParaUsuarios(
         userIds: affectedUserIds,
         titulo: 'Serviço Cancelado',
         corpo: 'O serviço que você agendou foi removido. Seu agendamento foi cancelado.',
+        tipo: 'agendamento',
         dados: {
           'tipo': 'cancelamento_servico',
           'service_id': serviceId,
@@ -516,16 +518,33 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
     required String scheduledTime,
   }) async {
     try {
+      if (kDebugMode) {
+        print('🔔 Iniciando envio de notificação de novo agendamento...');
+        print('   ServiceId: $serviceId');
+        print('   CommunityUserId: $communityUserId');
+        print('   Date: $scheduledDate Time: $scheduledTime');
+      }
+      
       final service = await _client
           .from('servicos')
           .select('user_id, nome_profissional, categoria, local, tipo_atendimento')
           .eq('id', serviceId)
           .maybeSingle();
 
-      if (service == null) return;
+      if (service == null) {
+        if (kDebugMode) {
+          print('⚠️ Serviço não encontrado, cancelando notificação');
+        }
+        return;
+      }
 
       final professionalId = service['user_id'] as String?;
-      if (professionalId == null) return;
+      if (professionalId == null) {
+        if (kDebugMode) {
+          print('⚠️ ProfessionalId é null, cancelando notificação');
+        }
+        return;
+      }
 
       final communityProfile = await _client
           .from('profiles')
@@ -958,11 +977,12 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
             ? timeValue.substring(0, 5)
             : timeValue;
 
-        // Notificar usuário sobre reagendamento
-        await _notificacoes.enviarParaUsuario(
-          userId: communityUserId,
+        // 🔒 NOTIFICAÇÃO SINCRONIZADA: Usuário ← Reagendamento
+        await _notificacoes.enviarNotificacaoSincronizada(
+          usuarioId: communityUserId,
           titulo: 'Agendamento Reagendado',
           corpo: 'Seu agendamento de $cat com $nomeProf foi alterado para $dataFormatada às $horaFormatada.',
+          tipo: 'agendamento',
           dados: {
             'tipo': 'reagendamento',
             'appointment_id': appointmentId,
@@ -971,19 +991,7 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
           },
         );
 
-        // 📋 NOTIFICAÇÃO IN-APP: Usuário
-        await _notificacoes.criarNotificacaoInApp(
-          usuarioId: communityUserId,
-          titulo: 'Agendamento Reagendado',
-          corpo: 'Seu agendamento de $cat com $nomeProf foi alterado para $dataFormatada às $horaFormatada.',
-          tipo: 'agendamento',
-          dados: {
-            'tipo': 'reagendamento',
-            'appointment_id': appointmentId,
-          },
-        );
-
-        // Notificar profissional sobre reagendamento
+        // 🔒 NOTIFICAÇÃO SINCRONIZADA: Profissional ← Reagendamento
         if (professionalId != null && professionalId != communityUserId) {
           final communityProfile = await _client
               .from('profiles')
@@ -992,20 +1000,7 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
               .maybeSingle();
           final userName = communityProfile?['full_name'] as String? ?? 'Um usuário';
 
-          await _notificacoes.enviarParaUsuario(
-            userId: professionalId,
-            titulo: 'Agendamento Reagendado',
-            corpo: '$userName reagendou $cat para $dataFormatada às $horaFormatada.',
-            dados: {
-              'tipo': 'reagendamento',
-              'appointment_id': appointmentId,
-              'scheduled_date': dateValue,
-              'scheduled_time': timeValue,
-            },
-          );
-
-          // 📋 NOTIFICAÇÃO IN-APP: Profissional
-          await _notificacoes.criarNotificacaoInApp(
+          await _notificacoes.enviarNotificacaoSincronizada(
             usuarioId: professionalId,
             titulo: 'Agendamento Reagendado',
             corpo: '$userName reagendou $cat para $dataFormatada às $horaFormatada.',
@@ -1013,6 +1008,8 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
             dados: {
               'tipo': 'reagendamento',
               'appointment_id': appointmentId,
+              'scheduled_date': dateValue,
+              'scheduled_time': timeValue,
             },
           );
         }

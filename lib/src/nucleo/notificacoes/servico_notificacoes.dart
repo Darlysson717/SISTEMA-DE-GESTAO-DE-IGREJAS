@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:js' as js;
 import 'package:centro_social_app/src/nucleo/configuracao/configuracao_app.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -597,13 +598,21 @@ class ServicoNotificacoes {
     Map<String, dynamic>? dados,
   }) async {
     try {
+      if (kDebugMode) {
+        print('📝 Criando notificação in-app para $usuarioId: $titulo');
+      }
+      
       await Supabase.instance.client.from('app_notifications').insert({
         'user_id': usuarioId,
         'titulo': titulo,
         'corpo': corpo,
         'tipo': tipo,
-        if (dados != null) 'dados': dados.toString(),
+        if (dados != null) 'dados': jsonEncode(dados),
       });
+      
+      if (kDebugMode) {
+        print('✅ Notificação in-app criada com sucesso');
+      }
     } catch (e) {
       if (kDebugMode) {
         print('❌ Erro ao criar notificação in-app: $e');

@@ -468,23 +468,14 @@ class EventsRepository {
         }
       }
 
-      // 🌐 NOTIFICAÇÃO GERAL: Novo evento publicado
+      // 🌐 NOTIFICAÇÃO SINCRONIZADA: Novo evento publicado (push + in-app para todos)
       if (existingEvent == null) {
-        await _notificacoes.enviarParaTodos(
+        await _notificacoes.enviarNotificacaoSincronizadaParaTodos(
           titulo: 'Novo Evento: ${input.nome}',
           corpo: 'Confira o novo evento "${input.nome}" que acaba de ser publicado!',
+          tipo: 'evento',
           dados: {
             'tipo': 'novo_evento',
-            'event_id': saved['id'] as String,
-          },
-        );
-
-        // 📋 NOTIFICAÇÃO IN-APP PARA TODOS: Novo evento cadastrado
-        await _notificacoes.enviarParaTodos(
-          titulo: 'Novo Evento',
-          corpo: 'Confira o evento "${input.nome}" que acabou de ser cadastrado!',
-          dados: {
-            'tipo': 'novo_evento_geral',
             'event_id': saved['id'] as String,
           },
         );
@@ -502,13 +493,12 @@ class EventsRepository {
             'event_id': saved['id'] as String,
           },
         );
-      }
 
-      // 🌐 NOTIFICAÇÃO IN-APP PARA TODOS: Evento atualizado
-      if (existingEvent != null) {
-        await _notificacoes.enviarParaTodos(
+        // 🌐 NOTIFICAÇÃO SINCRONIZADA: Evento atualizado (push + in-app para todos)
+        await _notificacoes.enviarNotificacaoSincronizadaParaTodos(
           titulo: 'Evento Atualizado',
           corpo: 'O evento "${input.nome}" foi atualizado. Confira as novidades!',
+          tipo: 'evento',
           dados: {
             'tipo': 'evento_atualizado_geral',
             'event_id': saved['id'] as String,
