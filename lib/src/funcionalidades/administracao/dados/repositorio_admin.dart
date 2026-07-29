@@ -1262,6 +1262,101 @@ class AdminRepository {
     return field;
   }
 
+  /// Exclui eventos cuja data de fim seja anterior a 2 meses atrás,
+  /// incluindo suas imagens no storage e inscrições vinculadas.
+  /// Retorna a quantidade de eventos excluídos.
+  Future<int> deleteExpiredEvents() async {
+    final isAdmin = await isCurrentUserAdmin();
+    if (!isAdmin) {
+      throw Exception('Acesso negado.');
+    }
+
+    final doisMesesAtras = DateTime.now().subtract(const Duration(days: 60));
+
+    // Busca eventos com data_fim anterior a 2 meses (inclui campos de imagem)
+    final expiredRows = await _client
+        .from('eventos')
+        .select('id, imagem_capa_url, galeria_imagens_urls')
+        .lt('data_fim', doisMesesAtras.toIso8601String());
+
+    final expiredEvents = (expiredRows as List<dynamic>)
+        .map((r) => r as Map<String, dynamic>)
+        .toList();
+
+    final expiredIds = expiredEvents
+        .map((e) => e['id'] as String)
+        .where((id) => id.isNotEmpty)
+        .toList();
+
+    if (expiredIds.isEmpty) {
+      return 0;
+    }
+
+    // Extrai paths de imagens do storage para exclusão
+    final storagePaths = <String>{};
+    for (final event in expiredEvents) {
+      // imagem_capa_url
+      final capaUrl = event['imagem_capa_url'] as String?;
+      if (capaUrl != null && capaUrl.isNotEmpty) {
+        final path = _extractStoragePath(capaUrl);
+        if (path != null) storagePaths.add(path);
+      }
+
+      // galeria_imagens_urls
+      final galeria = event['galeria_imagens_urls'] as List<dynamic>?;
+      if (galeria != null) {
+        for (final url in galeria) {
+          final urlStr = url.toString();
+          if (urlStr.isNotEmpty) {
+            final path = _extractStoragePath(urlStr);
+            if (path != null) storagePaths.add(path);
+          }
+        }
+      }
+    }
+
+    // Exclui imagens do storage (bucket eventos_images)
+    if (storagePaths.isNotEmpty) {
+      const chunkSize = 100;
+      final pathsList = storagePaths.toList();
+      for (var i = 0; i < pathsList.length; i += chunkSize) {
+        final chunk = pathsList.skip(i).take(chunkSize).toList();
+        await _client.storage.from('eventos_images').remove(chunk);
+      }
+    }
+
+    // Exclui registros de inscrições vinculados
+    await _client
+        .from('event_registrations')
+        .delete()
+        .inFilter('event_id', expiredIds);
+
+    // Exclui os eventos
+    await _client
+        .from('eventos')
+        .delete()
+        .inFilter('id', expiredIds);
+
+    return expiredIds.length;
+  }
+
+  /// Extrai o path do storage a partir de uma URL pública do Supabase.
+  /// Ex: "https://xxx.supabase.co/storage/v1/object/public/eventos_images/user_id/img.jpg"
+  ///     -> "user_id/img.jpg"
+  String? _extractStoragePath(String url) {
+    try {
+      final uri = Uri.parse(url);
+      // Procura pelo segmento "eventos_images" na URL
+      final segments = uri.pathSegments;
+      final idx = segments.indexOf('eventos_images');
+      if (idx >= 0 && idx + 1 < segments.length) {
+        // Pega tudo após "eventos_images/"
+        return segments.sublist(idx + 1).join('/');
+      }
+    } catch (_) {}
+    return null;
+  }
+
   Future<List<int>> exportEventsSummaryXlsx() async {
     final now = DateTime.now();
     final start = (now.month == 1)

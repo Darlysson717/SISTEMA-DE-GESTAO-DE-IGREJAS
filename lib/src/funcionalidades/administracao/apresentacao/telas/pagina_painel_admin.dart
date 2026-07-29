@@ -17,6 +17,7 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage> {
   final _emailController = TextEditingController();
   bool _isSavingAdmin = false;
   bool _isCleaningStorage = false;
+  bool _isDeletingExpiredEvents = false;
   bool _isExportingServices = false;
   bool _isExportingEventsSummary = false;
   String? _reviewingRequestId;
@@ -947,6 +948,22 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage> {
                                 : const Icon(Icons.cleaning_services_outlined),
                             label: const Text('Limpar imagens órfãs'),
                           ),
+                          const SizedBox(height: 12),
+                          OutlinedButton.icon(
+                            onPressed: _isDeletingExpiredEvents
+                                ? null
+                                : _handleDeleteExpiredEvents,
+                            icon: _isDeletingExpiredEvents
+                                ? const SizedBox(
+                                    height: 16,
+                                    width: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(Icons.event_busy_outlined),
+                            label: const Text('Excluir eventos vencidos (2+ meses)'),
+                          ),
                         ],
                       ),
                     ),
@@ -1288,6 +1305,65 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage> {
     } finally {
       if (mounted) {
         setState(() => _isCleaningStorage = false);
+      }
+    }
+  }
+
+  Future<void> _handleDeleteExpiredEvents() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Excluir eventos vencidos'),
+        content: const Text(
+          'Essa ação exclui permanentemente eventos com data de fim superior a 2 meses e suas inscrições vinculadas. Deseja continuar?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) {
+      return;
+    }
+
+    setState(() => _isDeletingExpiredEvents = true);
+    try {
+      final deleted = await ref
+          .read(adminRepositoryProvider)
+          .deleteExpiredEvents();
+
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            deleted > 0
+                ? '$deleted evento(s) excluído(s) com sucesso.'
+                : 'Nenhum evento vencido encontrado.',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro ao excluir eventos: $error')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isDeletingExpiredEvents = false);
       }
     }
   }
